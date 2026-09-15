@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { RoadmapPanel } from "@/components/app/roadmap-panel";
@@ -13,15 +15,23 @@ export const metadata: Metadata = { title: "Admin" };
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  const [{ count: providerCount }, { count: pendingCount }, { count: categoryCount }] =
-    await Promise.all([
-      supabase.from("providers").select("profile_id", { count: "exact", head: true }),
-      supabase
-        .from("providers")
-        .select("profile_id", { count: "exact", head: true })
-        .eq("verification_status", "pending"),
-      supabase.from("categories").select("id", { count: "exact", head: true }).eq("is_active", true),
-    ]);
+  const [
+    { count: providerCount },
+    { count: pendingCount },
+    { count: approvedCount },
+    { count: categoryCount },
+  ] = await Promise.all([
+    supabase.from("providers").select("profile_id", { count: "exact", head: true }),
+    supabase
+      .from("providers")
+      .select("profile_id", { count: "exact", head: true })
+      .eq("verification_status", "pending"),
+    supabase
+      .from("providers")
+      .select("profile_id", { count: "exact", head: true })
+      .eq("verification_status", "approved"),
+    supabase.from("categories").select("id", { count: "exact", head: true }).eq("is_active", true),
+  ]);
 
   // A worked example on the reference job from PLAN.md §4, computed by the same
   // function the quote builder uses — so the economics on this screen can never
@@ -41,9 +51,49 @@ export default async function AdminDashboard() {
         {isSimulated && <SimulatedBadge className="ml-auto" />}
       </div>
 
+      {/* The queue is the only thing on this screen that is somebody waiting.
+          It gets its own row above the counters rather than being one of
+          them — a number in a tile is a fact, and this is a job to do. */}
+      <Link
+        href="/admin/verification"
+        className="group flex items-center gap-4 rounded-card border border-ink-200 bg-ink-0 px-5 py-4 shadow-sm transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong hover:border-ink-300 hover:shadow-md"
+      >
+        <span
+          className={
+            (pendingCount ?? 0) > 0
+              ? "grid size-11 shrink-0 place-items-center rounded-full bg-warning-50 text-warning-700"
+              : "grid size-11 shrink-0 place-items-center rounded-full bg-ink-100 text-ink-500"
+          }
+        >
+          <ShieldCheck className="size-5" aria-hidden />
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.9375rem] font-semibold text-ink-900">
+            Verification queue
+          </span>
+          <span className="block text-sm text-ink-600">
+            {(pendingCount ?? 0) === 0
+              ? "Nobody is waiting for review."
+              : `${pendingCount} artisan${pendingCount === 1 ? "" : "s"} waiting to be reviewed.`}
+          </span>
+        </span>
+
+        {(pendingCount ?? 0) > 0 && (
+          <span className="tabular shrink-0 font-mono text-2xl font-semibold text-ink-900">
+            {pendingCount}
+          </span>
+        )}
+
+        <ArrowRight
+          className="size-4 shrink-0 text-ink-300 transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5 group-hover:text-ink-500"
+          aria-hidden
+        />
+      </Link>
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Artisans" value={String(providerCount ?? 0)} />
-        <Stat label="Awaiting review" value={String(pendingCount ?? 0)} />
+        <Stat label="Verified" value={String(approvedCount ?? 0)} />
         <Stat label="Active services" value={String(categoryCount ?? 0)} />
       </div>
 
@@ -81,11 +131,11 @@ export default async function AdminDashboard() {
 
       <RoadmapPanel
         title="What's coming to this screen"
-        description="Phase 0 delivers the foundations. These are the pieces that land on top."
+        description="Verification is live. These are the pieces that land on top."
         items={[
-          { label: "Review Ghana Cards and approve artisans", phase: "Phase 1" },
-          { label: "Set transport rate bands per city", phase: "Phase 2" },
+          { label: "Set transport rate bands per city", phase: "Phase 4" },
           { label: "Watch jobs and matching in real time", phase: "Phase 3" },
+          { label: "Step in when matching stalls", phase: "Phase 3" },
           { label: "Trigger payouts and handle failed transfers", phase: "Phase 4" },
           { label: "Resolve disputes and issue refunds", phase: "Phase 6" },
         ]}

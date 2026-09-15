@@ -140,6 +140,8 @@ async function configureSeedProvider(profileId: string) {
       service_radius_km: 15,
       momo_number: "+233242222222",
       momo_network: "mtn",
+      ghana_card_number: "GHA-729184003-5",
+      application_submitted_at: new Date().toISOString(),
     })
     .eq("profile_id", profileId);
 

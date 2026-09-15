@@ -102,6 +102,9 @@ export type ProviderRow = Timestamps & {
   base_city: string | null;
   momo_number: string | null;
   momo_network: MomoNetwork | null;
+  /** Ghana Card PIN, `GHA-#########-#`. Frozen once the application is in review. */
+  ghana_card_number: string | null;
+  application_submitted_at: string | null;
   payout_recipient_code: string | null;
   rating_avg: number;
   rating_count: number;
@@ -261,6 +264,27 @@ export type ProviderDocumentRow = {
   uploaded_at: string;
 }
 
+export type ProviderCategoryRow = {
+  provider_id: string;
+  category_id: string;
+}
+
+/**
+ * One row per admin decision, never updated.
+ *
+ * `decision` is the full verification_status enum rather than a narrower
+ * approve/reject pair because a suspension is also a review — same table, same
+ * notes field, same audit question six weeks later.
+ */
+export type VerificationReviewRow = {
+  id: string;
+  provider_id: string;
+  admin_id: string;
+  decision: VerificationStatus;
+  call_notes: string | null;
+  reviewed_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -280,6 +304,8 @@ export interface Database {
         | "base_city"
         | "momo_number"
         | "momo_network"
+        | "ghana_card_number"
+        | "application_submitted_at"
         | "payout_recipient_code"
         | "rating_avg"
         | "rating_count"
@@ -288,6 +314,8 @@ export interface Database {
         | "suspension_reason"
       >;
       provider_documents: Table<ProviderDocumentRow, "id" | "uploaded_at">;
+      provider_categories: Table<ProviderCategoryRow, never>;
+      verification_reviews: Table<VerificationReviewRow, "id" | "reviewed_at" | "call_notes">;
       categories: Table<CategoryRow, "id" | "created_at" | "description" | "is_active" | "sort_order" | "icon">;
       jobs: Table<
         JobRow,
@@ -402,6 +430,30 @@ export interface Database {
       // rather than trusting a composite echoed back from a definer function.
       post_job: { Args: { p_job_id: string }; Returns: undefined };
       cancel_job: { Args: { p_job_id: string; p_reason?: string | null }; Returns: undefined };
+
+      /**
+       * Phase 2 (migration 0008). Verification status is guarded against direct
+       * writes, so every move through it is a function call.
+       *
+       * `provider_application_gaps` is the same function the submit RPC checks
+       * against, exposed so the UI checklist and the gate cannot disagree —
+       * it returns the sentences still standing between the artisan and the
+       * queue, and an empty array means ready.
+       */
+      provider_application_gaps: { Args: { p_provider_id: string }; Returns: string[] };
+      submit_provider_application: { Args: Record<string, never>; Returns: undefined };
+      review_provider_application: {
+        Args: {
+          p_provider_id: string;
+          p_decision: VerificationStatus;
+          p_call_notes?: string | null;
+        };
+        Returns: undefined;
+      };
+      set_provider_availability: {
+        Args: { p_online: boolean };
+        Returns: ProviderAvailability;
+      };
     };
     Enums: {
       user_role: UserRole;

@@ -53,10 +53,13 @@ export function Input({ className, leading, ...props }: InputProps) {
   );
 }
 
-export function Textarea({
-  className,
-  ...props
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+/**
+ * `ComponentProps` rather than `TextareaHTMLAttributes` so `ref` is part of the
+ * type. React 19 passes refs to function components as an ordinary prop, and a
+ * caller that needs to focus this — the admin review form, after a failed
+ * validation — should not have to reach around the primitive to do it.
+ */
+export function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return <textarea className={cn(base, "min-h-24 resize-y leading-relaxed", className)} {...props} />;
 }
 
