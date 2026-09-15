@@ -124,10 +124,15 @@ async function main() {
     seeded.error ? `ERROR ${seeded.error.message}` : seeded.data!.map((p) => `${p.role}:${p.phone}`).join(" "),
   );
 
+  // Filter to the seeded artisan explicitly. Public signup creates other
+  // provider rows, and an unfiltered .limit(1) silently asserts against
+  // whichever row PostgREST happens to return first.
   const provider = await admin
     .from("providers")
-    .select("verification_status, availability, last_location_at, current_location")
-    .limit(1)
+    .select(
+      "verification_status, availability, last_location_at, current_location, profiles!inner(phone)",
+    )
+    .eq("profiles.phone", "+233242222222")
     .single();
   check(
     "provider approved, online, located",
@@ -285,7 +290,11 @@ async function main() {
         : `NOT BLOCKED — status is "${approvalAfter.data?.verification_status}"`,
     );
 
-    // The one transition they may make themselves: submitting for review.
+    // 0008 closed the direct unsubmitted → pending write. Submission now runs
+    // through submit_provider_application(), which refuses an incomplete
+    // application. The old hardcoded transition let an artisan flip their own
+    // status with nothing filled in, and locked a rejected artisan out of
+    // re-applying.
     await admin
       .from("providers")
       .update({ verification_status: "unsubmitted" })
@@ -295,9 +304,9 @@ async function main() {
       .update({ verification_status: "pending" })
       .eq("profile_id", uid!.id);
     check(
-      "artisan CAN submit application for review",
-      submit.error === null,
-      submit.error ? `WRONGLY BLOCKED: ${submit.error.message}` : "unsubmitted → pending allowed",
+      "artisan cannot set their own verification status directly",
+      submit.error !== null,
+      submit.error ? `blocked: ${submit.error.code}` : "NOT BLOCKED — direct status write succeeded",
     );
 
     await admin
