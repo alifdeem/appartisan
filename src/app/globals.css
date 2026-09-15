@@ -1,0 +1,317 @@
+@import "tailwindcss";
+
+/**
+ * ArtisanGH design tokens.
+ *
+ * The client has no brand yet (PLAN.md §15), so this is a defensible starting
+ * palette rather than a guess at their taste: a deep green that reads as trust
+ * and quietly nods at the flag without waving it, an amber reserved strictly
+ * for money, and a WARM neutral ramp. Warm grey is deliberate — every screen in
+ * this app sits next to photographs of real work in real Ghanaian homes, and
+ * cool grey makes those photos look dead.
+ *
+ * Dark mode is deliberately OUT OF SCOPE for v1. A half-finished dark theme
+ * looks broken in a client demo; better to ship one polished theme. The
+ * scaffold's prefers-color-scheme block is removed for that reason.
+ */
+
+@theme {
+  /* ---- Brand: deep green ------------------------------------------------ */
+  --color-brand-50: oklch(0.972 0.021 155);
+  --color-brand-100: oklch(0.942 0.043 155);
+  --color-brand-200: oklch(0.885 0.079 155);
+  --color-brand-300: oklch(0.812 0.112 155);
+  --color-brand-400: oklch(0.724 0.137 155);
+  --color-brand-500: oklch(0.638 0.142 155);
+  --color-brand-600: oklch(0.548 0.126 155);
+  --color-brand-700: oklch(0.452 0.103 155);
+  --color-brand-800: oklch(0.371 0.082 155);
+  --color-brand-900: oklch(0.305 0.064 155);
+  --color-brand-950: oklch(0.201 0.045 155);
+
+  /* ---- Accent: amber. Money only. -------------------------------------- */
+  /* Earnings, payouts, deposit due, primary CTAs. If it is not about money or
+     not the single most important action on the screen, it is not amber. */
+  --color-accent-50: oklch(0.977 0.031 84);
+  --color-accent-100: oklch(0.951 0.062 84);
+  --color-accent-200: oklch(0.904 0.107 82);
+  --color-accent-300: oklch(0.856 0.144 79);
+  --color-accent-400: oklch(0.806 0.162 74);
+  --color-accent-500: oklch(0.752 0.158 68);
+  --color-accent-600: oklch(0.667 0.142 55);
+  --color-accent-700: oklch(0.556 0.119 47);
+  --color-accent-800: oklch(0.461 0.095 45);
+  --color-accent-900: oklch(0.391 0.077 44);
+
+  /* ---- Ink: warm neutrals ---------------------------------------------- */
+  /* There is no pure white in this app, on purpose. Every African product worth
+     copying — Kuda, Hubtel, Moniepoint — grounds on warm paper rather than
+     #FFF, and the reason is practical rather than decorative: these screens sit
+     next to photographs of real rooms, and a pure-white surround makes a warm
+     interior photograph look like it was pasted on. ink-0 is the card surface,
+     ink-25 the page ground. The chroma is tiny (0.004–0.007) but it is the
+     difference between "designed" and "default".
+     Ramp steps 50→950 are unchanged, so nothing that already uses them moves. */
+  --color-ink-0: oklch(0.993 0.004 78); /* card / raised surface  ≈ #FEFCFA */
+  --color-ink-25: oklch(0.977 0.007 78); /* page ground            ≈ #FBF7F1 */
+  --color-ink-50: oklch(0.985 0.003 75);
+  --color-ink-100: oklch(0.968 0.005 75);
+  --color-ink-200: oklch(0.927 0.007 75);
+  --color-ink-300: oklch(0.868 0.009 75);
+  --color-ink-400: oklch(0.708 0.012 75);
+  --color-ink-500: oklch(0.567 0.013 75);
+  --color-ink-600: oklch(0.452 0.012 75);
+  --color-ink-700: oklch(0.371 0.011 75);
+  --color-ink-800: oklch(0.276 0.009 75);
+  --color-ink-900: oklch(0.211 0.008 75);
+  --color-ink-950: oklch(0.147 0.007 75);
+  /* The one dark band. Warm charcoal, not black — black next to warm paper
+     reads as a rendering bug rather than a choice. */
+  --color-ink-975: oklch(0.178 0.012 75); /*                       ≈ #1C1916 */
+
+  /* ---- Semantic --------------------------------------------------------- */
+  --color-success-50: oklch(0.973 0.028 150);
+  --color-success-500: oklch(0.652 0.157 149);
+  --color-success-600: oklch(0.575 0.141 150);
+  --color-success-700: oklch(0.478 0.117 151);
+  --color-warning-50: oklch(0.976 0.032 85);
+  --color-warning-500: oklch(0.782 0.155 75);
+  --color-warning-700: oklch(0.565 0.124 54);
+  --color-danger-50: oklch(0.971 0.021 17);
+  --color-danger-500: oklch(0.637 0.208 25);
+  --color-danger-600: oklch(0.577 0.213 27);
+  --color-danger-700: oklch(0.505 0.188 27);
+  --color-info-50: oklch(0.97 0.019 240);
+  --color-info-500: oklch(0.623 0.153 253);
+  --color-info-700: oklch(0.488 0.135 254);
+
+  --color-background: var(--color-ink-25);
+  --color-foreground: var(--color-ink-900);
+
+  /* ---- Motion ----------------------------------------------------------- */
+  /* Per the Emil Kowalski skill: never ease-in for UI that enters, never a
+     linear curve, and durations short enough that a confident user never waits
+     on the interface. */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --duration-instant: 130ms;
+  --duration-fast: 160ms;
+  --duration-base: 220ms;
+  --duration-slow: 320ms;
+
+  /* ---- Elevation -------------------------------------------------------- */
+  /* Warm-tinted rather than pure black, so shadows sit on the warm neutrals
+     without turning them grey. */
+  --shadow-xs: 0 1px 2px 0 oklch(0.147 0.007 75 / 0.05);
+  --shadow-sm: 0 1px 3px 0 oklch(0.147 0.007 75 / 0.08), 0 1px 2px -1px oklch(0.147 0.007 75 / 0.06);
+  --shadow-md:
+    0 4px 12px -2px oklch(0.147 0.007 75 / 0.08), 0 2px 4px -2px oklch(0.147 0.007 75 / 0.05);
+  --shadow-lg:
+    0 12px 28px -6px oklch(0.147 0.007 75 / 0.12), 0 4px 10px -4px oklch(0.147 0.007 75 / 0.06);
+  --shadow-xl: 0 24px 48px -12px oklch(0.147 0.007 75 / 0.18);
+
+  --radius-field: 0.625rem;
+  --radius-card: 1rem;
+
+  /* ---- Type ------------------------------------------------------------- */
+  /* Three faces, three jobs. Geist was the scaffold default and is now the most
+     recognisable "this page was generated" signal on the web, so it is gone.
+
+     display — Bricolage Grotesque. Variable, with width and optical-size axes,
+       so headlines set tight and dense without collapsing into something that
+       looks like a system font. Odd enough to read as art-directed.
+     sans    — Inter. Body, labels, forms. Deliberately unremarkable: it is the
+       best-tested face at 13–15px on the low-end Android screens most of Accra
+       is actually on. The display face carries the personality; this one only
+       has to stay legible in sunlight on a cracked screen.
+     mono    — IBM Plex Mono. Quote line items, receipts, reference numbers, the
+       OTP. This is what makes a quote look like a document instead of a div. */
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* ---- Keyframes -------------------------------------------------------- */
+  /* Note the entrance never starts from scale(0) — things that grow from
+     nothing read as cartoonish. 0.98 is enough to suggest arrival. */
+  --animate-fade-up: fade-up var(--duration-base) var(--ease-out-strong) both;
+  --animate-fade-in: fade-in var(--duration-fast) var(--ease-out-strong) both;
+  --animate-pulse-ring: pulse-ring 2s var(--ease-out-strong) infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-caret-blink: caret-blink 1.05s steps(1) infinite;
+
+  @keyframes caret-blink {
+    0%,
+    70%,
+    100% {
+      opacity: 1;
+    }
+    20%,
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.99);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      opacity: 0.55;
+      transform: scale(0.92);
+    }
+    70% {
+      opacity: 0;
+      transform: scale(1.6);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.6);
+    }
+  }
+
+  @keyframes shimmer {
+    from {
+      background-position: -200% 0;
+    }
+    to {
+      background-position: 200% 0;
+    }
+  }
+}
+
+@layer base {
+  /* Next 16 no longer applies this for us. */
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings take the display face by default so app screens inherit the voice
+     without every component remembering to ask for it. Anything that wants the
+     text face back says so explicitly. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.022em;
+  }
+
+  /* Keyboard users get a ring; mouse users never see it. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+
+  ::selection {
+    background-color: var(--color-brand-200);
+    color: var(--color-brand-950);
+  }
+
+  /* Forms inherit the app font instead of the UA's. */
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* iOS zooms the page when a focused input is under 16px. */
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1rem);
+  }
+}
+
+@layer utilities {
+  /* Prices and counters must not jitter as digits change. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* The placeholder every photographic slot falls back to until the real
+     photograph lands in public/img. Warm paper with a faint diagonal hatch —
+     visibly deliberate, so a half-dressed demo reads as "not shot yet" rather
+     than "broken". Because the slot already holds its final aspect ratio,
+     nothing on the page moves when the image arrives. */
+  .img-slot {
+    background-color: var(--color-ink-100);
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 11px,
+      oklch(0.868 0.009 75 / 0.5) 11px 12px
+    );
+  }
+
+  /* The same placeholder on the charcoal band. Without this the empty slot is
+     the brightest thing on a dark section and pulls the eye straight to the one
+     part of the page that isn't finished. */
+  .img-slot-dark {
+    background-color: oklch(0.232 0.011 75);
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 11px,
+      oklch(0.32 0.012 75 / 0.7) 11px 12px
+    );
+  }
+
+  .skeleton {
+    background-image: linear-gradient(
+      90deg,
+      var(--color-ink-200) 0%,
+      var(--color-ink-100) 50%,
+      var(--color-ink-200) 100%
+    );
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+  }
+
+  /* A global honour of the OS setting. Every animation in the app respects
+     this without each component having to remember. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
