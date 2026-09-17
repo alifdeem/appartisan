@@ -241,6 +241,24 @@ async function main() {
     await render("job detail (same defect)", `/client/jobs/${postedId}`, client.cookie);
     await render("job history", "/client/jobs", client.cookie);
 
+    // The invoice only exists on a paid job, and this script does not drive a
+    // job through payment — `npm run demo:job` does. Skipped rather than failed
+    // when none is present, so the smoke test never depends on demo data being
+    // seeded first.
+    const { data: paidJob } = await admin
+      .from("jobs")
+      .select("id")
+      .eq("client_id", client.userId)
+      .in("status", ["paid", "closed"])
+      .limit(1)
+      .maybeSingle();
+
+    if (paidJob) {
+      await render("invoice", `/client/jobs/${paidJob.id}/invoice`, client.cookie);
+    } else {
+      console.log("  SKIP  invoice — no paid job to render (npm run demo:job)");
+    }
+
     const provider = await sessionCookieFor("+233242222222");
     await render("provider dashboard", "/provider", provider.cookie);
 

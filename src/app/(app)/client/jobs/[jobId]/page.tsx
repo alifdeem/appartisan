@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ImageOff, MapPin, Mic, Phone } from "lucide-react";
+import { ArrowLeft, FileText, ImageOff, MapPin, Mic, Phone } from "lucide-react";
 
 import { CancelJob } from "@/components/jobs/cancel-job";
 import { CategoryIcon } from "@/components/marketplace/category-icon";
@@ -27,6 +27,7 @@ import {
   signJobPhotos,
   signVoiceNote,
 } from "@/lib/jobs/queries";
+import { INVOICEABLE_STATUSES, invoiceNumber } from "@/lib/jobs/invoice";
 import { timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Your job" };
@@ -76,6 +77,9 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
   // the client's side "someone is deciding right now" is still the search.
   const isMatching = ["posted", "matching", "offer_sent"].includes(job.status);
   const awaitingDecision = job.status === "quote_sent" && quote?.status === "sent";
+  const isInvoiceable = INVOICEABLE_STATUSES.includes(
+    job.status as (typeof INVOICEABLE_STATUSES)[number],
+  );
   const point =
     job.location_lat !== null && job.location_lng !== null
       ? { lat: job.location_lat, lng: job.location_lng }
@@ -269,6 +273,21 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
           {/* Above the timeline: somebody checking a job after paying is
               looking for the money, not for the history of the match. */}
           <PaymentReceipt payments={payments} />
+
+          {/* The invoice only exists once the money is in — before that the
+              quote is the document that describes the price. */}
+          {isInvoiceable && (
+            <Link
+              href={`/client/jobs/${jobId}/invoice`}
+              className="flex min-h-11 items-center gap-2 rounded-card border border-ink-200 bg-ink-0 px-4 text-sm font-medium text-ink-800 shadow-sm transition-colors hover:border-ink-300 hover:text-ink-900"
+            >
+              <FileText className="size-4 text-ink-500" aria-hidden />
+              View invoice
+              <span className="tabular ml-auto font-mono text-[0.75rem] text-ink-500">
+                {invoiceNumber(job.reference)}
+              </span>
+            </Link>
+          )}
 
           <Card>
             <CardContent className="space-y-4">

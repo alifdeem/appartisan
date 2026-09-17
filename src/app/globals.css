@@ -349,3 +349,49 @@
     }
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Print
+   ---------------------------------------------------------------------------
+   The invoice is the one screen meant to leave the browser as paper or a PDF
+   (src/lib/jobs/invoice.ts explains why there is no PDF library). These rules
+   are what make the browser's own "Save as PDF" produce something a client can
+   send to whoever pays their bills.
+
+   `print:hidden` is applied per-component to the app chrome — header, nav, dev
+   panel, buttons. What is left here is everything that has to be true of the
+   page as a whole. */
+@media print {
+  /* Warm paper is right on screen and wrong on paper: it prints as a grey wash
+     over the whole sheet and drinks ink. Paper is already the page ground. */
+  html,
+  body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Colour-managed swatches survive; the browser's default is to drop them. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* A4 with room for the browser's own header and footer stamp. */
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  /* Never break a money row, a party block or a signature across two sheets —
+     a total stranded alone on page 2 reads as a different document. */
+  article > * {
+    break-inside: avoid;
+  }
+
+  /* Links print as their text. A URL in brackets after every word is noise on
+     a document nobody is going to type. */
+  a[href]::after {
+    content: "";
+  }
+}

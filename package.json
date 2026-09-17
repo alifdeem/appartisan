@@ -17,7 +17,8 @@
     "smoke": "tsx scripts/smoke-render.ts",
     "e2e": "tsx scripts/e2e-matching.ts",
     "e2e:payments": "tsx scripts/e2e-payments.ts",
-    "e2e:execution": "tsx scripts/e2e-execution.ts"
+    "e2e:execution": "tsx scripts/e2e-execution.ts",
+    "demo:job": "tsx scripts/demo-job.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
