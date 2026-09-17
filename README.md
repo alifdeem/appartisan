@@ -110,7 +110,7 @@ Idempotent — safe to run repeatedly. It refuses to touch a production project 
 npm run db:verify
 ```
 
-41 assertions against the live database: anonymous access is refused, the privilege-escalation
+52 assertions against the live database: anonymous access is refused, the privilege-escalation
 paths above are actually blocked, PostGIS resolves inside the `SECURITY DEFINER` functions,
 the seed is present, and a real session can be minted and cannot be replayed. Read-only apart
 from a few writes it rolls back. Run it after any schema change.
@@ -210,7 +210,7 @@ npm run db:push    # apply migrations to the linked project
 npm run db:reset   # drop and rebuild local db, then re-run migrations
 npm run db:types   # dump the live schema to types.generated.ts, for diffing
 npm run db:seed    # idempotent test accounts
-npm run db:verify  # 41 assertions against the live database
+npm run db:verify  # 52 assertions against the live database
 
 npm run e2e          # Phase 3 — matching and quoting
 npm run e2e:payments # Phase 4 — the deposit leg, refunds, hostile webhooks

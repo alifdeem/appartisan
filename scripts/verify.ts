@@ -369,6 +369,74 @@ async function main() {
       renameSelf.error ? `WRONGLY BLOCKED: ${renameSelf.error.message}` : "allowed, as intended",
     );
 
+    console.log("\n  Provider column exposure (0020)\n");
+
+    /**
+     * The leak 0020 closed. `providers: read approved` was row-level, so it
+     * handed every signed-in user every column of every approved artisan —
+     * MoMo number, Ghana Card number, payout code and a live GPS point. Anyone
+     * can sign up, so that was the whole price.
+     *
+     * Asserted from a CLIENT session, because the artisan's own session can
+     * legitimately see all of it and would pass this test while it was broken.
+     */
+    const { data: probeLink } = await admin.auth.admin.generateLink({
+      type: "magiclink",
+      email: syntheticEmail("+233241111111"),
+    });
+
+    const probeAuth = createClient(url, anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: probeSession } = probeLink?.properties?.hashed_token
+      ? await probeAuth.auth.verifyOtp({
+          type: "magiclink",
+          token_hash: probeLink.properties.hashed_token,
+        })
+      : { data: null };
+
+    if (probeSession?.session) {
+      const clientSession = createClient(url, anonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+        global: { headers: { Authorization: `Bearer ${probeSession.session.access_token}` } },
+      });
+
+      const raid = await clientSession
+        .from("providers")
+        .select("profile_id, momo_number, ghana_card_number, payout_recipient_code, current_location");
+      check(
+        "a client cannot read the providers table at all",
+        (raid.data?.length ?? 0) === 0,
+        raid.error
+          ? `blocked: ${raid.error.code}`
+          : `${raid.data?.length ?? 0} row(s) visible${(raid.data?.length ?? 0) > 0 ? " — LEAKING" : ""}`,
+      );
+
+      // The replacement surface has to still work, or the fix just broke the
+      // product instead of securing it.
+      const safe = await clientSession.from("provider_public").select("full_name, rating_avg, bio");
+      check(
+        "the safe provider view is readable",
+        safe.error === null && (safe.data?.length ?? 0) > 0,
+        safe.error ? `ERROR ${safe.error.message}` : `${safe.data?.length} artisan(s) visible`,
+      );
+
+      for (const column of [
+        "momo_number",
+        "ghana_card_number",
+        "payout_recipient_code",
+        "current_location",
+        "suspension_reason",
+      ]) {
+        const probe = await clientSession.from("provider_public").select(column);
+        check(
+          `provider_public does not expose ${column}`,
+          probe.error !== null,
+          probe.error ? "absent" : "*** EXPOSED IN THE VIEW ***",
+        );
+      }
+    }
+
     console.log("\n  Phase 2 — verification (0008 / 0010)\n");
 
     // The gaps function is SECURITY DEFINER over somebody's identity documents,
