@@ -97,3 +97,24 @@ export async function getPaymentByReference(reference: string): Promise<PaymentR
 
   return data ?? null;
 }
+
+/**
+ * What is left to pay.
+ *
+ * `balance_due_for_job` (migration 0015) derives it as everything agreed less
+ * everything banked, rather than storing it — so a partial refund or a
+ * reconciled duplicate cannot leave the figure quietly wrong. Note that
+ * `quotes.total` excludes transport, which is why this is never computed here.
+ */
+export async function getBalanceDue(jobId: string): Promise<number | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("balance_due_for_job", { p_job_id: jobId });
+
+  if (error) {
+    console.error("[payments] getBalanceDue failed:", error.message);
+    return null;
+  }
+
+  return data === null ? null : Number(data);
+}

@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, ImageOff, MapPin, Mic } from "lucide-react";
 
 import { QuoteBuilder } from "@/app/(app)/provider/jobs/[jobId]/_components/quote-builder";
+import { ExecutionControls } from "@/components/jobs/execution-controls";
+import { CompletionPhotos } from "@/components/jobs/completion-photos";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CategoryIcon } from "@/components/marketplace/category-icon";
@@ -52,6 +54,11 @@ export default async function ProviderJobPage({ params }: PageProps<"/provider/j
   const canQuote = job.status === "quote_pending";
   const awaitingClient = job.status === "quote_sent";
 
+  // The execution half of the job. `advance_job_execution` decides what is
+  // legal; this only decides what to put on screen.
+  const onSite = ["deposit_paid", "en_route", "arrived", "in_progress"].includes(job.status);
+  const completionPhotos = photoRows.filter((photo) => photo.stage === "completion");
+
   return (
     <div className="space-y-6">
       <div className="space-y-3">
@@ -82,6 +89,25 @@ export default async function ProviderJobPage({ params }: PageProps<"/provider/j
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <div className="min-w-0 space-y-6">
+          {onSite && (
+            <ExecutionControls
+              jobId={jobId}
+              status={job.status}
+              completionPhotoCount={completionPhotos.length}
+            />
+          )}
+
+          {/* Only once work is under way. Asking for a "finished work" photo
+              before anything has been done is asking for a photo of a problem. */}
+          {job.status === "in_progress" && (
+            <CompletionPhotos
+              jobId={jobId}
+              photos={photos.filter((photo) =>
+                completionPhotos.some((row) => row.id === photo.id),
+              )}
+            />
+          )}
+
           {canQuote && (
             <QuoteBuilder
               jobId={jobId}

@@ -6,12 +6,14 @@ import { ArrowLeft, FileText, ImageOff, MapPin, Mic, Phone } from "lucide-react"
 
 import { CancelJob } from "@/components/jobs/cancel-job";
 import { CategoryIcon } from "@/components/marketplace/category-icon";
+import { BalancePanel } from "@/components/jobs/balance-panel";
 import { DepositPanel } from "@/components/jobs/deposit-panel";
+import { SignOff } from "@/components/jobs/sign-off";
 import { MatchingProgress } from "@/components/jobs/matching-progress";
 import { PaymentReceipt } from "@/components/jobs/payment-receipt";
 import { RaiseDispute } from "@/components/jobs/raise-dispute";
 import { RateJob } from "@/components/jobs/rate-job";
-import { getDepositDue, legState, listJobPayments } from "@/lib/payments/queries";
+import { getBalanceDue, getDepositDue, legState, listJobPayments } from "@/lib/payments/queries";
 import { detectMomoNetwork } from "@/lib/phone";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { QuoteReview } from "@/components/jobs/quote-review";
@@ -81,6 +83,11 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
   // job that has not got that far.
   const depositDue =
     job.status === "awaiting_deposit" && !deposit.paid ? await getDepositDue(jobId) : null;
+
+  // Same rule: the RPC raises unless a quote has been accepted, so asking on
+  // every view would log noise for every job that never got that far.
+  const balanceDue = job.status === "awaiting_balance" ? await getBalanceDue(jobId) : null;
+  const balance = legState(payments, "balance");
 
   const presentation = jobStatus(job.status);
 
@@ -281,6 +288,21 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
         </div>
 
         <div className="space-y-5">
+          {/* The artisan has marked the work done and it is the client's move.
+              Sign-off and payment are two steps, not one: mobile money needs a
+              fresh prompt the client approves, so the money cannot move on the
+              signature itself (PLAN.md §4). */}
+          {job.status === "awaiting_signoff" && <SignOff jobId={jobId} />}
+
+          {job.status === "awaiting_balance" && balanceDue !== null && (
+            <BalancePanel
+              jobId={jobId}
+              amountDue={balanceDue}
+              defaultNetwork={profile ? detectMomoNetwork(profile.phone) : null}
+              lastFailure={balance.lastFailure?.failure_reason ?? null}
+            />
+          )}
+
           {/* The rating comes first on a finished job. It is the one thing we
               want from the client at this point, and burying it under the
               receipt is how a marketplace ends up with no reviews. */}

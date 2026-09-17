@@ -839,3 +839,138 @@ export async function raiseDisputeAction(
   revalidatePath(`/client/jobs/${jobId}`);
   return state({ ok: true });
 }
+
+/* -------------------------------------------------------------------------
+ * Phase 5 — sign-off and the balance
+ * ---------------------------------------------------------------------- */
+
+const signOffSchema = z.object({
+  jobId: z.string().uuid("That job could not be found."),
+  signature: z
+    .string()
+    .trim()
+    .min(2, "Type your name to sign.")
+    .max(80, "That is longer than a name."),
+  notes: z.string().trim().max(1000, "Keep the note under 1000 characters.").optional(),
+});
+
+/**
+ * Sign the work off.
+ *
+ * `sign_off_job` (migration 0015) holds the rules — that the caller is the
+ * client on the job, that the artisan has actually marked the work complete,
+ * and that the signature is recorded against the job for good. The signature
+ * is a typed name rather than a drawn one: a canvas scribble on a phone is
+ * harder to produce, no more binding, and impossible to read back in a dispute.
+ */
+export async function signOffJobAction(
+  _prev: JobActionState | null,
+  formData: FormData,
+): Promise<JobActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+
+  const parsed = signOffSchema.safeParse({
+    jobId: formData.get("jobId"),
+    signature: formData.get("signature"),
+    notes: formData.get("notes") || undefined,
+  });
+
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      fieldErrors[String(issue.path[0] ?? "form")] = issue.message;
+    }
+    return state({ ok: false, fieldErrors });
+  }
+
+  const { jobId, signature, notes } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("sign_off_job", {
+    p_job_id: jobId,
+    p_signature: signature,
+    p_client_notes: notes ?? null,
+  });
+
+  if (error) {
+    console.error("[client] sign_off_job failed", error.message);
+    return state({ ok: false, error: error.message });
+  }
+
+  revalidatePath(`/client/jobs/${jobId}`);
+  return state({ ok: true });
+}
+
+/**
+ * Start the balance payment.
+ *
+ * The same shape as `startDepositAction`, and separate on purpose rather than
+ * a shared function with a `leg` argument: the two legs differ in what they
+ * check before charging, and PLAN.md §4 is emphatic that the balance is
+ * collected while the artisan is still standing there. Collapsing them invites
+ * someone to later make the balance chargeable from a state where nobody is on
+ * site.
+ */
+export async function startBalanceAction(
+  jobId: string,
+  network: MomoNetwork,
+): Promise<JobActionState & { authorizationUrl?: string }> {
+  const parsedJob = z.string().uuid().safeParse(jobId);
+  const parsedNetwork = z.enum(["mtn", "telecel", "airteltigo"]).safeParse(network);
+
+  if (!parsedJob.success || !parsedNetwork.success) {
+    return state({ ok: false, error: "That payment could not be started." });
+  }
+
+  const job = await loadOwnedJob(parsedJob.data);
+  if (!job) return state({ ok: false, error: "That job could not be found." });
+
+  if (job.status !== "awaiting_balance") {
+    return state({
+      ok: false,
+      error:
+        job.status === "paid" || job.status === "closed"
+          ? "This job is already paid for."
+          : "Sign the work off first — the balance is due after that.",
+    });
+  }
+
+  const supabase = await createClient();
+
+  // Asked of the database rather than derived here. `quotes.total` excludes
+  // transport, so any arithmetic in this file would drift from what is owed.
+  const { data: amount, error: amountError } = await supabase.rpc("balance_due_for_job", {
+    p_job_id: parsedJob.data,
+  });
+
+  if (amountError || amount === null) {
+    console.error("[payments] balance amount failed", amountError?.message);
+    return state({ ok: false, error: "We could not work out what is due. Try again." });
+  }
+
+  const profile = await getCurrentProfile();
+  if (!profile) return state({ ok: false, error: "You need to be signed in." });
+
+  try {
+    const provider = getPaymentProvider();
+    const charge = await provider.initializeCharge({
+      jobId: parsedJob.data,
+      leg: "balance",
+      amountGhs: Number(amount),
+      customerPhone: profile.phone,
+      channel: "momo",
+      momoNetwork: parsedNetwork.data,
+      metadata: { reference: job.reference },
+    });
+
+    revalidatePath(`/client/jobs/${parsedJob.data}`);
+    return { ...state({ ok: true }), authorizationUrl: charge.authorizationUrl };
+  } catch (error) {
+    console.error("[payments] balance initializeCharge failed", error);
+    return state({
+      ok: false,
+      error: "We could not reach the payment service. Nothing was charged — try again.",
+    });
+  }
+}
