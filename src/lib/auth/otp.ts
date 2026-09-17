@@ -85,6 +85,61 @@ export async function issueOtp({
     return { ok: false, error: "Could not send a code right now. Try again.", simulated: sms.simulated };
   }
 
+  /**
+   * Per-IP, across every number.
+   *
+   * The per-number limits below cannot see the attack that actually costs
+   * money: every Ghanaian mobile prefix is public, so one host can walk
+   * 024xxxxxxx upward and pay for an SMS on each step while never asking for
+   * the same number twice. PLAN.md §13 asks for "per number and per IP"; this
+   * is the second half, and it went unbuilt until Phase 7 even though
+   * `created_ip` has been written since Phase 0.
+   *
+   * Checked before the cooldown so a flood is turned away on the cheapest
+   * possible query rather than after two more round trips.
+   */
+  if (ip) {
+    const { data: throttled, error: throttleError } = await admin.rpc("otp_ip_throttled", {
+      p_ip: ip,
+    });
+
+    if (throttleError) {
+      // Fail open, deliberately. This check protects a budget; the per-number
+      // limits protect the user. Turning a broken RPC into a login outage
+      // trades a small cost risk for a total one.
+      console.error("[otp] ip throttle check failed", throttleError.message);
+    } else if (throttled) {
+      console.warn(`[otp] refused — ip ${ip} over the hourly cap`);
+      return {
+        ok: false,
+        error: "Too many codes requested from this connection. Try again in an hour.",
+        retryAfter: 3600,
+        simulated: sms.simulated,
+      };
+    }
+  }
+
+  /**
+   * The circuit breaker. Only counts real spend, so the simulation phase does
+   * not consume a budget that has not started yet.
+   */
+  if (!sms.simulated) {
+    const { data: exhausted, error: budgetError } = await admin.rpc("sms_budget_exhausted");
+
+    if (budgetError) {
+      console.error("[otp] budget check failed", budgetError.message);
+    } else if (exhausted) {
+      // Loud, because this is either an attack in progress or a genuine day of
+      // traffic nobody planned for, and both want a human.
+      console.error("[otp] REFUSED — daily SMS cap reached; no more codes will send today");
+      return {
+        ok: false,
+        error: "We cannot send codes right now. Please try again later or contact support.",
+        simulated: sms.simulated,
+      };
+    }
+  }
+
   if (recent && recent.length > 0) {
     const last = new Date(recent[0].created_at).getTime();
     const elapsed = Math.floor((Date.now() - last) / 1000);

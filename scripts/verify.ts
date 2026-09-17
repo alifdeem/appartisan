@@ -59,6 +59,48 @@ async function main() {
     cats.error ? `ERROR ${cats.error.message}` : `${cats.data?.length} categories`,
   );
 
+  console.log("\n  Reputation privacy (0022)\n");
+
+  /**
+   * `ratings: public read` and `provider_categories: read` were both
+   * `using (true)` to anon. Public reputation is intended; a public, queryable
+   * record of which client hired which artisan is not, and the ratings table
+   * carries client_id.
+   */
+  const anonRatings = await anon.from("ratings").select("client_id", { count: "exact", head: true });
+  check(
+    "anon cannot read the ratings table",
+    (anonRatings.count ?? 0) === 0,
+    anonRatings.error ? `blocked: ${anonRatings.error.code}` : `${anonRatings.count} row(s) visible`,
+  );
+
+  const anonTrades = await anon
+    .from("provider_categories")
+    .select("provider_id", { count: "exact", head: true });
+  check(
+    "anon cannot read the artisan-to-trade map",
+    (anonTrades.count ?? 0) === 0,
+    anonTrades.error ? `blocked: ${anonTrades.error.code}` : `${anonTrades.count} row(s) visible`,
+  );
+
+  // The replacement surfaces must still work, or this secured nothing and
+  // broke reputation instead.
+  const publicRatings = await anon.from("rating_public").select("stars, provider_id");
+  check(
+    "reputation is still public through rating_public",
+    publicRatings.error === null,
+    publicRatings.error ? `ERROR ${publicRatings.error.message}` : `${publicRatings.data?.length} rating(s)`,
+  );
+
+  for (const column of ["client_id", "job_id"]) {
+    const probe = await anon.from("rating_public").select(column);
+    check(
+      `rating_public does not expose ${column}`,
+      probe.error !== null,
+      probe.error ? "absent" : "*** EXPOSED ***",
+    );
+  }
+
   console.log("\n  Privilege escalation\n");
 
   // RLS filtering an UPDATE to zero rows is not an error, so asserting on the

@@ -726,6 +726,17 @@ export interface Database {
       apply_reliability_scoring: { Args: Record<string, never>; Returns: number };
 
       update_setting: { Args: { p_key: string; p_value: unknown }; Returns: unknown };
+
+      /**
+       * Phase 7 (migration 0021). Abuse and cost limits.
+       *
+       * Backend only — they read across every account's OTP history and the
+       * platform's whole spend, and the OTP flow that consults them runs as the
+       * service role before any session exists.
+       */
+      otp_ip_throttled: { Args: { p_ip: string }; Returns: boolean };
+      sms_spend_today: { Args: Record<string, never>; Returns: number };
+      sms_budget_exhausted: { Args: Record<string, never>; Returns: boolean };
       save_category: {
         Args: {
           p_id: string | null;
