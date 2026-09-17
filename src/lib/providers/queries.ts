@@ -1,12 +1,13 @@
 import "server-only";
 
 import { PROVIDER_DOC_BUCKET } from "@/lib/providers/documents";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import type {
   CategoryRow,
   ProfileRow,
   ProviderDocumentRow,
   ProviderRow,
+  ReliabilityStats,
   VerificationReviewRow,
 } from "@/lib/supabase/types";
 
@@ -282,4 +283,28 @@ export async function listVerificationReviews(providerId: string): Promise<Revie
   }
 
   return (data ?? []) as unknown as ReviewWithAdmin[];
+}
+
+/**
+ * The signed-in artisan's own reliability record.
+ *
+ * `provider_reliability` refuses a caller who is neither the artisan nor an
+ * admin, so this needs no ownership check of its own — the rule lives in one
+ * place and holds for every caller (PLAN.md §8).
+ */
+export async function getMyReliability(): Promise<ReliabilityStats | null> {
+  const profile = await getCurrentProfile();
+  if (!profile) return null;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("provider_reliability", {
+    p_provider_id: profile.id,
+  });
+
+  if (error) {
+    console.error("[providers] getMyReliability failed:", error.message);
+    return null;
+  }
+
+  return data as ReliabilityStats;
 }

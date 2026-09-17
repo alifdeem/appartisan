@@ -3,7 +3,14 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { JOB_PHOTO_BUCKET, VOICE_NOTE_BUCKET } from "@/lib/jobs/media";
 import { jobStatus } from "@/lib/jobs/status";
-import type { CategoryRow, JobEventRow, JobPhotoRow, JobRow } from "@/lib/supabase/types";
+import type {
+  CategoryRow,
+  DisputeRow,
+  JobEventRow,
+  JobPhotoRow,
+  JobRow,
+  RatingRow,
+} from "@/lib/supabase/types";
 
 /**
  * Client-side reads for the job screens.
@@ -234,4 +241,56 @@ export function summariseJobs(jobs: JobWithCategory[]) {
   }
 
   return { drafts, active, completed, total: jobs.length };
+}
+
+/* -------------------------------------------------------------------------
+ * Phase 6 — rating and dispute for one job
+ * ---------------------------------------------------------------------- */
+
+/**
+ * The client's own rating of a job, if they have left one.
+ *
+ * `ratings.job_id` is the primary key, so this is at most one row. Read under
+ * RLS like everything else — the public-read policy on ratings is deliberate
+ * (a rating is reputation, and reputation is public), but the job screen only
+ * ever asks about its own job.
+ */
+export async function getJobRating(jobId: string): Promise<RatingRow | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("ratings")
+    .select("*")
+    .eq("job_id", jobId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[jobs] getJobRating failed:", error.message);
+    return null;
+  }
+
+  return (data as RatingRow | null) ?? null;
+}
+
+/**
+ * The most recent dispute on a job. `raise_dispute` refuses a second open one,
+ * so at most one is ever live; older resolved ones are kept for the record.
+ */
+export async function getJobDispute(jobId: string): Promise<DisputeRow | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("disputes")
+    .select("*")
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[jobs] getJobDispute failed:", error.message);
+    return null;
+  }
+
+  return (data as DisputeRow | null) ?? null;
 }

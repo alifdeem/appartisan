@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/payments",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/reliability",
+      "schedule": "0 3 * * *"
     }
   ]
 }

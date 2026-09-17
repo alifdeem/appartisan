@@ -267,6 +267,34 @@ async function main() {
     await render("verification queue", "/admin/verification", adminUser.cookie);
     await render("stalled jobs", "/admin/matching", adminUser.cookie);
     await render("transport bands", "/admin/zones", adminUser.cookie);
+    await render("disputes queue", "/admin/disputes", adminUser.cookie);
+    await render("platform settings", "/admin/settings", adminUser.cookie);
+
+    /**
+     * The cron routes, unauthenticated and over HTTP.
+     *
+     * These carry a bearer token rather than a session cookie, so for a while
+     * the proxy matched them, saw no user, and 307'd every one to /login. A
+     * scheduler follows the redirect, receives a 200 from the login page and
+     * reports success — so the offer sweep silently stopped expiring offers
+     * and nothing anywhere said so. The e2e suites never caught it because
+     * they call the RPCs directly rather than over HTTP.
+     *
+     * A redirect is the failure being tested for, so redirects are not
+     * followed and the status itself is the assertion.
+     */
+    console.log("\n  Cron routes reachable\n");
+
+    for (const path of ["/api/cron/matching", "/api/cron/payments", "/api/cron/reliability"]) {
+      const response = await fetch(`${origin}${path}`, { redirect: "manual" });
+      check(
+        `${path} is not intercepted by the proxy`,
+        response.status === 200,
+        response.status === 200
+          ? "HTTP 200"
+          : `HTTP ${response.status}${response.status === 307 ? " — the proxy is swallowing it" : ""}`,
+      );
+    }
 
     // Give the server a moment to flush anything it logged while rendering.
     await new Promise((resolve) => setTimeout(resolve, 1500));

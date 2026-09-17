@@ -722,3 +722,120 @@ export async function cancelJobAction(
   revalidatePath(`/client/jobs/${jobId}`);
   return state({ ok: true });
 }
+
+/* -------------------------------------------------------------------------
+ * Phase 6 — rating and disputes
+ * ---------------------------------------------------------------------- */
+
+const rateSchema = z.object({
+  jobId: z.string().uuid("That job could not be found."),
+  stars: z.coerce.number().int().min(1, "Choose between 1 and 5 stars.").max(5, "Choose between 1 and 5 stars."),
+  comment: z.string().trim().max(1000, "Keep the comment under 1000 characters.").optional(),
+  tags: z.string().optional(),
+});
+
+/**
+ * Rate the artisan.
+ *
+ * Every rule lives in `rate_job` (migration 0018): that the caller booked the
+ * job, that the job is actually paid for, that one job carries one rating. The
+ * action's job is to parse a form and report the outcome — same delegation as
+ * the admin actions, for the same reason.
+ */
+export async function rateJobAction(
+  _prev: JobActionState | null,
+  formData: FormData,
+): Promise<JobActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+
+  const parsed = rateSchema.safeParse({
+    jobId: formData.get("jobId"),
+    stars: formData.get("stars"),
+    comment: formData.get("comment") || undefined,
+    tags: formData.get("tags") || undefined,
+  });
+
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      fieldErrors[String(issue.path[0] ?? "form")] = issue.message;
+    }
+    return state({ ok: false, fieldErrors });
+  }
+
+  const { jobId, stars, comment, tags } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("rate_job", {
+    p_job_id: jobId,
+    p_stars: stars,
+    p_comment: comment ?? null,
+    p_tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+  });
+
+  if (error) {
+    console.error("[client] rate_job failed", error.message);
+    return state({ ok: false, error: error.message });
+  }
+
+  revalidatePath(`/client/jobs/${jobId}`);
+  return state({ ok: true });
+}
+
+const disputeSchema = z.object({
+  jobId: z.string().uuid("That job could not be found."),
+  reason: z.string().trim().min(5, "Say what went wrong.").max(200, "Keep the summary short."),
+  detail: z.string().trim().max(2000, "Keep the detail under 2000 characters.").optional(),
+  evidencePaths: z.string().optional(),
+});
+
+/**
+ * Raise a dispute.
+ *
+ * Evidence images follow the same rule as job photos: the browser uploads
+ * straight to Storage and only the resulting paths come through here, because
+ * a Server Action body is capped at 1MB and a photo is not.
+ */
+export async function raiseDisputeAction(
+  _prev: JobActionState | null,
+  formData: FormData,
+): Promise<JobActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+
+  const parsed = disputeSchema.safeParse({
+    jobId: formData.get("jobId"),
+    reason: formData.get("reason"),
+    detail: formData.get("detail") || undefined,
+    evidencePaths: formData.get("evidencePaths") || undefined,
+  });
+
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      fieldErrors[String(issue.path[0] ?? "form")] = issue.message;
+    }
+    return state({ ok: false, fieldErrors });
+  }
+
+  const { jobId, reason, detail, evidencePaths } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("raise_dispute", {
+    p_job_id: jobId,
+    p_reason: reason,
+    p_detail: detail ?? null,
+    p_evidence_paths: evidencePaths
+      ? evidencePaths.split(",").map((p) => p.trim()).filter(Boolean)
+      : [],
+  });
+
+  if (error) {
+    console.error("[client] raise_dispute failed", error.message);
+    return state({ ok: false, error: error.message });
+  }
+
+  revalidatePath(`/client/jobs/${jobId}`);
+  return state({ ok: true });
+}

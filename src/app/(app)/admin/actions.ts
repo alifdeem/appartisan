@@ -265,3 +265,112 @@ export async function retireTransportZoneAction(zoneId: string): Promise<AdminAc
   revalidatePath("/admin/zones");
   return state({ ok: true });
 }
+
+/* -------------------------------------------------------------------------
+ * Phase 6 — disputes and platform configuration
+ * ---------------------------------------------------------------------- */
+
+const resolveSchema = z.object({
+  disputeId: z.string().uuid("That dispute could not be found."),
+  status: z.enum(["investigating", "resolved", "rejected"], {
+    message: "Choose investigating, resolved or rejected.",
+  }),
+  resolution: z.string().trim().max(2000, "Keep the note under 2000 characters.").optional(),
+});
+
+/**
+ * Resolve a dispute.
+ *
+ * `resolve_dispute` (migration 0018) holds the rules: only an admin, only the
+ * three legal outcomes, and a closing outcome must carry a written decision.
+ * Six weeks later that sentence is the only thing that will explain why the
+ * money went where it went.
+ */
+export async function resolveDisputeAction(
+  _prev: AdminActionState | null,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const parsed = resolveSchema.safeParse({
+    disputeId: formData.get("disputeId"),
+    status: formData.get("status"),
+    resolution: formData.get("resolution") || undefined,
+  });
+
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      fieldErrors[String(issue.path[0] ?? "form")] = issue.message;
+    }
+    return state({ ok: false, fieldErrors });
+  }
+
+  const { disputeId, status: decision, resolution } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("resolve_dispute", {
+    p_dispute_id: disputeId,
+    p_status: decision,
+    p_resolution: resolution ?? "",
+  });
+
+  if (error) {
+    console.error("[admin] resolve_dispute failed", error.message);
+    return state({ ok: false, error: error.message });
+  }
+
+  revalidatePath("/admin/disputes");
+  return state({ ok: true });
+}
+
+const settingSchema = z.object({
+  key: z.string().min(1),
+  value: z.string().trim().min(1, "Enter a value."),
+});
+
+/**
+ * Change a platform setting.
+ *
+ * The value arrives as a string from a form and has to become JSON, because
+ * `settings.value` is jsonb and holds numbers, arrays and objects depending on
+ * the key. Parsing here rather than in the database keeps the error message
+ * something a person can act on; `update_setting` still enforces the ranges
+ * that matter, so a bad value cannot get in through another caller.
+ */
+export async function updateSettingAction(
+  _prev: AdminActionState | null,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const parsed = settingSchema.safeParse({
+    key: formData.get("key"),
+    value: formData.get("value"),
+  });
+
+  if (!parsed.success) {
+    return state({ ok: false, error: parsed.error.issues[0]?.message ?? "Enter a value." });
+  }
+
+  const { key, value } = parsed.data;
+
+  let parsedValue: unknown;
+  try {
+    parsedValue = JSON.parse(value);
+  } catch {
+    return state({
+      ok: false,
+      fieldErrors: {
+        [key]: "That is not valid JSON. A number is just 12; a list looks like [5,10,20].",
+      },
+    });
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_setting", { p_key: key, p_value: parsedValue });
+
+  if (error) {
+    console.error("[admin] update_setting failed", error.message);
+    return state({ ok: false, fieldErrors: { [key]: error.message } });
+  }
+
+  revalidatePath("/admin/settings");
+  return state({ ok: true });
+}

@@ -158,6 +158,17 @@ export const config = {
   /**
    * Skip static assets and image optimisation — running an auth round-trip for
    * every SVG is pure latency.
+   *
+   * `api/cron` is excluded for a different and more serious reason. Those
+   * routes carry a bearer token, not a session cookie, so the proxy saw no user
+   * and 307'd them to /login — every one of them, silently. A scheduler follows
+   * the redirect, gets a 200 back from the login page, and reports success, so
+   * the platform looks healthy while the offer sweep never expires an offer and
+   * the payment reconciliation never reconciles anything. It survived until now
+   * because the e2e suites call the RPCs directly rather than over HTTP.
+   * `api/webhooks` was already excluded for exactly this reason.
    */
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };

@@ -9,6 +9,8 @@ import { CategoryIcon } from "@/components/marketplace/category-icon";
 import { DepositPanel } from "@/components/jobs/deposit-panel";
 import { MatchingProgress } from "@/components/jobs/matching-progress";
 import { PaymentReceipt } from "@/components/jobs/payment-receipt";
+import { RaiseDispute } from "@/components/jobs/raise-dispute";
+import { RateJob } from "@/components/jobs/rate-job";
 import { getDepositDue, legState, listJobPayments } from "@/lib/payments/queries";
 import { detectMomoNetwork } from "@/lib/phone";
 import { getCurrentProfile } from "@/lib/supabase/server";
@@ -22,6 +24,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { isCancellable, jobStatus } from "@/lib/jobs/status";
 import {
   getClientJob,
+  getJobDispute,
+  getJobRating,
   listJobEvents,
   listJobPhotos,
   signJobPhotos,
@@ -63,6 +67,13 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
   ]);
 
   const [payments, profile] = await Promise.all([listJobPayments(jobId), getCurrentProfile()]);
+
+  // Only fetched once the job is finished — a rating and a dispute are both
+  // meaningless before then, and this screen is already doing plenty of reads.
+  const isFinished = ["paid", "closed"].includes(job.status);
+  const [rating, dispute] = isFinished
+    ? await Promise.all([getJobRating(jobId), getJobDispute(jobId)])
+    : [null, null];
   const deposit = legState(payments, "deposit");
 
   // Only asked for when it is actually owed — the RPC raises if no quote has
@@ -270,12 +281,19 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
         </div>
 
         <div className="space-y-5">
+          {/* The rating comes first on a finished job. It is the one thing we
+              want from the client at this point, and burying it under the
+              receipt is how a marketplace ends up with no reviews. */}
+          {isFinished && job.provider_id && <RateJob jobId={jobId} existing={rating} />}
+
           {/* Above the timeline: somebody checking a job after paying is
               looking for the money, not for the history of the match. */}
           <PaymentReceipt payments={payments} />
 
           {/* The invoice only exists once the money is in — before that the
               quote is the document that describes the price. */}
+          {isFinished && <RaiseDispute jobId={jobId} existing={dispute} />}
+
           {isInvoiceable && (
             <Link
               href={`/client/jobs/${jobId}/invoice`}

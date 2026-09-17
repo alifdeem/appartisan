@@ -233,6 +233,57 @@ export type PayoutRow = {
   settled_at: string | null;
 }
 
+/**
+ * A rating. `job_id` is the primary key, so one job carries one rating and a
+ * client revising theirs corrects it rather than stacking a second.
+ */
+export type RatingRow = {
+  job_id: string;
+  client_id: string;
+  provider_id: string;
+  stars: number;
+  comment: string | null;
+  tags: string[];
+  created_at: string;
+}
+
+export type DisputeRow = {
+  id: string;
+  job_id: string;
+  raised_by: string;
+  reason: string;
+  detail: string | null;
+  /** Storage paths, not URLs. Private bucket; signed on read. */
+  evidence_paths: string[];
+  status: DisputeStatus;
+  resolution: string | null;
+  admin_id: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+/** What `provider_reliability` returns. Mirrors PLAN.md §8. */
+export interface ReliabilityStats {
+  window_days: number;
+  offers: number;
+  accepted: number;
+  /** Null when no offers went out in the window — not zero, which reads as "refused everything". */
+  accept_rate: number | null;
+  cancels: number;
+  no_shows: number;
+  rating_avg: number;
+  rating_count: number;
+  jobs_completed: number;
+  /** False below the offer floor: a new artisan is not scored at all. */
+  scored: boolean;
+}
+
+export interface ReliabilityVerdict {
+  action: "ok" | "deprioritise" | "review" | "suspend";
+  reasons: string[];
+  stats: ReliabilityStats;
+}
+
 export type TransportZoneRow = Timestamps & {
   id: string;
   city: string;
@@ -462,6 +513,11 @@ export interface Database {
       >;
       transport_zones: Table<TransportZoneRow, "id" | "created_at" | "provider_share_pct" | "is_active">;
       settings: Table<SettingRow, "description" | "updated_at" | "updated_by">;
+      ratings: Table<RatingRow, "comment" | "tags" | "created_at">;
+      disputes: Table<
+        DisputeRow,
+        "id" | "detail" | "evidence_paths" | "status" | "resolution" | "admin_id" | "created_at" | "resolved_at"
+      >;
     };
     Views: Record<string, never>;
     Functions: {
@@ -627,6 +683,60 @@ export interface Database {
           amount: number;
           created_at: string;
         }[];
+      };
+
+      /**
+       * Phase 6 (migrations 0018, 0019). Trust and admin.
+       *
+       * `rate_job` upserts on `ratings.job_id`, so a client revising their
+       * rating an hour later corrects it rather than adding a second one.
+       * Reputation figures are recomputed from the table by trigger, never
+       * incremented — see 0019.
+       */
+      rate_job: {
+        Args: {
+          p_job_id: string;
+          p_stars: number;
+          p_comment?: string | null;
+          p_tags?: string[] | null;
+        };
+        Returns: void;
+      };
+      raise_dispute: {
+        Args: {
+          p_job_id: string;
+          p_reason: string;
+          p_detail?: string | null;
+          p_evidence_paths?: string[] | null;
+        };
+        Returns: string;
+      };
+      resolve_dispute: {
+        Args: { p_dispute_id: string; p_status: DisputeStatus; p_resolution: string };
+        Returns: DisputeStatus;
+      };
+      /**
+       * Readable by the artisan themselves and by an admin, nobody else.
+       * Artisans see their own score because hiding it and then punishing
+       * people for it is how you lose supply (PLAN.md §8).
+       */
+      provider_reliability: { Args: { p_provider_id: string }; Returns: ReliabilityStats };
+      reliability_verdict: { Args: { p_provider_id: string }; Returns: ReliabilityVerdict };
+      /** Backend only. Suspends into an admin's queue; never bans outright. */
+      apply_reliability_scoring: { Args: Record<string, never>; Returns: number };
+
+      update_setting: { Args: { p_key: string; p_value: unknown }; Returns: unknown };
+      save_category: {
+        Args: {
+          p_id: string | null;
+          p_name: string;
+          p_slug: string;
+          p_icon: string;
+          p_description?: string | null;
+          p_is_active?: boolean;
+          p_sort_order?: number;
+        };
+        Returns: string;
       };
     };
     Enums: {

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Map, Radar, ShieldCheck } from "lucide-react";
+import { ArrowRight, Map, Radar, ShieldAlert, ShieldCheck, SlidersHorizontal } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { RoadmapPanel } from "@/components/app/roadmap-panel";
@@ -21,6 +21,7 @@ export default async function AdminDashboard() {
     { count: approvedCount },
     { count: categoryCount },
     { count: stalledCount },
+    { count: openDisputes },
   ] = await Promise.all([
     supabase.from("providers").select("profile_id", { count: "exact", head: true }),
     supabase
@@ -36,6 +37,10 @@ export default async function AdminDashboard() {
       .from("jobs")
       .select("id", { count: "exact", head: true })
       .in("status", ["unmatched", "expired_no_match"]),
+    supabase
+      .from("disputes")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["open", "investigating"]),
   ]);
 
   // A worked example on the reference job from PLAN.md §4, computed by the same
@@ -124,6 +129,64 @@ export default async function AdminDashboard() {
             {stalledCount}
           </span>
         )}
+
+        <ArrowRight
+          className="size-4 shrink-0 text-ink-300 transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5 group-hover:text-ink-500"
+          aria-hidden
+        />
+      </Link>
+
+      <Link
+        href="/admin/disputes"
+        className="group flex items-center gap-4 rounded-card border border-ink-200 bg-ink-0 px-5 py-4 shadow-sm transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong hover:border-ink-300 hover:shadow-md"
+      >
+        <span
+          className={
+            (openDisputes ?? 0) > 0
+              ? "grid size-11 shrink-0 place-items-center rounded-full bg-danger-50 text-danger-700"
+              : "grid size-11 shrink-0 place-items-center rounded-full bg-ink-100 text-ink-500"
+          }
+        >
+          <ShieldAlert className="size-5" aria-hidden />
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.9375rem] font-semibold text-ink-900">Disputes</span>
+          <span className="block text-sm text-ink-600">
+            {(openDisputes ?? 0) === 0
+              ? "Nothing reported."
+              : `${openDisputes} waiting on a decision.`}
+          </span>
+        </span>
+
+        {(openDisputes ?? 0) > 0 && (
+          <span className="tabular shrink-0 font-mono text-2xl font-semibold text-ink-900">
+            {openDisputes}
+          </span>
+        )}
+
+        <ArrowRight
+          className="size-4 shrink-0 text-ink-300 transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5 group-hover:text-ink-500"
+          aria-hidden
+        />
+      </Link>
+
+      <Link
+        href="/admin/settings"
+        className="group flex items-center gap-4 rounded-card border border-ink-200 bg-ink-0 px-5 py-4 shadow-sm transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong hover:border-ink-300 hover:shadow-md"
+      >
+        <span className="grid size-11 shrink-0 place-items-center rounded-full bg-ink-100 text-ink-500">
+          <SlidersHorizontal className="size-5" aria-hidden />
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.9375rem] font-semibold text-ink-900">
+            Platform settings
+          </span>
+          <span className="block text-sm text-ink-600">
+            Commission, deposit split and the reliability thresholds.
+          </span>
+        </span>
 
         <ArrowRight
           className="size-4 shrink-0 text-ink-300 transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5 group-hover:text-ink-500"

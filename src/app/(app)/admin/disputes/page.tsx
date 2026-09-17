@@ -1,0 +1,134 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowLeft, ShieldAlert } from "lucide-react";
+
+import { DisputeDecision } from "./_components/dispute-decision";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { listDisputes } from "@/lib/admin/queries";
+import { formatPhoneForDisplay } from "@/lib/phone";
+import { timeAgo } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Disputes" };
+
+const DECIDED: string[] = ["resolved", "rejected"];
+
+const TONE = {
+  open: "danger",
+  investigating: "warning",
+  resolved: "success",
+  rejected: "neutral",
+} as const;
+
+/**
+ * The disputes queue.
+ *
+ * Ordered as a queue rather than a feed — open first, then oldest — because
+ * the thing that matters is which one has been waiting longest, not which one
+ * arrived last. Resolved disputes stay on the list rather than disappearing:
+ * when the same artisan shows up twice, the previous outcome is the context an
+ * admin needs before making the second call.
+ */
+export default async function DisputesPage() {
+  const disputes = await listDisputes();
+  const live = disputes.filter((d) => !DECIDED.includes(d.status));
+
+  return (
+    <div className="space-y-6">
+      <Link
+        href="/admin"
+        className="inline-flex items-center gap-1.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        Admin
+      </Link>
+
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold text-ink-900">Disputes</h1>
+        <p className="text-[0.9375rem] text-ink-600">
+          {live.length === 0
+            ? "Nothing outstanding."
+            : `${live.length} waiting on a decision.`}
+        </p>
+      </div>
+
+      {disputes.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <ShieldAlert className="mx-auto size-6 text-ink-300" aria-hidden />
+            <p className="mt-2 text-sm font-medium text-ink-800">No disputes raised</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-ink-500">
+              Clients and artisans can both report a problem on a finished job.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <ul className="space-y-3">
+          {disputes.map((dispute) => (
+            <li key={dispute.id}>
+              <Card>
+                <CardContent className="space-y-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-[0.9375rem] font-medium text-ink-900">
+                          {dispute.reason}
+                        </h2>
+                        <Badge tone={TONE[dispute.status]}>{dispute.status}</Badge>
+                      </div>
+                      <p className="tabular font-mono text-sm text-ink-500">
+                        {dispute.job?.reference ?? "job removed"} · raised {timeAgo(dispute.created_at)}
+                      </p>
+                      {dispute.raiser && (
+                        <p className="text-sm text-ink-600">
+                          {dispute.raiser.full_name}{" "}
+                          <span className="text-ink-400">({dispute.raiser.role})</span> ·{" "}
+                          <span className="tabular font-mono">
+                            {formatPhoneForDisplay(dispute.raiser.phone)}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
+                    {dispute.job && (
+                      <Link
+                        href={`/client/jobs/${dispute.job.id}`}
+                        className="shrink-0 text-sm text-ink-500 underline-offset-4 transition-colors hover:text-ink-900 hover:underline"
+                      >
+                        View job
+                      </Link>
+                    )}
+                  </div>
+
+                  {dispute.detail && (
+                    <p className="rounded-field bg-ink-25 px-3 py-2 text-sm text-ink-700">
+                      {dispute.detail}
+                    </p>
+                  )}
+
+                  {dispute.evidence_paths.length > 0 && (
+                    <p className="text-sm text-ink-500">
+                      {dispute.evidence_paths.length} photo
+                      {dispute.evidence_paths.length === 1 ? "" : "s"} attached
+                    </p>
+                  )}
+
+                  {dispute.resolution ? (
+                    <div className="border-t border-ink-200 pt-3">
+                      <p className="font-mono text-[0.6875rem] font-semibold tracking-[0.08em] text-ink-500 uppercase">
+                        Decision
+                      </p>
+                      <p className="mt-0.5 text-sm text-ink-700">{dispute.resolution}</p>
+                    </div>
+                  ) : (
+                    <DisputeDecision disputeId={dispute.id} />
+                  )}
+                </CardContent>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

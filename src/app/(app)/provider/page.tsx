@@ -14,10 +14,12 @@ import { jobStatus } from "@/lib/jobs/status";
 import { Card, CardContent } from "@/components/ui/card";
 import { RoadmapPanel } from "@/components/app/roadmap-panel";
 import { Stat } from "@/components/app/stat";
+import { ReliabilityPanel } from "@/components/provider/reliability-panel";
 import { VerificationPanel } from "@/components/provider/verification-panel";
 import { formatCedis } from "@/lib/money";
 import {
   getMyProvider,
+  getMyReliability,
   listProviderCategories,
   listProviderDocuments,
   listVerificationReviews,
@@ -54,12 +56,13 @@ export default async function ProviderDashboard({
   // normally prevents this; a Server Component must never assume it ran.
   if (!provider) redirect("/");
 
-  const [trades, documents, reviews, liveOffer, jobs] = await Promise.all([
+  const [trades, documents, reviews, liveOffer, jobs, reliability] = await Promise.all([
     listProviderCategories(provider.profile_id),
     listProviderDocuments(provider.profile_id),
     listVerificationReviews(provider.profile_id),
     getLiveOffer(),
     listProviderJobs(),
+    getMyReliability(),
   ]);
 
   const status = provider.verification_status;
@@ -168,6 +171,11 @@ export default async function ProviderDashboard({
           {availability}
         </>
       )}
+
+      {/* Only once they are approved: an artisan still waiting on their Ghana
+          Card review has no offers to have a reliability record about, and a
+          panel full of dashes reads as a problem with them. */}
+      {approved && reliability && <ReliabilityPanel stats={reliability} />}
 
       {activeJobs.length > 0 && (
         <section className="space-y-2.5">
