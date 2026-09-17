@@ -26,7 +26,6 @@ const admin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
 });
 
 const CLIENT_PHONE = "+233241111111";
-const ARTISAN_PHONE = "+233242222242";
 const JOB_POINT = { lng: -0.1805, lat: 5.5561 };
 const MOCK_WEBHOOK_SECRET = "artisangh-mock-webhook-secret";
 

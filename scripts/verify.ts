@@ -225,11 +225,23 @@ async function main() {
       own.error ? `ERROR ${own.error.message}` : `${own.data?.length} row`,
     );
 
-    const others = await asProvider.from("profiles").select("phone").neq("phone", phone);
+    // "no other profiles visible" only held while no jobs existed. The
+    // counterparty policy in 0003 deliberately exposes the profile of anyone
+    // you share a job with — the artisan needs the client's number to call
+    // them on the way, and vice versa. Assert the actual rule: every profile
+    // the artisan can see is either their own or someone they share a job
+    // with. Anything else is a leak.
+    const others = await asProvider.from("profiles").select("id, phone").neq("phone", phone);
+    const self = await admin.from("profiles").select("id").eq("phone", phone).single();
+    const shared = await admin.from("jobs").select("client_id").eq("provider_id", self.data!.id);
+    const counterparties = new Set((shared.data ?? []).map((j) => j.client_id));
+    const leaked = (others.data ?? []).filter((row) => !counterparties.has(row.id));
     check(
-      "provider cannot read other users' profiles",
-      (others.data?.length ?? 0) === 0,
-      others.error ? `blocked: ${others.error.code}` : `${others.data?.length} other rows visible`,
+      "provider sees only their own profile and job counterparties",
+      leaked.length === 0,
+      others.error
+        ? `blocked: ${others.error.code}`
+        : `${others.data?.length ?? 0} other visible, ${counterparties.size} counterparty(ies), ${leaked.length} leaked`,
     );
 
     const promote = await asProvider
