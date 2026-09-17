@@ -234,6 +234,14 @@ async function main() {
 
     console.log(`\n  Rendering against ${origin}\n`);
 
+    // Public, and rendered with NO cookie on purpose. Somebody has to be able
+    // to read the terms before they have an account, and `/legal` sat in the
+    // proxy's PUBLIC_PATHS from Phase 0 with nothing behind it — every link to
+    // it 404'd. An authenticated render would have passed the whole time.
+    await render("legal index (signed out)", "/legal", "");
+    await render("terms (signed out)", "/legal/terms", "");
+    await render("privacy (signed out)", "/legal/privacy", "");
+
     await render("client dashboard", "/client", client.cookie);
     await render("posting — describe", `/client/post/${draftId}/describe`, client.cookie);
     await render("posting — location", `/client/post/${draftId}/location`, client.cookie);

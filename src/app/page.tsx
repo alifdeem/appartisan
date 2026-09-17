@@ -531,6 +531,12 @@ function SiteFooter() {
           <a href="#for-artisans" className="transition-colors hover:text-ink-900">
             For artisans
           </a>
+          <Link href="/legal/terms" className="transition-colors hover:text-ink-900">
+            Terms
+          </Link>
+          <Link href="/legal/privacy" className="transition-colors hover:text-ink-900">
+            Privacy
+          </Link>
           <Link href="/login" className="transition-colors hover:text-ink-900">
             Log in
           </Link>
