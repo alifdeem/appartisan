@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but the annotated reference carries no secrets, and the README sends
+# people to it. Without this, a fresh clone has no env template at all.
+!.env.example
 
 # vercel
 .vercel
