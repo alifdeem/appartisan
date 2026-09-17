@@ -483,3 +483,32 @@
   text-transform: uppercase;
   color: var(--color-ink-500);
 }
+
+/* ---------------------------------------------------------------------------
+   Tap targets
+   ---------------------------------------------------------------------------
+   WCAG 2.5.8 (AA) asks for 24x24 CSS pixels; Apple and Android both ask for
+   44 and 48. An inline text link is naturally about 20px tall, so a row of
+   footer links fails the AA minimum outright — which an audit of the landing
+   page found on ten elements.
+
+   `tap` keeps the link looking like a link and grows only its hit area, using
+   a pseudo-element rather than padding so it cannot disturb the layout of a
+   flex row. 44px on coarse pointers where a thumb is doing the work, and left
+   alone on a mouse, where a 44px invisible box over a 20px link swallows
+   clicks meant for the text beside it. */
+.tap {
+  position: relative;
+}
+
+@media (pointer: coarse) {
+  .tap::after {
+    content: "";
+    position: absolute;
+    inset: 50% 0 auto 0;
+    height: 44px;
+    transform: translateY(-50%);
+    /* Widen narrow links to 24px minimum without affecting wide ones. */
+    min-width: 24px;
+  }
+}

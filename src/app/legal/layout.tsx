@@ -24,10 +24,10 @@ export default function LegalLayout({ children }: LayoutProps<"/legal">) {
           </Link>
 
           <nav className="ml-auto flex gap-x-5 text-sm text-ink-500">
-            <Link href="/legal/terms" className="transition-colors hover:text-ink-900">
+            <Link href="/legal/terms" className="tap transition-colors hover:text-ink-900">
               Terms
             </Link>
-            <Link href="/legal/privacy" className="transition-colors hover:text-ink-900">
+            <Link href="/legal/privacy" className="tap transition-colors hover:text-ink-900">
               Privacy
             </Link>
           </nav>
@@ -40,7 +40,7 @@ export default function LegalLayout({ children }: LayoutProps<"/legal">) {
 
       <footer className="border-t border-ink-200 bg-ink-0 print:hidden">
         <div className="mx-auto w-full max-w-3xl px-5 py-6 text-sm text-ink-500 sm:px-8">
-          <Link href="/" className="transition-colors hover:text-ink-900">
+          <Link href="/" className="tap transition-colors hover:text-ink-900">
             Back to ArtisanGH
           </Link>
         </div>

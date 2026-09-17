@@ -113,25 +113,25 @@ function SiteHeader() {
         </Link>
 
         <nav className="ml-auto hidden items-center gap-7 text-sm text-ink-600 md:flex">
-          <a href="#how-it-works" className="transition-colors hover:text-ink-900">
+          <a href="#how-it-works" className="tap transition-colors hover:text-ink-900">
             How it works
           </a>
-          <a href="#services" className="transition-colors hover:text-ink-900">
+          <a href="#services" className="tap transition-colors hover:text-ink-900">
             Services
           </a>
-          <a href="#for-artisans" className="transition-colors hover:text-ink-900">
+          <a href="#for-artisans" className="tap transition-colors hover:text-ink-900">
             For artisans
           </a>
         </nav>
 
         <div className="ml-auto flex items-center gap-2 md:ml-0">
           <Link href="/login">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="max-md:min-h-11">
               Log in
             </Button>
           </Link>
           <Link href="/signup">
-            <Button size="sm">Get started</Button>
+            <Button size="sm" className="max-md:min-h-11">Get started</Button>
           </Link>
         </div>
       </div>
@@ -204,6 +204,7 @@ function Hero() {
           style={{ animationDelay: "240ms" }}
         >
           <ArtisanCard
+            headingLevel={2}
             elevated
             priority
             name="Kwame Mensah"
@@ -220,6 +221,7 @@ function Hero() {
           />
 
           <QuoteDocket
+            headingLevel={2}
             elevated
             className="relative z-10 mt-4 lg:-mt-3 lg:ml-8"
             reference="AGH-4471"
@@ -522,22 +524,22 @@ function SiteFooter() {
         </div>
 
         <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-500 sm:ml-auto">
-          <a href="#how-it-works" className="transition-colors hover:text-ink-900">
+          <a href="#how-it-works" className="tap transition-colors hover:text-ink-900">
             How it works
           </a>
-          <a href="#services" className="transition-colors hover:text-ink-900">
+          <a href="#services" className="tap transition-colors hover:text-ink-900">
             Services
           </a>
-          <a href="#for-artisans" className="transition-colors hover:text-ink-900">
+          <a href="#for-artisans" className="tap transition-colors hover:text-ink-900">
             For artisans
           </a>
-          <Link href="/legal/terms" className="transition-colors hover:text-ink-900">
+          <Link href="/legal/terms" className="tap transition-colors hover:text-ink-900">
             Terms
           </Link>
-          <Link href="/legal/privacy" className="transition-colors hover:text-ink-900">
+          <Link href="/legal/privacy" className="tap transition-colors hover:text-ink-900">
             Privacy
           </Link>
-          <Link href="/login" className="transition-colors hover:text-ink-900">
+          <Link href="/login" className="tap transition-colors hover:text-ink-900">
             Log in
           </Link>
         </nav>

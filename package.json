@@ -15,6 +15,7 @@
     "db:verify": "tsx scripts/verify.ts",
     "check:props": "tsx scripts/check-server-props.ts",
     "smoke": "tsx scripts/smoke-render.ts",
+    "a11y": "tsx scripts/a11y-check.ts",
     "e2e": "tsx scripts/e2e-matching.ts",
     "e2e:payments": "tsx scripts/e2e-payments.ts",
     "e2e:execution": "tsx scripts/e2e-execution.ts",

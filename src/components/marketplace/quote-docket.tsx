@@ -31,6 +31,12 @@ export interface QuoteLine {
 }
 
 export interface QuoteDocketProps {
+  /**
+   * What heading level the title should be. The card is a real list item on a
+   * marketplace screen, where h3 is right — but it also appears illustratively
+   * under the hero h1, where an h3 skips a level and an audit flags it.
+   */
+  headingLevel?: 2 | 3 | 4;
   lines: QuoteLine[];
   breakdown: QuoteBreakdown;
   /** Shown in the header strip. Real jobs have a reference; demos may not. */
@@ -81,7 +87,9 @@ export function QuoteDocket({
   showDeposit = true,
   className,
   elevated = false,
+  headingLevel = 3,
 }: QuoteDocketProps) {
+  const Heading = `h${headingLevel}` as const;
   return (
     <section
       className={cn(
@@ -92,9 +100,9 @@ export function QuoteDocket({
       aria-label={`${title} breakdown`}
     >
       <header className="flex items-baseline justify-between gap-3 border-b border-ink-200 bg-ink-25 px-4 py-2.5">
-        <h3 className="font-mono text-[0.6875rem] font-semibold tracking-[0.08em] text-ink-700 uppercase">
+        <Heading className="font-mono text-[0.6875rem] font-semibold tracking-[0.08em] text-ink-700 uppercase">
           {title}
-        </h3>
+        </Heading>
         <div className="flex items-baseline gap-2.5">
           {reference && (
             <span className="font-mono text-[0.6875rem] tabular text-ink-400">{reference}</span>

@@ -29,6 +29,12 @@ import type { ProviderAvailability, VerificationStatus } from "@/lib/supabase/ty
  */
 
 export interface ArtisanCardProps {
+  /**
+   * What heading level the title should be. The card is a real list item on a
+   * marketplace screen, where h3 is right — but it also appears illustratively
+   * under the hero h1, where an h3 skips a level and an audit flags it.
+   */
+  headingLevel?: 2 | 3 | 4;
   name: string;
   trade: string;
   /** Falls back to a hatched slot until the photograph exists. */
@@ -70,8 +76,11 @@ export function ArtisanCard({
   distanceKm,
   className,
   elevated = false,
+  headingLevel = 3,
   priority = false,
 }: ArtisanCardProps) {
+  const Heading = `h${headingLevel}` as const;
+
   const isApproved = verification === "approved";
   const isOnline = availability === "online";
 
@@ -102,9 +111,9 @@ export function ArtisanCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="truncate text-[1.0625rem] leading-tight font-semibold text-ink-900">
+              <Heading className="truncate text-[1.0625rem] leading-tight font-semibold text-ink-900">
                 {name}
-              </h3>
+              </Heading>
               <p className="mt-0.5 truncate text-sm text-ink-600">
                 {trade}
                 {baseCity && <span className="text-ink-400"> · {baseCity}</span>}
