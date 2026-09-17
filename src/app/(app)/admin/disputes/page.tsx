@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ShieldAlert } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft, ImageOff, ShieldAlert } from "lucide-react";
 
 import { DisputeDecision } from "./_components/dispute-decision";
 import { Badge } from "@/components/ui/badge";
@@ -106,11 +107,34 @@ export default async function DisputesPage() {
                     </p>
                   )}
 
-                  {dispute.evidence_paths.length > 0 && (
-                    <p className="text-sm text-ink-500">
-                      {dispute.evidence_paths.length} photo
-                      {dispute.evidence_paths.length === 1 ? "" : "s"} attached
-                    </p>
+                  {dispute.evidence.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="font-mono text-[0.6875rem] font-semibold tracking-[0.08em] text-ink-500 uppercase">
+                        Evidence
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {dispute.evidence.map(({ path, url }) =>
+                          url ? (
+                            <a
+                              key={path}
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="relative size-20 overflow-hidden rounded-field border border-ink-200 transition-colors hover:border-ink-400"
+                            >
+                              <Image src={url} alt="" fill sizes="80px" className="object-cover" />
+                            </a>
+                          ) : (
+                            <span
+                              key={path}
+                              className="img-slot grid size-20 place-items-center rounded-field text-[0.625rem] text-ink-400"
+                            >
+                              <ImageOff className="size-4" aria-hidden />
+                            </span>
+                          ),
+                        )}
+                      </div>
+                    </div>
                   )}
 
                   {dispute.resolution ? (

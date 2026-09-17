@@ -109,14 +109,12 @@ export default async function ClientDashboard() {
       )}
 
       <RoadmapPanel
-        title="What's coming to this screen"
-        description="Posting a job is live. These land on the same screens as the later phases ship."
+        title="What's still to come"
+        description="Booking, paying, tracking, sign-off and rating all work. What is left is making the money and the messages real."
         items={[
-          { label: "Watch an artisan being matched, live", phase: "Phase 3" },
-          { label: "Review and approve the itemised quote", phase: "Phase 3" },
-          { label: "Pay the deposit by mobile money", phase: "Phase 4" },
-          { label: "Track the artisan on the way", phase: "Phase 5" },
-          { label: "Sign off the work and rate the artisan", phase: "Phase 5" },
+          { label: "Real mobile money — payments are simulated today", phase: "Phase 8" },
+          { label: "SMS updates as your job moves", phase: "Phase 8" },
+          { label: "Terms and privacy policy", phase: "Phase 7" },
         ]}
       />
     </div>

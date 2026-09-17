@@ -273,14 +273,12 @@ export default async function ProviderDashboard({
       )}
 
       <RoadmapPanel
-        title="What's coming to this screen"
-        description="Verification is live. These land on the same screen as the later phases ship."
+        title="What's still to come"
+        description="Offers, quoting, travel, sign-off and your reliability score all work. What is left is the money leaving our account for yours."
         items={[
-          { label: "Receive job offers with a countdown", phase: "Phase 3" },
-          { label: "Build and send an itemised quote", phase: "Phase 3" },
-          { label: "Track earnings and payout history", phase: "Phase 4" },
-          { label: "Navigate to the job and share live location", phase: "Phase 5" },
-          { label: "See your reliability score", phase: "Phase 6" },
+          { label: "Real payouts to your mobile money wallet", phase: "Phase 8" },
+          { label: "Earnings history across all your jobs", phase: "Phase 7" },
+          { label: "An Android app that tracks with the screen off", phase: "Later" },
         ]}
       />
     </div>

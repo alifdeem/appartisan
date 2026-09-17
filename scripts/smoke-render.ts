@@ -269,6 +269,7 @@ async function main() {
     await render("transport bands", "/admin/zones", adminUser.cookie);
     await render("disputes queue", "/admin/disputes", adminUser.cookie);
     await render("platform settings", "/admin/settings", adminUser.cookie);
+    await render("trades", "/admin/categories", adminUser.cookie);
 
     /**
      * The cron routes, unauthenticated and over HTTP.

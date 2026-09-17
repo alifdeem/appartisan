@@ -374,3 +374,77 @@ export async function updateSettingAction(
   revalidatePath("/admin/settings");
   return state({ ok: true });
 }
+
+const categorySchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(2, "Give the trade a name.").max(60, "Keep the name short."),
+  slug: z
+    .string()
+    .trim()
+    .min(2, "A slug is needed.")
+    .max(60)
+    .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and hyphens only."),
+  icon: z.string().trim().min(1, "Choose an icon.").max(40),
+  description: z.string().trim().max(300, "Keep the description under 300 characters.").optional(),
+  isActive: z.coerce.boolean().optional(),
+  sortOrder: z.coerce.number().int().min(0).max(999).optional(),
+});
+
+/**
+ * Add or edit a service category.
+ *
+ * PLAN.md §9: "admin can add more without a deploy." Retiring rather than
+ * deleting is the only option offered, and deliberately — a category is
+ * referenced by every job ever booked under it, so a delete either fails on
+ * the foreign key or takes history with it. `is_active` hides it from the
+ * posting flow and leaves the record intact.
+ */
+export async function saveCategoryAction(
+  _prev: AdminActionState | null,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const parsed = categorySchema.safeParse({
+    id: formData.get("id") || undefined,
+    name: formData.get("name"),
+    slug: formData.get("slug"),
+    icon: formData.get("icon"),
+    description: formData.get("description") || undefined,
+    isActive: formData.get("isActive") === "on" || formData.get("isActive") === "true",
+    sortOrder: formData.get("sortOrder") || 0,
+  });
+
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      fieldErrors[String(issue.path[0] ?? "form")] = issue.message;
+    }
+    return state({ ok: false, fieldErrors });
+  }
+
+  const { id, name, slug, icon, description, isActive, sortOrder } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("save_category", {
+    p_id: id ?? null,
+    p_name: name,
+    p_slug: slug,
+    p_icon: icon,
+    p_description: description ?? null,
+    p_is_active: isActive ?? true,
+    p_sort_order: sortOrder ?? 0,
+  });
+
+  if (error) {
+    console.error("[admin] save_category failed", error.message);
+    return state({
+      ok: false,
+      error: /duplicate|unique/i.test(error.message)
+        ? "That slug is already taken by another trade."
+        : error.message,
+    });
+  }
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/client/post");
+  return state({ ok: true });
+}

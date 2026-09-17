@@ -6,11 +6,14 @@ the platform holds the money until the job is signed off.
 
 Launching in Accra and Tema, then countrywide.
 
-> **Phases 0–3 are built.** A client posts a job with photos and a voice note; the
-> matcher offers it to the nearest verified artisan with a 120-second clock, widening
-> 5km → 10km → 20km and falling through to an admin queue; the artisan builds an itemised
-> quote; the client accepts or sends it back out. Payments are not built yet — a job stops
-> at `awaiting_deposit`. See the [Roadmap](#roadmap).
+> **Phases 0–6 are built.** A job now runs the whole way: a client posts it with photos
+> and a voice note; the matcher offers it to the nearest verified artisan on a 120-second
+> clock, widening 5km → 10km → 20km before falling through to an admin queue; the artisan
+> quotes it itemised; the client pays a deposit; the artisan travels, works and marks it
+> done with a photo; the client signs off and pays the balance on the doorstep; a payout
+> is queued and an invoice is generated. Then the client rates the artisan, either party
+> can raise a dispute with photo evidence, and an admin resolves it. See the
+> [Roadmap](#roadmap).
 >
 > Payments, SMS and maps run against **mock adapters**. Nothing here moves real money or
 > sends real messages — see [Simulation mode](#simulation-mode) below and `PLAN.md` §3.
@@ -113,13 +116,24 @@ the seed is present, and a real session can be minted and cannot be replayed. Re
 from a few writes it rolls back. Run it after any schema change.
 
 ```bash
-npx tsx scripts/e2e-matching.ts
+npm run dev          # in another terminal — these need the server up
+npm run e2e          # Phase 3: matching and quoting
+npm run e2e:payments # Phase 4: the deposit leg
+npm run e2e:execution# Phase 5: travel, sign-off, balance, payout
+npm run e2e:trust    # Phase 6: ratings, disputes, reliability
+npm run smoke        # every screen renders, and the crons are reachable
+npm run check:props  # no function props cross a server/client boundary
 ```
 
-27 more that drive a real job all the way through Phase 3 — post, match, offer, accept,
-quote, accept — plus the two paths PLAN.md §6 says will be the common ones: an artisan
-declining an offer, and a client rejecting a price. Both run under real client and artisan
-sessions, so RLS and the column guards are in the loop. It cleans up the jobs it creates.
+Four suites that drive real jobs end to end under real client, artisan and admin
+sessions, so RLS and the column guards are in the loop throughout. They need the dev
+server because the mock payment provider settles through the same signed webhook
+Paystack will call — see `PLAN.md` §3 for why that matters. Each cleans up the jobs it
+creates.
+
+`npm run demo:job` is the exception: it drives one job from draft to paid and **leaves
+it**, so there is something to show a client. The e2e suites delete what they touch,
+which is right for a test and useless for a demo.
 
 ### 6. Run
 
@@ -197,7 +211,19 @@ npm run db:reset   # drop and rebuild local db, then re-run migrations
 npm run db:types   # dump the live schema to types.generated.ts, for diffing
 npm run db:seed    # idempotent test accounts
 npm run db:verify  # 41 assertions against the live database
+
+npm run e2e          # Phase 3 — matching and quoting
+npm run e2e:payments # Phase 4 — the deposit leg, refunds, hostile webhooks
+npm run e2e:execution# Phase 5 — travel, sign-off, balance, payout, cancellation tiers
+npm run e2e:trust    # Phase 6 — ratings, disputes, reliability, admin config
+npm run smoke        # every screen renders; the cron routes are reachable
+npm run check:props  # no function props cross a server/client boundary
+npm run demo:job     # one complete paid job, left in place for a demo
 ```
+
+The four `e2e` suites and `smoke` need `npm run dev` running in another terminal — the
+mock payment provider settles through the same signed webhook Paystack will call, over
+real HTTP.
 
 `src/lib/supabase/types.ts` is **hand-maintained** — it carries comments explaining the
 columns, and the RPC signatures the generator gets wrong. `db:types` writes a separate
@@ -348,9 +374,9 @@ brief.
 | 1 | ✅ | Client posting — categories, photos, voice notes, Leaflet pin, dashboard, history |
 | 2 | ✅ | Artisan application, private document upload, admin verification queue, availability |
 | 3 | ✅ | Matching, sequential offers with expiry, radius widening, quote builder, admin fallback |
-| 4 | — | Money in — payment adapter, mock MoMo, simulated webhook round-trip |
-| 5 | — | Execution and money out — travel status, sign-off, invoices, payouts |
-| 6 | — | Ratings, disputes, admin dashboards, reliability scoring |
+| 4 | ✅ | Money in — payment adapter, mock MoMo, simulated webhook round-trip, refunds |
+| 5 | ✅ | Execution and money out — travel status, sign-off, invoice, payout records |
+| 6 | ✅ | Ratings, disputes with evidence, reliability scoring, trades, zones, thresholds |
 | 7 | — | Hardening — rate limiting, error monitoring, RLS review, accessibility |
 | 8 | — | Go live — real Paystack, SMS and Maps accounts |
 | 9 | — | Pilot and handover |

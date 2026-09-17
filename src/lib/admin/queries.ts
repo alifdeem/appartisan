@@ -1,5 +1,6 @@
 import "server-only";
 
+import { JOB_PHOTO_BUCKET } from "@/lib/jobs/media";
 import { createClient } from "@/lib/supabase/server";
 import type {
   DisputeRow,
@@ -21,7 +22,12 @@ import type {
 export type DisputeWithContext = DisputeRow & {
   job: Pick<JobRow, "id" | "reference" | "status"> | null;
   raiser: Pick<ProfileRow, "full_name" | "phone" | "role"> | null;
+  /** Signed for the admin's session only. Null where signing failed. */
+  evidence: { path: string; url: string | null }[];
 };
+
+/** Long enough to read a queue and open a photo; short enough not to be a link. */
+const SIGNED_URL_TTL_SECONDS = 60 * 10;
 
 /** Open disputes first, oldest first within that — a queue, not a feed. */
 export async function listDisputes(): Promise<DisputeWithContext[]> {
@@ -40,6 +46,29 @@ export async function listDisputes(): Promise<DisputeWithContext[]> {
   }
 
   const rows = (data ?? []) as unknown as DisputeWithContext[];
+
+  // Evidence lives in the private job-photos bucket, so an admin needs a signed
+  // URL per object. Signed in one batch across every dispute rather than per
+  // row — a queue of twenty disputes should not be twenty round trips.
+  const allPaths = rows.flatMap((row) => row.evidence_paths);
+
+  if (allPaths.length > 0) {
+    const { data: signed, error: signError } = await supabase.storage
+      .from(JOB_PHOTO_BUCKET)
+      .createSignedUrls(allPaths, SIGNED_URL_TTL_SECONDS);
+
+    if (signError) console.error("[admin] signing dispute evidence failed:", signError.message);
+
+    const byPath = new Map(
+      (signed ?? []).map((entry, index) => [allPaths[index], entry?.signedUrl ?? null]),
+    );
+
+    for (const row of rows) {
+      row.evidence = row.evidence_paths.map((path) => ({ path, url: byPath.get(path) ?? null }));
+    }
+  } else {
+    for (const row of rows) row.evidence = [];
+  }
 
   const rank = (status: DisputeRow["status"]) =>
     status === "open" ? 0 : status === "investigating" ? 1 : 2;

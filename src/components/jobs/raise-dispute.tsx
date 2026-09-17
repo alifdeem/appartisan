@@ -1,9 +1,17 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Camera, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
+
+import {
+  ACCEPTED_PHOTO_TYPES,
+  JOB_PHOTO_BUCKET,
+  MAX_PHOTO_BYTES,
+} from "@/lib/jobs/media";
+import { createClient } from "@/lib/supabase/browser";
 
 import { raiseDisputeAction } from "@/app/(app)/client/actions";
 import { Button } from "@/components/ui/button";
@@ -34,11 +42,78 @@ const REASONS = [
 
 const OPEN_STATUSES: DisputeRow["status"][] = ["open", "investigating"];
 
+/** Enough to show a cracked faceplate from two angles and the room it is in. */
+const MAX_EVIDENCE = 4;
+
 export function RaiseDispute({ jobId, existing }: { jobId: string; existing: DisputeRow | null }) {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   const [state, setState] = React.useState<JobActionState | null>(null);
   const [open, setOpen] = React.useState(false);
+
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [evidence, setEvidence] = React.useState<string[]>([]);
+  const [previews, setPreviews] = React.useState<Record<string, string>>({});
+  const [uploading, setUploading] = React.useState(false);
+
+  // Release the object URLs on unmount. Each one pins the whole file in memory,
+  // and six phone photos is not a small amount of it.
+  React.useEffect(() => {
+    return () => {
+      for (const url of Object.values(previews)) URL.revokeObjectURL(url);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function onPick(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = ""; // so retaking the same shot still fires
+    if (!file) return;
+
+    if (!ACCEPTED_PHOTO_TYPES.includes(file.type as (typeof ACCEPTED_PHOTO_TYPES)[number])) {
+      toast.error("That is not a photo we can read. Use your camera.");
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      toast.error("That photo is too large. The limit is 10MB.");
+      return;
+    }
+
+    // Generated here, never taken from the file: a user's own filename can
+    // contain anything, and the storage key is part of a policy expression.
+    const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+    const path = `${jobId}/dispute-${crypto.randomUUID()}.${extension}`;
+
+    setUploading(true);
+    const supabase = createClient();
+    const { error } = await supabase.storage
+      .from(JOB_PHOTO_BUCKET)
+      .upload(path, file, { contentType: file.type, upsert: false });
+    setUploading(false);
+
+    if (error) {
+      console.error("[dispute] evidence upload failed", error);
+      toast.error("Could not upload that photo. Check your connection.");
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setEvidence((current) => [...current, path]);
+    setPreviews((current) => ({ ...current, [path]: previewUrl }));
+  }
+
+  async function discard(path: string) {
+    const supabase = createClient();
+    await supabase.storage.from(JOB_PHOTO_BUCKET).remove([path]);
+
+    setEvidence((current) => current.filter((p) => p !== path));
+    setPreviews((current) => {
+      const next = { ...current };
+      if (next[path]) URL.revokeObjectURL(next[path]);
+      delete next[path];
+      return next;
+    });
+  }
 
   /** Success closes the panel, so this runs in a handler rather than an effect. */
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -140,6 +215,65 @@ export function RaiseDispute({ jobId, existing }: { jobId: string; existing: Dis
         maxLength={2000}
         className="w-full rounded-field border border-ink-200 bg-ink-25 px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-ink-400 focus:outline-none"
       />
+
+      {/* Evidence. Same rule as job photos: the browser uploads straight to
+          Storage and only the paths travel through the action, because an
+          action body is capped at 1MB and a phone photo is not. The paths ride
+          in a hidden field so the action stays a plain form post. */}
+      <input type="hidden" name="evidencePaths" value={evidence.join(",")} />
+
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {evidence.map((path) => (
+            <span
+              key={path}
+              className="relative size-16 overflow-hidden rounded-field border border-ink-200 bg-ink-100"
+            >
+              {previews[path] && (
+                <Image src={previews[path]} alt="" fill sizes="64px" className="object-cover" />
+              )}
+              <button
+                type="button"
+                onClick={() => void discard(path)}
+                aria-label="Remove this photo"
+                className="absolute top-0.5 right-0.5 grid size-5 place-items-center rounded-full bg-ink-950/70 text-ink-0"
+              >
+                <X className="size-3" aria-hidden />
+              </button>
+            </span>
+          ))}
+
+          {uploading && (
+            <span className="grid size-16 place-items-center rounded-field border border-dashed border-ink-300 bg-ink-25">
+              <Loader2 className="size-4 animate-spin text-ink-400" aria-hidden />
+            </span>
+          )}
+
+          {evidence.length < MAX_EVIDENCE && !uploading && (
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="grid size-16 place-items-center rounded-field border border-dashed border-ink-300 bg-ink-25 text-ink-500 transition-colors hover:border-ink-400 hover:text-ink-700"
+            >
+              <Camera className="size-5" aria-hidden />
+              <span className="sr-only">Add a photo</span>
+            </button>
+          )}
+        </div>
+
+        <p className="text-[0.75rem] text-ink-500">
+          Photos help more than words here. Up to {MAX_EVIDENCE}.
+        </p>
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept={ACCEPTED_PHOTO_TYPES.join(",")}
+          capture="environment"
+          hidden
+          onChange={onPick}
+        />
+      </div>
 
       <div className="flex items-center gap-2">
         <Button type="submit" variant="danger" disabled={pending}>

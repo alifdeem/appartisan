@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Map, Radar, ShieldAlert, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Map, Radar, ShieldAlert, ShieldCheck, SlidersHorizontal, Wrench } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { RoadmapPanel } from "@/components/app/roadmap-panel";
@@ -172,6 +172,27 @@ export default async function AdminDashboard() {
       </Link>
 
       <Link
+        href="/admin/categories"
+        className="group flex items-center gap-4 rounded-card border border-ink-200 bg-ink-0 px-5 py-4 shadow-sm transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong hover:border-ink-300 hover:shadow-md"
+      >
+        <span className="grid size-11 shrink-0 place-items-center rounded-full bg-ink-100 text-ink-500">
+          <Wrench className="size-5" aria-hidden />
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.9375rem] font-semibold text-ink-900">Trades</span>
+          <span className="block text-sm text-ink-600">
+            {categoryCount ?? 0} offered to clients. Add or retire without a deploy.
+          </span>
+        </span>
+
+        <ArrowRight
+          className="size-4 shrink-0 text-ink-300 transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5 group-hover:text-ink-500"
+          aria-hidden
+        />
+      </Link>
+
+      <Link
         href="/admin/settings"
         className="group flex items-center gap-4 rounded-card border border-ink-200 bg-ink-0 px-5 py-4 shadow-sm transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong hover:border-ink-300 hover:shadow-md"
       >
@@ -256,14 +277,12 @@ export default async function AdminDashboard() {
       </Card>
 
       <RoadmapPanel
-        title="What's coming to this screen"
-        description="Verification is live. These are the pieces that land on top."
+        title="What's still to come"
+        description="Verification, matching rescue, disputes, trades, zones and the thresholds are all live. These are the screens still missing."
         items={[
-          { label: "Set transport rate bands per city", phase: "Phase 4" },
-          { label: "Watch jobs and matching in real time", phase: "Phase 3" },
-          { label: "Step in when matching stalls", phase: "Phase 3" },
-          { label: "Trigger payouts and handle failed transfers", phase: "Phase 4" },
-          { label: "Resolve disputes and issue refunds", phase: "Phase 6" },
+          { label: "Watch every live job on one board", phase: "Phase 7" },
+          { label: "Trigger payouts and handle failed transfers", phase: "Phase 8" },
+          { label: "Find and manage any user", phase: "Phase 7" },
         ]}
       />
     </div>
