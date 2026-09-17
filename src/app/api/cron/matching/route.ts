@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { env } from "@/lib/env";
+import { reportError } from "@/lib/integrations/monitoring";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -46,6 +47,7 @@ async function sweep() {
 
   if (error) {
     console.error("[cron:matching] sweep failed", error);
+    await reportError(error, { scope: "cron:matching" });
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 

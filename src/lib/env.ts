@@ -35,6 +35,8 @@ const schema = z.object({
   PAYMENT_PROVIDER: providerMode.default("mock"),
   SMS_PROVIDER: providerMode.default("mock"),
   MAP_PROVIDER: z.enum(["osm", "google"]).default("osm"),
+  // Errors go to stdout until the client has a Sentry account (PLAN.md §12).
+  MONITORING_PROVIDER: z.enum(["console", "sentry"]).default("console"),
 
   // --- Guardrail --------------------------------------------------------
   ALLOW_MOCK_IN_PROD: z
@@ -59,6 +61,7 @@ const schema = z.object({
   ARKESEL_API_KEY: z.string().optional(),
   ARKESEL_SENDER_ID: z.string().optional(),
   GOOGLE_MAPS_API_KEY: z.string().optional(),
+  SENTRY_DSN: z.string().optional(),
 
   /**
    * Shared secret for `/api/cron/matching`, the portable half of the offer
@@ -135,6 +138,9 @@ function load() {
   }
   if (value.MAP_PROVIDER === "google" && !value.GOOGLE_MAPS_API_KEY) {
     throw new Error("MAP_PROVIDER=google requires GOOGLE_MAPS_API_KEY");
+  }
+  if (value.MONITORING_PROVIDER === "sentry" && !value.SENTRY_DSN) {
+    throw new Error("MONITORING_PROVIDER=sentry requires SENTRY_DSN");
   }
 
   return value;

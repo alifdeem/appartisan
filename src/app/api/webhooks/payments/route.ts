@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getPaymentProvider } from "@/lib/integrations/payments";
+import { reportError, reportMessage } from "@/lib/integrations/monitoring";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -29,6 +30,11 @@ export async function POST(request: Request) {
 
   if (!provider.verifyWebhookSignature(rawBody, signature)) {
     console.warn("[webhook:payments] rejected — bad signature");
+    // Worth aggregating: one of these is a misconfigured secret, a run of them
+    // is somebody probing the endpoint.
+    await reportMessage("payment webhook rejected — bad signature", {
+      scope: "webhook:payments",
+    });
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
 
@@ -70,6 +76,13 @@ export async function POST(request: Request) {
         // 500 so the provider retries. This is the one case where a retry is
         // what we want — the event was real and we failed to act on it.
         console.error("[webhook:payments] settle_payment failed", error.message);
+        // The provider says money moved and we failed to record it. Everything
+        // downstream — the job status, the payout, the invoice — is now wrong
+        // until this is resolved, so it is the single loudest thing here.
+        await reportError(error, {
+          scope: "webhook:payments",
+          extra: { reference: event.reference, event: event.type },
+        });
         return NextResponse.json({ error: "could not settle" }, { status: 500 });
       }
 

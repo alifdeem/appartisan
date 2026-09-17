@@ -218,6 +218,7 @@ npm run e2e:execution# Phase 5 — travel, sign-off, balance, payout, cancellati
 npm run e2e:trust    # Phase 6 — ratings, disputes, reliability, admin config
 npm run smoke        # every screen renders; the cron routes are reachable
 npm run a11y         # alt text, form labels, heading outline, lang
+npm run monitoring:check  # nothing personal reaches the error monitor
 npm run check:props  # no function props cross a server/client boundary
 npm run demo:job     # one complete paid job, left in place for a demo
 ```
@@ -378,6 +379,6 @@ brief.
 | 4 | ✅ | Money in — payment adapter, mock MoMo, simulated webhook round-trip, refunds |
 | 5 | ✅ | Execution and money out — travel status, sign-off, invoice, payout records |
 | 6 | ✅ | Ratings, disputes with evidence, reliability scoring, trades, zones, thresholds |
-| 7 | — | Hardening — rate limiting, error monitoring, RLS review, accessibility |
+| 7 | ◐ | Hardening — abuse limits, spend cap, RLS review, legal, a11y, monitoring |
 | 8 | — | Go live — real Paystack, SMS and Maps accounts |
 | 9 | — | Pilot and handover |
