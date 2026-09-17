@@ -197,6 +197,22 @@
       background-position: 200% 0;
     }
   }
+
+  /* The offer countdown ring.
+     Driven entirely by CSS so the 120 seconds cost zero React renders and keep
+     running smoothly while the page is still fetching photographs — a
+     requestAnimationFrame timer would drop frames at exactly the moment the
+     artisan is deciding. `linear` because a clock is constant motion; any
+     easing here would be a lie about how much time is left.
+     Resuming mid-countdown is a negative `animation-delay`, set per element. */
+  @keyframes ring-drain {
+    from {
+      stroke-dashoffset: 0;
+    }
+    to {
+      stroke-dashoffset: var(--ring-length);
+    }
+  }
 }
 
 @layer base {
@@ -300,6 +316,24 @@
     );
     background-size: 200% 100%;
     animation: var(--animate-shimmer);
+  }
+
+  /* The countdown ring, reduced-motion variant.
+     The blanket rule below would collapse the drain to 0.01ms and snap the ring
+     to empty — which reads as "your time is up" the instant the screen opens.
+     Reduced motion means gentler, not wrong: the animation is dropped and the
+     ring is held at the proportion it was at on mount, while the digits keep
+     counting. This must come before the blanket block to be overridden by it. */
+  .ring-countdown {
+    animation: ring-drain var(--ring-duration) linear forwards;
+    animation-delay: var(--ring-delay);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ring-countdown {
+      animation: none;
+      stroke-dashoffset: var(--ring-static);
+    }
   }
 
   /* A global honour of the OS setting. Every animation in the app respects

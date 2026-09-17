@@ -99,12 +99,9 @@ export default async function ReviewStepPage({
           <ReviewSection title="Where" editHref={`/client/post/${job.id}/location`}>
             {point ? (
               <div className="space-y-3">
-                <LocationMap
-                  value={point}
-                  onChange={() => {}}
-                  interactive={false}
-                  className="h-40 w-full"
-                />
+                {/* No `onChange`. This is a Server Component, and a function
+                    prop cannot cross into a Client Component. */}
+                <LocationMap value={point} interactive={false} className="h-40 w-full" />
 
                 <div className="space-y-1.5 text-[0.9375rem]">
                   {job.landmark && (

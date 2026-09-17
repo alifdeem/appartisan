@@ -37,7 +37,21 @@ function samePoint(a: LatLng | null, b: LatLng | null): boolean {
 
 export interface LocationMapProps {
   value: LatLng | null;
-  onChange: (point: LatLng) => void;
+  /**
+   * Optional, and it has to be.
+   *
+   * Two of the three screens that render this map are read-only previews on
+   * **Server** Components — the posting review step and the client's job
+   * screen. A required handler forced those pages to pass `onChange={() => {}}`
+   * just to satisfy the type, and a function prop crossing the server/client
+   * boundary is not a type error, it is a runtime crash: "Event handlers cannot
+   * be passed to Client Component props". The build could not catch it because
+   * both routes are dynamic and only fail once actually rendered.
+   *
+   * Making it optional removes the reason to write the no-op at all. It is
+   * never invoked when `interactive` is false, so a preview has nothing to say.
+   */
+  onChange?: (point: LatLng) => void;
   /** Raised while the user is panning, so the parent can hold off geocoding. */
   onMoveStart?: () => void;
   className?: string;
@@ -121,7 +135,7 @@ export function LocationMap({
         // Only report a genuine change. `setView` below also fires moveend, so
         // without this the map and its parent would ping-pong forever.
         if (!samePoint(next, latest.current.value)) {
-          latest.current.onChange(next);
+          latest.current.onChange?.(next);
         }
       });
 

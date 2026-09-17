@@ -536,3 +536,129 @@ export async function setAvailabilityAction(
   revalidatePath("/provider");
   return { ...state({ ok: true }), availability: data ?? undefined };
 }
+
+// ---------------------------------------------------------------------------
+// Offers — Phase 3
+// ---------------------------------------------------------------------------
+
+/**
+ * Accept or pass on a job.
+ *
+ * Returns the status the *database* settled on, not the one that was asked for.
+ * Two artisans can tap Accept in the same second and only one can win; the
+ * loser needs to be told what actually happened rather than shown a screen that
+ * behaves as though they got it.
+ */
+export async function respondToOfferAction(
+  offerId: string,
+  accept: boolean,
+): Promise<ProviderActionState & { status?: string }> {
+  const parsed = z.string().uuid().safeParse(offerId);
+  if (!parsed.success) return state({ ok: false, error: "That offer could not be found." });
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("respond_to_offer", {
+    p_offer_id: parsed.data,
+    p_accept: accept,
+  });
+
+  if (error) {
+    console.error("[offers] respondToOffer failed", error);
+    return state({
+      ok: false,
+      // Postgres raises these with a human sentence already (see 0011).
+      error: error.message.replace(/^.*?:\s*/, "") || "Could not send your answer.",
+    });
+  }
+
+  revalidatePath("/provider", "layout");
+  return { ...state({ ok: true }), status: data ?? undefined };
+}
+
+// ---------------------------------------------------------------------------
+// Quoting — Phase 3
+// ---------------------------------------------------------------------------
+
+/**
+ * Line items only.
+ *
+ * `amount` is absent on purpose, and so are the subtotal, the service fee, the
+ * transport band and the deposit. `save_quote` derives every one of them. A
+ * quote is a number somebody pays — it does not come off a form, and a client
+ * who tampers with this payload can change what the *artisan* asked for, never
+ * what anybody is charged.
+ */
+const quoteItemSchema = z.object({
+  kind: z.enum(["labour", "material"]),
+  description: z.string().trim().min(1, "Describe the line.").max(200),
+  quantity: z.coerce.number().positive("Quantity must be more than zero.").max(9999),
+  unitPrice: z.coerce.number().min(0, "A price cannot be negative.").max(1_000_000),
+});
+
+const saveQuoteSchema = z.object({
+  jobId: z.string().uuid("That job could not be found."),
+  items: z.array(quoteItemSchema).min(1, "Add at least one line.").max(30, "Up to 30 lines."),
+  notes: z.string().trim().max(1000).optional(),
+});
+
+export type QuoteItemDraft = z.input<typeof quoteItemSchema>;
+
+export async function saveQuoteAction(input: {
+  jobId: string;
+  items: QuoteItemDraft[];
+  notes?: string;
+}): Promise<ProviderActionState & { quoteId?: string }> {
+  const parsed = saveQuoteSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return state({
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Check the quote and try again.",
+    });
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("save_quote", {
+    p_job_id: parsed.data.jobId,
+    p_items: parsed.data.items.map((item) => ({
+      kind: item.kind,
+      description: item.description,
+      quantity: Number(item.quantity),
+      unit_price: Number(item.unitPrice),
+    })),
+    p_notes: parsed.data.notes ?? null,
+  });
+
+  if (error) {
+    console.error("[quotes] saveQuote failed", error);
+    return state({
+      ok: false,
+      error: error.message.replace(/^.*?:\s*/, "") || "Could not save the quote.",
+    });
+  }
+
+  revalidatePath(`/provider/jobs/${parsed.data.jobId}`, "layout");
+  return { ...state({ ok: true }), quoteId: data ?? undefined };
+}
+
+export async function sendQuoteAction(quoteId: string): Promise<ProviderActionState> {
+  const parsed = z.string().uuid().safeParse(quoteId);
+  if (!parsed.success) return state({ ok: false, error: "That quote could not be found." });
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("send_quote", { p_quote_id: parsed.data });
+
+  if (error) {
+    console.error("[quotes] sendQuote failed", error);
+    return state({
+      ok: false,
+      error: error.message.replace(/^.*?:\s*/, "") || "Could not send the quote.",
+    });
+  }
+
+  revalidatePath("/provider", "layout");
+  return state({ ok: true });
+}

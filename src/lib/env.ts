@@ -59,6 +59,16 @@ const schema = z.object({
   ARKESEL_API_KEY: z.string().optional(),
   ARKESEL_SENDER_ID: z.string().optional(),
   GOOGLE_MAPS_API_KEY: z.string().optional(),
+
+  /**
+   * Shared secret for `/api/cron/matching`, the portable half of the offer
+   * sweep. Optional because pg_cron drives the sweep where it is available and
+   * the route is then unused — but when the route IS the mechanism, an
+   * unauthenticated endpoint that advances every stalled job in the system is
+   * not something to leave open. The route refuses to run in production
+   * without it.
+   */
+  CRON_SECRET: z.string().min(16).optional(),
 });
 
 function load() {

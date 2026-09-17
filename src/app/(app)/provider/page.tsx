@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 
+import { CategoryIcon } from "@/components/marketplace/category-icon";
+import { cn } from "@/lib/utils";
+
 import { AvailabilityToggle } from "@/components/provider/availability-toggle";
 import { Badge } from "@/components/ui/badge";
+import { IncomingOffer } from "@/components/provider/incoming-offer";
+import { getLiveOffer, listProviderJobs } from "@/lib/jobs/matching";
+import { jobStatus } from "@/lib/jobs/status";
 import { Card, CardContent } from "@/components/ui/card";
 import { RoadmapPanel } from "@/components/app/roadmap-panel";
 import { Stat } from "@/components/app/stat";
@@ -47,14 +54,20 @@ export default async function ProviderDashboard({
   // normally prevents this; a Server Component must never assume it ran.
   if (!provider) redirect("/");
 
-  const [trades, documents, reviews] = await Promise.all([
+  const [trades, documents, reviews, liveOffer, jobs] = await Promise.all([
     listProviderCategories(provider.profile_id),
     listProviderDocuments(provider.profile_id),
     listVerificationReviews(provider.profile_id),
+    getLiveOffer(),
+    listProviderJobs(),
   ]);
 
   const status = provider.verification_status;
   const approved = status === "approved";
+
+  // Work in hand, newest first. Everything past `paid` is history and belongs
+  // in an earnings screen rather than on top of today's job.
+  const activeJobs = jobs.filter((job) => jobStatus(job.status).group === "active");
   const firstName = profile.full_name.split(" ")[0];
   const justSubmitted = params.submitted === "1" && status === "pending";
 
@@ -124,6 +137,26 @@ export default async function ProviderDashboard({
         </div>
       )}
 
+      {/* Above everything, including the availability toggle. An offer has a
+          clock on it; nothing else on this screen does. */}
+      <IncomingOffer
+        offer={
+          liveOffer && liveOffer.job
+            ? {
+                id: liveOffer.id,
+                expiresAt: liveOffer.expires_at,
+                sentAt: liveOffer.sent_at,
+                distanceKm:
+                  liveOffer.distance_km === null ? null : Number(liveOffer.distance_km),
+                categoryName: liveOffer.job.category?.name ?? "Job",
+                categoryIcon: liveOffer.job.category?.icon ?? "wrench",
+                landmark: liveOffer.job.landmark,
+              }
+            : null
+        }
+        listening={approved && provider.availability === "online"}
+      />
+
       {approved ? (
         <>
           {availability}
@@ -134,6 +167,54 @@ export default async function ProviderDashboard({
           {verification}
           {availability}
         </>
+      )}
+
+      {activeJobs.length > 0 && (
+        <section className="space-y-2.5">
+          <h2 className="text-sm font-semibold text-ink-800">Your work</h2>
+          <ul className="space-y-2.5">
+            {activeJobs.map((job) => {
+              const presentation = jobStatus(job.status);
+              const needsPrice = job.status === "quote_pending";
+
+              return (
+                <li key={job.id}>
+                  <Link
+                    href={`/provider/jobs/${job.id}`}
+                    className={cn(
+                      "group flex items-center gap-3.5 rounded-card border bg-ink-0 px-4 py-3.5 shadow-sm",
+                      "transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong",
+                      // The one that needs something from the artisan right now
+                      // is marked. The rest are simply in flight.
+                      needsPrice
+                        ? "border-warning-500/40 hover:border-warning-500/60"
+                        : "border-ink-200 hover:border-ink-300",
+                      "hover:shadow-md",
+                    )}
+                  >
+                    <span className="grid size-10 shrink-0 place-items-center rounded-field bg-ink-100 text-ink-600">
+                      <CategoryIcon name={job.category?.icon ?? "wrench"} className="size-5" />
+                    </span>
+
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[0.9375rem] font-medium text-ink-900">
+                        {job.category?.name ?? "Job"}
+                      </span>
+                      <span className="block truncate text-sm text-ink-600">
+                        {needsPrice ? "Send your price" : presentation.label}
+                        {job.landmark && <span className="text-ink-400"> · {job.landmark}</span>}
+                      </span>
+                    </span>
+
+                    <Badge tone={needsPrice ? "warning" : presentation.tone}>
+                      {presentation.label}
+                    </Badge>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">

@@ -44,48 +44,45 @@ export async function POST(request: Request) {
   const raw = event.raw as never;
 
   switch (event.type) {
-    case "charge.success": {
-      // Idempotent by reference. Providers retry, and a double-credited deposit
-      // is a support ticket that costs more than the job is worth.
-      const { data: payment } = await admin
-        .from("payments")
-        .select("id, status")
-        .eq("provider_reference", event.reference)
-        .maybeSingle();
-
-      if (!payment) {
-        console.warn("[webhook:payments] no payment row for", event.reference);
-        return NextResponse.json({ received: true, handled: false });
-      }
-
-      if (payment.status === "succeeded") {
-        return NextResponse.json({ received: true, handled: true, idempotent: true });
-      }
-
-      await admin
-        .from("payments")
-        .update({
-          status: "succeeded",
-          paid_at: now,
-          channel: event.channel ?? null,
-          raw_payload: raw,
-        })
-        .eq("id", payment.id);
-
-      // Advancing the job's own status belongs to the payments phase — the
-      // state machine lands in Phase 4 (PLAN.md §6, §12).
-      break;
-    }
-
+    case "charge.success":
     case "charge.failed": {
+      const succeeded = event.type === "charge.success";
+
+      /**
+       * One RPC for both outcomes, because the payment row and the job status
+       * have to move together or not at all.
+       *
+       * Doing it here in two statements — update the payment, then update the
+       * job — leaves a window where a crash between them produces a paid
+       * deposit on a job still asking to be paid. `settle_payment` does both in
+       * one transaction, takes the row locks in a fixed order, and is
+       * idempotent by reference, so a provider's retry is a no-op rather than a
+       * double credit.
+       */
+      const { data: jobStatus, error } = await admin.rpc("settle_payment", {
+        p_reference: event.reference,
+        p_succeeded: succeeded,
+        p_reason: succeeded ? null : (event.failureReason ?? "Payment failed"),
+        p_channel: event.channel ?? null,
+      });
+
+      if (error) {
+        // 500 so the provider retries. This is the one case where a retry is
+        // what we want — the event was real and we failed to act on it.
+        console.error("[webhook:payments] settle_payment failed", error.message);
+        return NextResponse.json({ error: "could not settle" }, { status: 500 });
+      }
+
+      // The raw provider payload is stored separately from the settlement so a
+      // failure to record it can never roll back the money decision.
       await admin
         .from("payments")
-        .update({
-          status: "failed",
-          failure_reason: event.failureReason ?? "Payment failed",
-          raw_payload: raw,
-        })
+        .update({ raw_payload: raw })
         .eq("provider_reference", event.reference);
+
+      console.info(
+        `[webhook:payments] ${event.type} ${event.reference} → job ${jobStatus ?? "unknown"}`,
+      );
       break;
     }
 

@@ -270,6 +270,71 @@ export type ProviderCategoryRow = {
 }
 
 /**
+ * One offer to one artisan. Written only by the matcher (migration 0011) —
+ * there is deliberately no INSERT policy, so the sequence cannot be forged.
+ */
+export type JobOfferRow = {
+  id: string;
+  job_id: string;
+  provider_id: string;
+  sequence_no: number;
+  distance_km: number | null;
+  status: OfferStatus;
+  sent_at: string;
+  expires_at: string;
+  responded_at: string | null;
+}
+
+/**
+ * `subtotal` is what the ARTISAN asked for; `total` is what the CLIENT sees.
+ * Both are shown to both parties on purpose (PLAN.md §4) — an artisan who
+ * thinks the job is GHS 400 while the client is paying GHS 448 will have that
+ * conversation on the doorstep.
+ *
+ * Every figure here is derived by `save_quote`, never sent from a browser.
+ */
+export type QuoteRow = {
+  id: string;
+  job_id: string;
+  provider_id: string;
+  status: QuoteStatus;
+  subtotal: number;
+  service_fee_pct: number;
+  service_fee_amount: number;
+  transport_fee: number;
+  total: number;
+  deposit_amount: number;
+  notes: string | null;
+  created_at: string;
+  sent_at: string | null;
+  responded_at: string | null;
+}
+
+/**
+ * What the quote builder sends. Note what is absent: `amount`. The line total,
+ * the subtotal, the service fee, the transport band and the deposit are all
+ * computed by `save_quote`. A browser supplies descriptions and numbers to
+ * multiply, never money.
+ */
+export interface QuoteItemInput {
+  kind: QuoteItemKind;
+  description: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export type QuoteItemRow = {
+  id: string;
+  quote_id: string;
+  kind: QuoteItemKind;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+  sort_order: number;
+}
+
+/**
  * One row per admin decision, never updated.
  *
  * `decision` is the full verification_status enum rather than a narrower
@@ -316,6 +381,19 @@ export interface Database {
       provider_documents: Table<ProviderDocumentRow, "id" | "uploaded_at">;
       provider_categories: Table<ProviderCategoryRow, never>;
       verification_reviews: Table<VerificationReviewRow, "id" | "reviewed_at" | "call_notes">;
+      job_offers: Table<JobOfferRow, "id" | "sent_at" | "status" | "distance_km" | "responded_at">;
+      quotes: Table<
+        QuoteRow,
+        | "id"
+        | "created_at"
+        | "status"
+        | "service_fee_pct"
+        | "transport_fee"
+        | "notes"
+        | "sent_at"
+        | "responded_at"
+      >;
+      quote_items: Table<QuoteItemRow, "id" | "quantity" | "sort_order">;
       categories: Table<CategoryRow, "id" | "created_at" | "description" | "is_active" | "sort_order" | "icon">;
       jobs: Table<
         JobRow,
@@ -453,6 +531,102 @@ export interface Database {
       set_provider_availability: {
         Args: { p_online: boolean };
         Returns: ProviderAvailability;
+      };
+
+      /**
+       * Phase 3 (migration 0011). Every one of these returns the status the
+       * database settled on rather than the one the caller hoped for — an
+       * artisan tapping Accept two seconds after somebody else did needs to be
+       * told what actually happened, not what they asked for.
+       *
+       * `advance_matching` is intentionally absent: it is not granted to end
+       * users, because a client who could call it directly could burn through
+       * their own candidate list.
+       */
+      respond_to_offer: {
+        Args: { p_offer_id: string; p_accept: boolean };
+        Returns: JobStatus;
+      };
+      admin_assign_job: {
+        Args: { p_job_id: string; p_provider_id: string };
+        Returns: undefined;
+      };
+      /** Line items in, quote id out. Totals are derived server-side. */
+      save_quote: {
+        Args: { p_job_id: string; p_items: QuoteItemInput[]; p_notes?: string | null };
+        Returns: string;
+      };
+      send_quote: { Args: { p_quote_id: string }; Returns: undefined };
+      respond_to_quote: {
+        Args: { p_quote_id: string; p_accept: boolean; p_reason?: string | null };
+        Returns: JobStatus;
+      };
+      job_matching_progress: {
+        Args: { p_job_id: string };
+        Returns: {
+          contacted: number;
+          current_pass: number;
+          radius_km: number;
+          offer_expires_at: string | null;
+        }[];
+      };
+      /** Called by pg_cron and by /api/cron/matching. Returns offers expired. */
+      expire_stale_offers: { Args: Record<string, never>; Returns: number };
+
+      /**
+       * Phase 4 (migration 0012). Money.
+       *
+       * `settle_payment` is the only function that may mark a payment
+       * succeeded, and it is not granted to end users — it runs from the
+       * webhook handler under the service role. It is listed here because the
+       * handler is typed against this interface, not because a browser can
+       * reach it.
+       */
+      deposit_due_for_job: { Args: { p_job_id: string }; Returns: number };
+      settle_payment: {
+        Args: {
+          p_reference: string;
+          p_succeeded: boolean;
+          p_reason?: string | null;
+          p_channel?: string | null;
+        };
+        Returns: JobStatus | null;
+      };
+      refund_job_payments: {
+        Args: { p_job_id: string; p_reason?: string | null };
+        Returns: number;
+      };
+      /**
+       * Phase 5 (migration 0015). Execution and money out.
+       *
+       * `advance_job_execution` checks the requested edge against a table of
+       * legal transitions rather than trusting the caller's idea of what comes
+       * next — an artisan who marks "arrived" without ever going en route
+       * leaves a client watching a map that never moved.
+       */
+      advance_job_execution: {
+        Args: { p_job_id: string; p_to: JobStatus };
+        Returns: JobStatus;
+      };
+      sign_off_job: {
+        Args: { p_job_id: string; p_signature: string; p_client_notes?: string | null };
+        Returns: JobStatus;
+      };
+      balance_due_for_job: { Args: { p_job_id: string }; Returns: number };
+      close_job: { Args: { p_job_id: string }; Returns: JobStatus };
+      /** Backend only. Closes paid jobs the client never rated. */
+      auto_close_paid_jobs: { Args: { p_after_days?: number }; Returns: number };
+
+      stale_pending_payments: {
+        Args: { p_older_than_minutes?: number };
+        Returns: {
+          payment_id: string;
+          job_id: string;
+          provider_reference: string;
+          leg: PaymentLeg;
+          amount: number;
+          created_at: string;
+        }[];
       };
     };
     Enums: {

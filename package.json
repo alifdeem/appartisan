@@ -12,7 +12,12 @@
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/types.generated.ts",
     "db:seed": "tsx scripts/seed.ts",
-    "db:verify": "tsx scripts/verify.ts"
+    "db:verify": "tsx scripts/verify.ts",
+    "check:props": "tsx scripts/check-server-props.ts",
+    "smoke": "tsx scripts/smoke-render.ts",
+    "e2e": "tsx scripts/e2e-matching.ts",
+    "e2e:payments": "tsx scripts/e2e-payments.ts",
+    "e2e:execution": "tsx scripts/e2e-execution.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

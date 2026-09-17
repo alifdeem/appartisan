@@ -6,6 +6,14 @@ import { ArrowLeft, ImageOff, MapPin, Mic, Phone } from "lucide-react";
 
 import { CancelJob } from "@/components/jobs/cancel-job";
 import { CategoryIcon } from "@/components/marketplace/category-icon";
+import { DepositPanel } from "@/components/jobs/deposit-panel";
+import { MatchingProgress } from "@/components/jobs/matching-progress";
+import { PaymentReceipt } from "@/components/jobs/payment-receipt";
+import { getDepositDue, legState, listJobPayments } from "@/lib/payments/queries";
+import { detectMomoNetwork } from "@/lib/phone";
+import { getCurrentProfile } from "@/lib/supabase/server";
+import { QuoteReview } from "@/components/jobs/quote-review";
+import { getLatestQuote, getMatchingProgress } from "@/lib/jobs/matching";
 import { JobProgress } from "@/components/jobs/job-progress";
 import { JobStatusBadge } from "@/components/jobs/job-status-badge";
 import { JobTimeline } from "@/components/jobs/job-timeline";
@@ -22,6 +30,9 @@ import {
 import { timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Your job" };
+
+/** Mirrors `matching_radius_passes` in settings. Display only. */
+const PASS_COUNT = 3;
 
 /**
  * The one screen that changes with state (PLAN.md §11).
@@ -42,13 +53,29 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
   if (job.status === "draft") notFound();
 
   const photoRows = await listJobPhotos(jobId);
-  const [photos, voiceNoteUrl, events] = await Promise.all([
+  const [photos, voiceNoteUrl, events, progress, quote] = await Promise.all([
     signJobPhotos(photoRows),
     signVoiceNote(job.voice_note_path),
     listJobEvents(jobId),
+    getMatchingProgress(jobId),
+    getLatestQuote(jobId),
   ]);
 
+  const [payments, profile] = await Promise.all([listJobPayments(jobId), getCurrentProfile()]);
+  const deposit = legState(payments, "deposit");
+
+  // Only asked for when it is actually owed — the RPC raises if no quote has
+  // been accepted, and calling it on every job view would log noise for every
+  // job that has not got that far.
+  const depositDue =
+    job.status === "awaiting_deposit" && !deposit.paid ? await getDepositDue(jobId) : null;
+
   const presentation = jobStatus(job.status);
+
+  // Statuses where an artisan is being looked for. `offer_sent` counts: from
+  // the client's side "someone is deciding right now" is still the search.
+  const isMatching = ["posted", "matching", "offer_sent"].includes(job.status);
+  const awaitingDecision = job.status === "quote_sent" && quote?.status === "sent";
   const point =
     job.location_lat !== null && job.location_lng !== null
       ? { lat: job.location_lat, lng: job.location_lng }
@@ -93,21 +120,11 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
 
           {/* The honest version of a spinner. PLAN.md §6 is explicit that a
               silent wait is the failure mode here, so the screen says what the
-              matcher is actually doing and how far out it has looked. */}
-          {presentation.group === "active" && presentation.awaitingUs && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-field bg-ink-50 px-3.5 py-2.5 text-sm text-ink-600">
-              <span className="tabular">
-                Searching within{" "}
-                <span className="font-mono font-medium text-ink-800">
-                  {Number(job.matching_radius_km)}km
-                </span>
-              </span>
-              {job.matching_pass > 0 && (
-                <span className="tabular">
-                  Pass <span className="font-mono font-medium text-ink-800">{job.matching_pass}</span>
-                </span>
-              )}
-            </div>
+              matcher is actually doing, how far out it has looked, and how many
+              artisans it has already asked. It polls itself, so when somebody
+              accepts, this becomes the "artisan assigned" screen unaided. */}
+          {isMatching && progress && (
+            <MatchingProgress progress={progress} passCount={PASS_COUNT} />
           )}
 
           {job.status === "unmatched" && (
@@ -121,6 +138,42 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
           )}
         </CardContent>
       </Card>
+
+      {/* Money is the only thing on this screen the client can act on, so it
+          outranks everything — including their own photographs and the quote
+          they have already read. */}
+      {job.status === "awaiting_deposit" && depositDue !== null && (
+        <section className="animate-fade-up">
+          <DepositPanel
+            jobId={job.id}
+            amountDue={depositDue}
+            defaultNetwork={profile ? detectMomoNetwork(profile.phone) : null}
+            lastFailure={deposit.lastFailure?.failure_reason ?? null}
+          />
+        </section>
+      )}
+
+      {/* The price sits directly under the status and above everything the
+          client already knows — it is the only thing on this screen that is
+          waiting on them, and burying it under their own photographs would be
+          the one genuine usability failure available on this page. */}
+      {awaitingDecision && quote && (
+        <section className="animate-fade-up space-y-3">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-ink-900">Your artisan has sent a price</h2>
+            <p className="max-w-prose text-sm leading-relaxed text-ink-600">
+              Nothing is charged until you accept, and nobody travels until the deposit is paid.
+            </p>
+          </div>
+
+          <QuoteReview
+            quote={quote}
+            items={quote.items}
+            reference={job.reference}
+            rejectionsLeft={Math.max(0, PASS_COUNT - (job.quote_rejections ?? 0))}
+          />
+        </section>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-5">
@@ -188,14 +241,9 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
                 Where
               </h2>
 
-              {point && (
-                <LocationMap
-                  value={point}
-                  onChange={() => {}}
-                  interactive={false}
-                  className="h-44 w-full"
-                />
-              )}
+              {/* No `onChange`. This is a Server Component, and a function prop
+                  cannot cross into a Client Component. */}
+              {point && <LocationMap value={point} interactive={false} className="h-44 w-full" />}
 
               <div className="space-y-1.5">
                 {job.landmark && (
@@ -218,6 +266,10 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
         </div>
 
         <div className="space-y-5">
+          {/* Above the timeline: somebody checking a job after paying is
+              looking for the money, not for the history of the match. */}
+          <PaymentReceipt payments={payments} />
+
           <Card>
             <CardContent className="space-y-4">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-500">

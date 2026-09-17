@@ -356,8 +356,238 @@ async function main() {
       renameSelf.error === null,
       renameSelf.error ? `WRONGLY BLOCKED: ${renameSelf.error.message}` : "allowed, as intended",
     );
+
+    console.log("\n  Phase 2 — verification (0008 / 0010)\n");
+
+    // The gaps function is SECURITY DEFINER over somebody's identity documents,
+    // so who may call it is the whole question. 0009 briefly got this wrong in
+    // both directions at once; these three checks are why it did not survive.
+    // This doubles as the regression test for the `||` bug fixed in 0010: the
+    // gaps array is built by appending text to text[], and an unquoted literal
+    // is `unknown`, which resolves the operator toward anyarray||anyarray and
+    // raises "malformed array literal". It only fails once there is a gap to
+    // report — the exact case the function exists for — so a non-empty result
+    // here is the assertion that matters, not merely the absence of an error.
+    const ownGaps = await asProvider.rpc("provider_application_gaps", {
+      p_provider_id: uid!.id,
+    });
+    check(
+      "artisan reads own gaps, and the array actually builds",
+      ownGaps.error === null && Array.isArray(ownGaps.data) && ownGaps.data.length > 0,
+      ownGaps.error
+        ? `WRONGLY BLOCKED: ${ownGaps.error.message}`
+        : `${(ownGaps.data ?? []).length} gap(s): ${JSON.stringify(ownGaps.data)}`,
+    );
+
+    const otherGaps = await asProvider.rpc("provider_application_gaps", {
+      p_provider_id: "00000000-0000-0000-0000-000000000000",
+    });
+    check(
+      "artisan cannot read someone else's gaps",
+      otherGaps.error !== null,
+      otherGaps.error ? `blocked: ${otherGaps.error.message}` : "NOT BLOCKED — definer leak",
+    );
+
+    const anonGaps = await anon.rpc("provider_application_gaps", { p_provider_id: uid!.id });
+    check(
+      "anon cannot read gaps at all",
+      anonGaps.error !== null,
+      anonGaps.error ? `blocked: ${anonGaps.error.message}` : "NOT BLOCKED — PUBLIC execute grant",
+    );
+
+    // An approved artisan resubmitting would let somebody swap their documents
+    // after they had been checked.
+    const resubmit = await asProvider.rpc("submit_provider_application");
+    check(
+      "approved artisan cannot resubmit",
+      resubmit.error !== null,
+      resubmit.error ? `blocked: ${resubmit.error.message}` : "NOT BLOCKED",
+    );
+
+    const selfReview = await asProvider.rpc("review_provider_application", {
+      p_provider_id: uid!.id,
+      p_decision: "approved",
+      p_call_notes: "self-approved",
+    });
+    check(
+      "artisan cannot review themselves",
+      selfReview.error !== null,
+      selfReview.error ? `blocked: ${selfReview.error.message}` : "NOT BLOCKED — queue is decorative",
+    );
+
+    const cardAfterApproval = await asProvider
+      .from("providers")
+      .update({ ghana_card_number: "GHA-000000000-0" })
+      .eq("profile_id", uid!.id);
+    check(
+      "approved artisan cannot change their Ghana Card number",
+      cardAfterApproval.error !== null,
+      cardAfterApproval.error ? `blocked: ${cardAfterApproval.error.code}` : "NOT BLOCKED",
+    );
+
+    const onJob = await asProvider
+      .from("providers")
+      .update({ availability: "on_job" })
+      .eq("profile_id", uid!.id);
+    check(
+      "artisan cannot put themselves on a job",
+      onJob.error !== null,
+      onJob.error ? `blocked: ${onJob.error.code}` : "NOT BLOCKED",
+    );
+
+    // The RPC is what the toggle calls, so it must work for the legitimate case.
+    const offline = await asProvider.rpc("set_provider_availability", { p_online: false });
+    const online = await asProvider.rpc("set_provider_availability", { p_online: true });
+    check(
+      "set_provider_availability round-trips for an approved artisan",
+      offline.error === null && online.error === null && online.data === "online",
+      offline.error?.message ?? online.error?.message ?? `returned "${online.data}"`,
+    );
   }
 
+
+  console.log("\n  Function privileges (0013)\n");
+
+  /**
+   * The defect 0013 exists to fix, asserted permanently.
+   *
+   * Supabase's default privileges grant EXECUTE on every new `public` function
+   * to `anon` and `authenticated`, so `revoke ... from public` — which 0010,
+   * 0011 and 0012 all used — removes nothing. For a while an anonymous caller
+   * could execute `settle_payment` and mark any deposit paid.
+   *
+   * Every privileged function added from here on belongs in this list. A new
+   * one that is merely forgotten will be callable by the whole internet.
+   */
+  const PRIVILEGED: [string, Record<string, unknown>][] = [
+    ["settle_payment", { p_reference: "x", p_succeeded: true, p_reason: null, p_channel: null }],
+    ["refund_job_payments", { p_job_id: "00000000-0000-0000-0000-000000000000", p_reason: null }],
+    ["advance_matching", { p_job_id: "00000000-0000-0000-0000-000000000000" }],
+    ["expire_stale_offers", {}],
+    ["stale_pending_payments", { p_older_than_minutes: 15 }],
+  ];
+
+  for (const [fn, args] of PRIVILEGED) {
+    const asAnon = await anon.rpc(fn, args as never);
+    check(
+      `anon cannot execute ${fn}`,
+      asAnon.error !== null,
+      asAnon.error ? `blocked: ${asAnon.error.code}` : "EXECUTED — privilege leak",
+    );
+  }
+
+  // The same functions must still work for the backend, or the fix has simply
+  // broken the webhook and the cron sweep instead of securing them.
+  const sweep = await admin.rpc("expire_stale_offers");
+  check(
+    "the service role CAN still run the offer sweep",
+    sweep.error === null,
+    sweep.error ? `WRONGLY BLOCKED: ${sweep.error.message}` : `expired ${sweep.data}`,
+  );
+
+  const settleUnknown = await admin.rpc("settle_payment", {
+    p_reference: "definitely-not-a-real-reference",
+    p_succeeded: true,
+    p_reason: null,
+    p_channel: null,
+  });
+  check(
+    "the service role CAN still settle payments",
+    settleUnknown.error === null,
+    settleUnknown.error ? `WRONGLY BLOCKED: ${settleUnknown.error.message}` : "reachable",
+  );
+
+  console.log("\n  Phase 1 — a job needs a landmark (0009)\n");
+
+  // Phase 1 drew the landmark field with a required marker and enforced it
+  // nowhere, so a job could go out with an OSM road name as its only human
+  // direction. This proves the rule bites at the point of no return.
+  //
+  // Only the refusal is exercised, deliberately: a successful post_job leaves a
+  // `posted` job behind, and the client's own DELETE policy covers drafts only
+  // (0007), so the happy path could not be cleaned up after itself.
+  const clientPhone = "+233241111111";
+  const { data: clientLink } = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email: syntheticEmail(clientPhone),
+  });
+
+  if (!clientLink?.properties?.hashed_token) {
+    check("mint a client session", false, "generateLink gave no token");
+  } else {
+    const clientAuth = createClient(url, anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: clientSession } = await clientAuth.auth.verifyOtp({
+      type: "magiclink",
+      token_hash: clientLink.properties.hashed_token,
+    });
+
+    const asClient = createClient(url, anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: {
+        headers: { Authorization: `Bearer ${clientSession!.session!.access_token}` },
+      },
+    });
+
+    const { data: anyCategory } = await admin
+      .from("categories")
+      .select("id")
+      .eq("is_active", true)
+      .limit(1)
+      .single();
+
+    const { data: draft, error: draftError } = await asClient
+      .from("jobs")
+      .insert({ client_id: clientSession!.user!.id, category_id: anyCategory!.id })
+      .select("id")
+      .single();
+
+    if (draftError || !draft) {
+      check("client can create a draft job", false, draftError?.message ?? "no row");
+    } else {
+      // Everything a job needs except the landmark.
+      await asClient.rpc("set_job_location", {
+        p_job_id: draft.id,
+        p_lng: -0.1826,
+        p_lat: 5.5573,
+        p_address_text: "Osu, Accra",
+        p_ghanapost_code: null,
+        p_landmark: null,
+      });
+      await asClient.from("jobs").update({ description: "Ceiling fan has stopped spinning." }).eq("id", draft.id);
+
+      const noLandmark = await asClient.rpc("post_job", { p_job_id: draft.id });
+      check(
+        "post_job refuses a job with no landmark",
+        noLandmark.error !== null && /landmark/i.test(noLandmark.error.message),
+        noLandmark.error ? `blocked: ${noLandmark.error.message}` : "POSTED WITHOUT A LANDMARK",
+      );
+
+      // A too-short landmark is the same defect wearing a hat.
+      await asClient.rpc("set_job_location", {
+        p_job_id: draft.id,
+        p_lng: -0.1826,
+        p_lat: 5.5573,
+        p_address_text: "Osu, Accra",
+        p_ghanapost_code: null,
+        p_landmark: "here",
+      });
+      const shortLandmark = await asClient.rpc("post_job", { p_job_id: draft.id });
+      check(
+        "post_job refuses a one-word landmark",
+        shortLandmark.error !== null && /landmark/i.test(shortLandmark.error.message),
+        shortLandmark.error ? `blocked` : "POSTED WITH A USELESS LANDMARK",
+      );
+
+      const cleanup = await asClient.from("jobs").delete().eq("id", draft.id);
+      check(
+        "test draft cleaned up",
+        cleanup.error === null,
+        cleanup.error ? `LEFT BEHIND: ${cleanup.error.message}` : "draft removed",
+      );
+    }
+  }
 
   console.log(failures === 0 ? "\n  All checks passed.\n" : `\n  ${failures} CHECK(S) FAILED.\n`);
   process.exit(failures === 0 ? 0 : 1);

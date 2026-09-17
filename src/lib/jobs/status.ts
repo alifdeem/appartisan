@@ -196,7 +196,17 @@ export function jobStatus(status: JobStatus): JobStatusPresentation {
   return JOB_STATUS[status];
 }
 
-/** Statuses a client can still walk away from with nothing owed (PLAN.md §7). */
+/**
+ * The cancellation tiers from PLAN.md §7, as the UI sees them.
+ *
+ * Kept in step with `cancel_job` (migration 0012), which is what actually
+ * enforces them. Two lists rather than one because the difference matters to
+ * the person cancelling: walking away before paying costs nothing and needs no
+ * explanation, whereas cancelling after a deposit triggers a refund and is
+ * worth saying out loud before they tap.
+ */
+
+/** Nothing has been paid, so nothing is owed and nothing comes back. */
 export const FREELY_CANCELLABLE: readonly JobStatus[] = [
   "draft",
   "posted",
@@ -204,10 +214,27 @@ export const FREELY_CANCELLABLE: readonly JobStatus[] = [
   "offer_sent",
   "unmatched",
   "assigned",
+  "quote_pending",
+  "quote_sent",
+  "awaiting_deposit",
 ];
 
+/**
+ * Paid, but nobody has travelled yet — so the deposit comes back in full.
+ *
+ * This is clean only because the platform holds the gross and pays artisans
+ * separately (PLAN.md §4 Finding 1). Under a split-payment model every one of
+ * these refunds would leave the platform out of pocket.
+ */
+export const REFUNDABLE_CANCELLABLE: readonly JobStatus[] = ["deposit_paid"];
+
 export function isCancellable(status: JobStatus): boolean {
-  return FREELY_CANCELLABLE.includes(status);
+  return FREELY_CANCELLABLE.includes(status) || REFUNDABLE_CANCELLABLE.includes(status);
+}
+
+/** True when cancelling now returns money the client has already paid. */
+export function cancellingRefunds(status: JobStatus): boolean {
+  return REFUNDABLE_CANCELLABLE.includes(status);
 }
 
 /**

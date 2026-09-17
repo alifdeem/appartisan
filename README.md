@@ -6,9 +6,14 @@ the platform holds the money until the job is signed off.
 
 Launching in Accra and Tema, then countrywide.
 
-> **Phase 0.** Foundations only. The database, auth, roles, design system and landing page
-> are real. Payments, SMS and maps run against **mock adapters** — see
-> [Simulation mode](#simulation-mode) below and `PLAN.md` §3.
+> **Phases 0–3 are built.** A client posts a job with photos and a voice note; the
+> matcher offers it to the nearest verified artisan with a 120-second clock, widening
+> 5km → 10km → 20km and falling through to an admin queue; the artisan builds an itemised
+> quote; the client accepts or sends it back out. Payments are not built yet — a job stops
+> at `awaiting_deposit`. See the [Roadmap](#roadmap).
+>
+> Payments, SMS and maps run against **mock adapters**. Nothing here moves real money or
+> sends real messages — see [Simulation mode](#simulation-mode) below and `PLAN.md` §3.
 
 ---
 
@@ -60,7 +65,7 @@ supabase link --project-ref "$SUPABASE_PROJECT_REF"
 npm run db:push
 ```
 
-Six migrations run in order:
+Eleven migrations run in order:
 
 | File | What it creates |
 |---|---|
@@ -70,6 +75,11 @@ Six migrations run in order:
 | `0004_reference_data.sql` | 26 service categories, transport-fee distance bands, tunable settings |
 | `0005_location.sql` | `set_provider_location()`, `record_location_ping()` |
 | `0006_column_guards.sql` | Column-level write guards — see below |
+| `0007_job_posting.sql` | Client posting: PostGIS pin, `post_job()`, draft cleanup |
+| `0008_provider_verification.sql` | Artisan application, `review_provider_application()`, availability |
+| `0009_landmark_and_gaps_fixes.sql` | Landmark made mandatory at post time |
+| `0010_gaps_hardening.sql` | Revokes the default PUBLIC execute grant; array-build fix |
+| `0011_matching_and_quoting.sql` | The matcher, offers with expiry, quotes, admin assignment |
 
 `0006` is the one to read before changing any policy. RLS decides which **rows** you may
 touch and has no opinion on which **columns**, so every "update your own row" policy in
@@ -80,7 +90,7 @@ apply per role and admins are also `authenticated` — revoking the column would
 admin console along with the attacker.
 
 If you would rather paste SQL by hand, run the files in that order in the dashboard's SQL
-editor, or paste `supabase/apply_all.sql`, which is all six concatenated.
+editor, or paste `supabase/apply_all.sql`, which is all eleven concatenated.
 
 ### 4. Seed the test accounts
 
@@ -97,10 +107,19 @@ Idempotent — safe to run repeatedly. It refuses to touch a production project 
 npm run db:verify
 ```
 
-25 assertions against the live database: anonymous access is refused, the privilege-escalation
+41 assertions against the live database: anonymous access is refused, the privilege-escalation
 paths above are actually blocked, PostGIS resolves inside the `SECURITY DEFINER` functions,
 the seed is present, and a real session can be minted and cannot be replayed. Read-only apart
 from a few writes it rolls back. Run it after any schema change.
+
+```bash
+npx tsx scripts/e2e-matching.ts
+```
+
+27 more that drive a real job all the way through Phase 3 — post, match, offer, accept,
+quote, accept — plus the two paths PLAN.md §6 says will be the common ones: an artisan
+declining an offer, and a client rejecting a price. Both run under real client and artisan
+sessions, so RLS and the column guards are in the loop. It cleans up the jobs it creates.
 
 ### 6. Run
 
@@ -177,7 +196,7 @@ npm run db:push    # apply migrations to the linked project
 npm run db:reset   # drop and rebuild local db, then re-run migrations
 npm run db:types   # dump the live schema to types.generated.ts, for diffing
 npm run db:seed    # idempotent test accounts
-npm run db:verify  # 25 assertions against the live database
+npm run db:verify  # 41 assertions against the live database
 ```
 
 `src/lib/supabase/types.ts` is **hand-maintained** — it carries comments explaining the
@@ -323,4 +342,15 @@ regulatory constraints, and the phase breakdown. Read §3 before touching anythi
 with money. `DESIGN.md` covers the visual language and `IMAGE-PROMPTS.md` the photography
 brief.
 
-Phase 0 (this) is foundations. Phase 1 is the booking flow.
+| Phase | | What it delivers |
+|---|---|---|
+| 0 | ✅ | Schema, PostGIS, RLS, phone OTP, role routing, design system, landing page |
+| 1 | ✅ | Client posting — categories, photos, voice notes, Leaflet pin, dashboard, history |
+| 2 | ✅ | Artisan application, private document upload, admin verification queue, availability |
+| 3 | ✅ | Matching, sequential offers with expiry, radius widening, quote builder, admin fallback |
+| 4 | — | Money in — payment adapter, mock MoMo, simulated webhook round-trip |
+| 5 | — | Execution and money out — travel status, sign-off, invoices, payouts |
+| 6 | — | Ratings, disputes, admin dashboards, reliability scoring |
+| 7 | — | Hardening — rate limiting, error monitoring, RLS review, accessibility |
+| 8 | — | Go live — real Paystack, SMS and Maps accounts |
+| 9 | — | Pilot and handover |

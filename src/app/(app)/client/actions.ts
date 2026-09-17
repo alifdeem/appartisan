@@ -8,8 +8,9 @@ import { z } from "zod";
 
 import { JOB_PHOTO_BUCKET, MAX_JOB_PHOTOS, VOICE_NOTE_BUCKET } from "@/lib/jobs/media";
 import { isValidGhanaPostCode } from "@/lib/integrations/maps/types";
-import { createClient } from "@/lib/supabase/server";
-import type { JobRow } from "@/lib/supabase/types";
+import { getPaymentProvider } from "@/lib/integrations/payments";
+import { createClient, getCurrentProfile } from "@/lib/supabase/server";
+import type { JobRow, MomoNetwork } from "@/lib/supabase/types";
 
 /**
  * Client job-posting actions.
@@ -233,7 +234,19 @@ const locationSchema = z.object({
   lng: z.coerce.number({ message: "Drop a pin on the map." }).min(-3.3).max(1.2),
   addressText: z.string().trim().max(300).optional(),
   ghanapostCode: z.string().trim().max(20).optional(),
-  landmark: z.string().trim().max(200).optional(),
+  /**
+   * Required, and it is the pin that makes it so rather than the other way
+   * round. PostGIS gets the artisan to the right street; a street in Accra can
+   * be four unmarked gates and no numbers. The landmark is the half of the
+   * address a human actually uses on arrival, which is why the picker has
+   * always drawn it with a required marker — this is where that marker became
+   * true. Mirrored in `post_job` (migration 0009), which is what enforces it.
+   */
+  landmark: z
+    .string()
+    .trim()
+    .min(10, "Describe how to find the place — “blue gate opposite Melcom”.")
+    .max(200, "Keep the landmark under 200 characters."),
 });
 
 export async function saveLocationAction(
@@ -246,7 +259,10 @@ export async function saveLocationAction(
     lng: formData.get("lng"),
     addressText: formData.get("addressText") || undefined,
     ghanapostCode: formData.get("ghanapostCode") || undefined,
-    landmark: formData.get("landmark") || undefined,
+    // Not coalesced to undefined like the two above it: an empty landmark is a
+    // *missing required value*, and it should meet the length rule's sentence
+    // rather than zod's generic "Required".
+    landmark: formData.get("landmark") ?? "",
   });
 
   if (!parsed.success) {
@@ -543,6 +559,132 @@ export async function discardDraftAction(
 
   revalidatePath("/client");
   redirect("/client");
+}
+
+// ---------------------------------------------------------------------------
+// The quote — Phase 3
+// ---------------------------------------------------------------------------
+
+/**
+ * Accept the price, or send the job back out.
+ *
+ * **Declining is not a failure and must not be built like one.** With no price
+ * guidance in v1 (PLAN.md §2) artisans price freely and clients decline, so
+ * this path gets walked often — `respond_to_quote` puts the job straight back
+ * into matching, and the declined artisan is never re-offered it because the
+ * candidate query already excludes anyone who has seen the job.
+ *
+ * The reason is optional on purpose. Requiring a client to justify declining a
+ * price they did not like would depress the decline rate rather than improve
+ * the data, and a job bounced back with no explanation still tells us the
+ * number was wrong.
+ */
+export async function respondToQuoteAction(
+  quoteId: string,
+  accept: boolean,
+  reason?: string,
+): Promise<JobActionState & { status?: string }> {
+  const parsed = uuid.safeParse(quoteId);
+  if (!parsed.success) return state({ ok: false, error: "That quote could not be found." });
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("respond_to_quote", {
+    p_quote_id: parsed.data,
+    p_accept: accept,
+    p_reason: reason?.trim().slice(0, 300) || null,
+  });
+
+  if (error) {
+    console.error("[quotes] respondToQuote failed", error);
+    return state({
+      ok: false,
+      error: error.message.replace(/^.*?:\s*/, "") || "Could not send your answer.",
+    });
+  }
+
+  revalidatePath("/client", "layout");
+  return { ...state({ ok: true }), status: data ?? undefined };
+}
+
+// ---------------------------------------------------------------------------
+// The deposit — Phase 4
+// ---------------------------------------------------------------------------
+
+/**
+ * Start a deposit charge and hand back where to complete it.
+ *
+ * Three rules hold here and none of them are negotiable:
+ *
+ *  1. **The amount is never sent from the browser.** It comes from
+ *     `deposit_due_for_job`, which reads the accepted quote. A client who
+ *     tampers with this payload can pick a network, and nothing else.
+ *  2. **This does not mark anything paid.** It creates a `pending` row and a
+ *     provider reference. Only the webhook may settle it — see
+ *     `settle_payment` in migration 0012.
+ *  3. **A previous failure is not an obstacle.** The partial unique index in
+ *     0012 allows any number of attempts, so a declined prompt simply gets
+ *     retried with a fresh reference.
+ */
+export async function startDepositAction(
+  jobId: string,
+  network: MomoNetwork,
+): Promise<JobActionState & { authorizationUrl?: string }> {
+  const parsedJob = uuid.safeParse(jobId);
+  const parsedNetwork = z.enum(["mtn", "telecel", "airteltigo"]).safeParse(network);
+
+  if (!parsedJob.success || !parsedNetwork.success) {
+    return state({ ok: false, error: "That payment could not be started." });
+  }
+
+  const job = await loadOwnedJob(parsedJob.data);
+  if (!job) return state({ ok: false, error: "That job could not be found." });
+
+  if (job.status !== "awaiting_deposit") {
+    return state({
+      ok: false,
+      error:
+        job.status === "deposit_paid"
+          ? "This deposit has already been paid."
+          : "This job is not waiting for a deposit.",
+    });
+  }
+
+  const supabase = await createClient();
+
+  const { data: amount, error: amountError } = await supabase.rpc("deposit_due_for_job", {
+    p_job_id: parsedJob.data,
+  });
+
+  if (amountError || amount === null) {
+    console.error("[payments] deposit amount failed", amountError?.message);
+    return state({ ok: false, error: "We could not work out what is due. Try again." });
+  }
+
+  const profile = await getCurrentProfile();
+  if (!profile) return state({ ok: false, error: "You need to be signed in." });
+
+  try {
+    const provider = getPaymentProvider();
+    const charge = await provider.initializeCharge({
+      jobId: parsedJob.data,
+      leg: "deposit",
+      amountGhs: Number(amount),
+      customerPhone: profile.phone,
+      channel: "momo",
+      momoNetwork: parsedNetwork.data,
+      metadata: { reference: job.reference },
+    });
+
+    revalidatePath(`/client/jobs/${parsedJob.data}`);
+    return { ...state({ ok: true }), authorizationUrl: charge.authorizationUrl };
+  } catch (error) {
+    console.error("[payments] initializeCharge failed", error);
+    return state({
+      ok: false,
+      error: "We could not reach the payment service. Nothing was charged — try again.",
+    });
+  }
 }
 
 export async function cancelJobAction(

@@ -2406,3 +2406,1882 @@ grant execute on function public.submit_provider_application() to authenticated;
 grant execute on function public.review_provider_application(uuid, public.verification_status, text)
   to authenticated;
 grant execute on function public.set_provider_availability(boolean) to authenticated;
+
+-- ══════════════════════════════════════════════════════════════
+-- 0009_landmark_and_gaps_fixes.sql
+-- ══════════════════════════════════════════════════════════════
+-- ArtisanGH — 0009 corrections
+--
+-- Two fixes, one to each of the last two phases.
+--
+--  1. **Phase 1 left the landmark half-required.** `location-picker.tsx` marks
+--     the field with a required asterisk, and nothing anywhere enforced it —
+--     not the action's schema, not `post_job`. A client could post a job whose
+--     only human-readable direction was an OSM reverse-geocode label, which in
+--     Accra is frequently a road name and nothing else. The pin is what the
+--     matcher measures from, but the pin is not what the artisan reads when
+--     they are standing at a junction holding a phone. PLAN.md §3 and the
+--     picker's own header comment both call the landmark the thing Ghanaians
+--     actually navigate by; this makes the database agree.
+--
+--  2. **0008's `provider_application_gaps` locked out the service role.** Every
+--     other guard and definer function in this schema treats `auth.uid() is
+--     null` as trusted server code and lets it through — 0006 says so in as
+--     many words. That one refused it, so the seed script and any future
+--     back-office tooling would meet "That is not your application." The app
+--     never hit it (it always calls with a session), which is exactly the kind
+--     of inconsistency that stays hidden until somebody writes a script at 2am.
+
+-- ---------------------------------------------------------------------------
+-- 1. A landmark is part of a complete job
+-- ---------------------------------------------------------------------------
+-- Enforced in `post_job` rather than as a NOT NULL column, deliberately: a
+-- draft is allowed to be incomplete, and the pin is set on its own step before
+-- the landmark is typed. The rule belongs at the point of no return, next to
+-- the other two completeness checks, not on the column.
+--
+-- Existing rows are untouched — this only gates new posts. A draft started
+-- before this migration is refused at the review step with a sentence telling
+-- the client what to add, and the review screen already links back to the
+-- location step to add it.
+
+create or replace function public.post_job(p_job_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_job    public.jobs;
+  v_radius numeric;
+begin
+  select * into v_job from public.jobs where id = p_job_id for update;
+
+  if v_job.id is null then
+    raise exception 'Job not found.' using errcode = 'P0002';
+  end if;
+
+  if v_job.client_id is distinct from auth.uid() then
+    raise exception 'That is not your job.' using errcode = '42501';
+  end if;
+
+  if v_job.status <> 'draft' then
+    raise exception 'This job has already been posted.' using errcode = '22023';
+  end if;
+
+  if v_job.location is null then
+    raise exception 'Pin the job location before posting.' using errcode = '22023';
+  end if;
+
+  -- NEW in 0009. A pin gets the artisan to the street; the landmark gets them
+  -- to the gate. Ten characters is enough to refuse an empty field or a full
+  -- stop without demanding prose.
+  if length(coalesce(trim(v_job.landmark), '')) < 10 then
+    raise exception 'Add a landmark so the artisan can find the place — “blue gate opposite Melcom”.'
+      using errcode = '22023';
+  end if;
+
+  -- A description OR a voice note. Requiring prose would exclude the clients
+  -- this product is partly built for; requiring neither wastes a callout.
+  if coalesce(trim(v_job.description), '') = '' and v_job.voice_note_path is null then
+    raise exception 'Describe the job, or record a voice note, before posting.'
+      using errcode = '22023';
+  end if;
+
+  -- First matching pass radius comes from `matching_radius_passes` ([5,10,20]),
+  -- the same array the Phase 3 widener walks, so the first offer and the first
+  -- widening can never be configured against each other (PLAN.md §6).
+  select coalesce((value -> 0)::numeric, 5) into v_radius
+  from public.settings where key = 'matching_radius_passes';
+
+  perform set_config('artisangh.job_status_change', 'on', true);
+
+  update public.jobs
+     set status             = 'posted',
+         matching_radius_km = coalesce(v_radius, 5),
+         matching_pass      = 1
+   where id = p_job_id;
+
+  perform set_config('artisangh.job_status_change', 'off', true);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 2. Let trusted server code read application gaps
+-- ---------------------------------------------------------------------------
+-- Identical to the 0008 definition except for the `auth.uid() is null` escape,
+-- which restores the convention 0006 documents.
+
+create or replace function public.provider_application_gaps(p_provider_id uuid)
+returns text[]
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_provider public.providers;
+  v_gaps     text[] := array[]::text[];
+  v_trades   int;
+  v_docs     int;
+begin
+  -- SECURITY DEFINER, so RLS is not doing the scoping here and this has to.
+  -- Without it, any signed-in user could ask whether a given artisan has a
+  -- Ghana Card on file — which is exactly the kind of thing the private bucket
+  -- exists to keep quiet about. The service role is exempt, as everywhere else.
+  if auth.uid() is not null
+     and p_provider_id is distinct from auth.uid()
+     and not public.is_admin() then
+    raise exception 'That is not your application.' using errcode = '42501';
+  end if;
+
+  select * into v_provider from public.providers where profile_id = p_provider_id;
+
+  if v_provider.profile_id is null then
+    return array['This account is not set up as an artisan.'];
+  end if;
+
+  select count(*) into v_trades
+  from public.provider_categories pc
+  join public.categories c on c.id = pc.category_id and c.is_active
+  where pc.provider_id = p_provider_id;
+
+  if v_trades = 0 then
+    v_gaps := v_gaps || 'Choose at least one trade you work in.';
+  end if;
+
+  -- 40 characters is roughly one honest sentence. Shorter than that is a
+  -- placeholder, and a placeholder bio is what the admin ends up phoning about.
+  if length(coalesce(trim(v_provider.bio), '')) < 40 then
+    v_gaps := v_gaps || 'Write at least a sentence about the work you do.';
+  end if;
+
+  if v_provider.years_experience is null then
+    v_gaps := v_gaps || 'Say how many years you have been doing this work.';
+  end if;
+
+  if coalesce(trim(v_provider.base_city), '') = '' then
+    v_gaps := v_gaps || 'Tell us which town or area you work from.';
+  end if;
+
+  if v_provider.momo_number is null or v_provider.momo_network is null then
+    v_gaps := v_gaps || 'Add the mobile money number you want to be paid on.';
+  end if;
+
+  if v_provider.ghana_card_number is null then
+    v_gaps := v_gaps || 'Enter your Ghana Card number.';
+  end if;
+
+  select count(distinct doc_type) into v_docs
+  from public.provider_documents
+  where provider_id = p_provider_id
+    and doc_type in ('ghana_card_front', 'ghana_card_back', 'selfie');
+
+  if v_docs < 3 then
+    v_gaps := v_gaps
+      || 'Upload both sides of your Ghana Card and a photo of yourself holding it.';
+  end if;
+
+  return v_gaps;
+end;
+$$;
+
+-- ══════════════════════════════════════════════════════════════
+-- 0010_gaps_hardening.sql
+-- ══════════════════════════════════════════════════════════════
+-- ArtisanGH — 0010 harden provider_application_gaps
+--
+-- Two defects, both in code added by 0008/0009, both found by exercising the
+-- function against the live database rather than by reading it.
+--
+--  1. **Anonymous callers could read application gaps.** Postgres grants
+--     EXECUTE on a new function to PUBLIC by default, so 0008's
+--     `grant ... to authenticated` excluded nobody — it was additive to a grant
+--     that was already there. 0009 then made it reachable: it relaxed the
+--     authority check to `auth.uid() is not null and ...` so that trusted
+--     server code could call it, not accounting for the fact that an anonymous
+--     PostgREST caller *also* has a null `auth.uid()`. The two together meant
+--     anyone could ask whether a given artisan had a Ghana Card on file.
+--
+--     0009 was wrong on its own terms as well. The `auth.uid() is null` escape
+--     documented in 0006 belongs to the guard *triggers*, which are only
+--     reachable once RLS has already allowed a write. A directly-callable RPC
+--     has no such gate in front of it, so the same test does not mean the same
+--     thing. The escape is removed rather than repaired: nothing in this
+--     codebase calls this as the service role, and a code path that exists for
+--     no caller is a code path nobody maintains.
+--
+--  2. **`v_gaps || 'some sentence'` raised "malformed array literal".** An
+--     unquoted string literal is `unknown` to the parser, which resolves `||`
+--     toward `anyarray || anyarray` and then tries to read the sentence as an
+--     array. Every incomplete application would have hit this — the function
+--     only fails once it has an actual gap to report, which is precisely the
+--     case the review screen and the submit RPC exist to handle. Explicit
+--     `::text` casts pin the operator to `anyarray || anyelement`.
+
+-- ---------------------------------------------------------------------------
+-- 1. Take back the default PUBLIC grant
+-- ---------------------------------------------------------------------------
+-- The other three Phase 2 functions refuse an anonymous caller on their own
+-- (they raise on a null `auth.uid()`, or on `is_admin()`), so this is defence
+-- in depth for them and the actual fix for the first one. Revoking from PUBLIC
+-- does not touch the owner, which is what runs migrations.
+
+revoke execute on function public.provider_application_gaps(uuid) from public;
+revoke execute on function public.submit_provider_application() from public;
+revoke execute on function public.review_provider_application(
+  uuid, public.verification_status, text
+) from public;
+revoke execute on function public.set_provider_availability(boolean) from public;
+revoke execute on function public.provider_status_change_permitted() from public;
+
+grant execute on function public.provider_application_gaps(uuid) to authenticated;
+grant execute on function public.submit_provider_application() to authenticated;
+grant execute on function public.review_provider_application(
+  uuid, public.verification_status, text
+) to authenticated;
+grant execute on function public.set_provider_availability(boolean) to authenticated;
+grant execute on function public.provider_status_change_permitted() to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 2. The function itself
+-- ---------------------------------------------------------------------------
+
+create or replace function public.provider_application_gaps(p_provider_id uuid)
+returns text[]
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_provider public.providers;
+  v_gaps     text[] := array[]::text[];
+  v_trades   int;
+  v_docs     int;
+begin
+  -- SECURITY DEFINER, so RLS is not doing the scoping here and this has to.
+  -- A caller must be the artisan in question or an admin. A null `auth.uid()`
+  -- is an anonymous caller and is refused with everybody else — see the header.
+  if p_provider_id is distinct from auth.uid() and not public.is_admin() then
+    raise exception 'That is not your application.' using errcode = '42501';
+  end if;
+
+  select * into v_provider from public.providers where profile_id = p_provider_id;
+
+  if v_provider.profile_id is null then
+    return array['This account is not set up as an artisan.'::text];
+  end if;
+
+  select count(*) into v_trades
+  from public.provider_categories pc
+  join public.categories c on c.id = pc.category_id and c.is_active
+  where pc.provider_id = p_provider_id;
+
+  if v_trades = 0 then
+    v_gaps := v_gaps || 'Choose at least one trade you work in.'::text;
+  end if;
+
+  -- 40 characters is roughly one honest sentence. Shorter than that is a
+  -- placeholder, and a placeholder bio is what the admin ends up phoning about.
+  if length(coalesce(trim(v_provider.bio), '')) < 40 then
+    v_gaps := v_gaps || 'Write at least a sentence about the work you do.'::text;
+  end if;
+
+  if v_provider.years_experience is null then
+    v_gaps := v_gaps || 'Say how many years you have been doing this work.'::text;
+  end if;
+
+  if coalesce(trim(v_provider.base_city), '') = '' then
+    v_gaps := v_gaps || 'Tell us which town or area you work from.'::text;
+  end if;
+
+  if v_provider.momo_number is null or v_provider.momo_network is null then
+    v_gaps := v_gaps || 'Add the mobile money number you want to be paid on.'::text;
+  end if;
+
+  if v_provider.ghana_card_number is null then
+    v_gaps := v_gaps || 'Enter your Ghana Card number.'::text;
+  end if;
+
+  select count(distinct doc_type) into v_docs
+  from public.provider_documents
+  where provider_id = p_provider_id
+    and doc_type in ('ghana_card_front', 'ghana_card_back', 'selfie');
+
+  if v_docs < 3 then
+    v_gaps := v_gaps
+      || 'Upload both sides of your Ghana Card and a photo of yourself holding it.'::text;
+  end if;
+
+  return v_gaps;
+end;
+$$;
+
+-- ══════════════════════════════════════════════════════════════
+-- 0011_matching_and_quoting.sql
+-- ══════════════════════════════════════════════════════════════
+-- ArtisanGH — 0011 matching and quoting (Phase 3)
+--
+-- The sequential-offer matcher and the itemised quote, and the state machine
+-- between them (PLAN.md §6).
+--
+--   posted → matching → offer_sent ⇄ decline/expire → next candidate
+--                           ↓ accept
+--                      assigned → quote_pending → quote_sent
+--                                      ↓ accept → awaiting_deposit
+--                                      ↓ reject → matching (×3) → unmatched
+--      candidates exhausted at 20km → unmatched → admin assigns → assigned
+--
+-- Five things this file has to get right, and why each is here rather than in
+-- the application:
+--
+--  1. **The matcher must be idempotent and lock.** It is called from a user
+--     action, from `post_job`, and from a cron sweep — potentially at the same
+--     moment. Two concurrent calls that both find "the nearest free artisan"
+--     would send two offers for one job. Every entry point takes `for update`
+--     on the job row first.
+--
+--  2. **Quote arithmetic is computed here, never accepted from the client.**
+--     The browser sends line items; the subtotal, the 12%, the transport band
+--     and the deposit are all derived server-side through
+--     `compute_quote_totals`. A quote is a number somebody pays — it does not
+--     come off a form.
+--
+--  3. **`guard_jobs_columns` blocks `provider_id` outright**, which is correct
+--     for a participant and wrong for the matcher. It also leaves
+--     `matching_pass`, `matching_radius_km` and `quote_rejections` completely
+--     unguarded, so today a client can widen their own search to 100km or reset
+--     their own rejection count. Both fixed below.
+--
+--  4. **Declining is not rejecting the client.** A declined quote sends the job
+--     back to matching, and PLAN.md §6 is explicit that this path will be
+--     walked often because there is no price guidance in v1. It has to be a
+--     first-class transition, not an error path.
+--
+--  5. **Nothing may sit still.** A job in `offer_sent` whose offer has expired
+--     is a job nobody is looking at. `expire_stale_offers()` is the sweep, and
+--     it is written to be safe to run every 30 seconds forever.
+
+-- ---------------------------------------------------------------------------
+-- 1. Widen the guard's sanctioned door, and close two holes beside it
+-- ---------------------------------------------------------------------------
+
+create or replace function public.guard_jobs_columns()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+
+  if new.client_id is distinct from old.client_id then
+    raise exception 'jobs.client_id is immutable' using errcode = '42501';
+  end if;
+
+  if public.is_admin() then
+    return new;
+  end if;
+
+  -- CHANGED in 0011: assignment is still not a participant's to make, but the
+  -- matcher has to make it. Same transaction-local flag the status change uses,
+  -- opened only inside the functions below.
+  if new.provider_id is distinct from old.provider_id
+     and not public.job_status_change_permitted() then
+    raise exception 'Job assignment is made by the platform, not by participants.'
+      using errcode = '42501';
+  end if;
+
+  if new.status is distinct from old.status
+     and not public.job_status_change_permitted() then
+    raise exception 'Job status changes go through the platform, not direct writes.'
+      using errcode = '42501';
+  end if;
+
+  -- NEW in 0011. These three were unguarded, which meant a client could widen
+  -- their own search radius past every other client's, skip matching passes, or
+  -- zero their own quote-rejection count to keep rematching forever.
+  if (new.matching_pass      is distinct from old.matching_pass
+      or new.matching_radius_km is distinct from old.matching_radius_km
+      or new.quote_rejections   is distinct from old.quote_rejections)
+     and not public.job_status_change_permitted() then
+    raise exception 'Matching is run by the platform, not by participants.'
+      using errcode = '42501';
+  end if;
+
+  return new;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 2. Settings helpers
+-- ---------------------------------------------------------------------------
+
+create or replace function public.setting_int(p_key text, p_fallback int)
+returns int
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select coalesce((select value::text::int from public.settings where key = p_key), p_fallback);
+$$;
+
+/** Radius in km for a given 1-based matching pass, clamped to the last band. */
+create or replace function public.matching_radius_for_pass(p_pass int)
+returns numeric
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_passes jsonb;
+  v_len    int;
+begin
+  select value into v_passes from public.settings where key = 'matching_radius_passes';
+  if v_passes is null then v_passes := '[5,10,20]'::jsonb; end if;
+
+  v_len := jsonb_array_length(v_passes);
+  if v_len = 0 then return 5; end if;
+
+  -- Past the last pass the caller is done widening; returning the widest band
+  -- keeps this total rather than making every caller handle a null.
+  return (v_passes -> least(greatest(p_pass, 1), v_len) - 1)::text::numeric;
+end;
+$$;
+
+/** How many passes exist before a job falls through to the admin queue. */
+create or replace function public.matching_pass_count()
+returns int
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select coalesce(
+    jsonb_array_length((select value from public.settings where key = 'matching_radius_passes')),
+    3
+  );
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 3. The matcher
+-- ---------------------------------------------------------------------------
+-- Offers one artisan at a time, nearest first, widening the radius when a pass
+-- is exhausted and falling through to `unmatched` when the widest pass is.
+--
+-- PLAN.md §6 asks that broadcasting to the nearest 3–5 simultaneously later be
+-- a config change rather than a rewrite. The shape that makes that true is the
+-- candidate query being separate from the offer loop: to broadcast, raise the
+-- `limit` here and insert a row per candidate. Nothing else moves.
+
+create or replace function public.advance_matching(p_job_id uuid)
+returns public.job_status
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_job       public.jobs;
+  v_pass      int;
+  v_max_pass  int;
+  v_radius    numeric;
+  v_candidate record;
+  v_timeout   int;
+  v_seq       int;
+begin
+  select * into v_job from public.jobs where id = p_job_id for update;
+
+  if v_job.id is null then
+    raise exception 'Job not found.' using errcode = 'P0002';
+  end if;
+
+  -- The only statuses from which looking for an artisan makes sense. Anything
+  -- else is a job that has moved on, and re-entering the matcher would send an
+  -- offer for work somebody is already doing.
+  if v_job.status not in ('posted', 'matching', 'offer_sent') then
+    return v_job.status;
+  end if;
+
+  -- A live offer is somebody's 120 seconds. Do not step on it.
+  if exists (
+    select 1 from public.job_offers
+    where job_id = p_job_id and status = 'pending' and expires_at > now()
+  ) then
+    return v_job.status;
+  end if;
+
+  v_timeout  := public.setting_int('offer_timeout_seconds', 120);
+  v_max_pass := public.matching_pass_count();
+  v_pass     := greatest(coalesce(v_job.matching_pass, 0), 1);
+
+  perform set_config('artisangh.job_status_change', 'on', true);
+
+  -- Walk outwards. Each pass asks the same question at a wider radius; the
+  -- candidate function already excludes anyone busy, unverified, offline, or
+  -- previously offered this job, so a pass that finds nobody genuinely has
+  -- nobody left to find.
+  while v_pass <= v_max_pass loop
+    v_radius := public.matching_radius_for_pass(v_pass);
+
+    select * into v_candidate
+    from public.find_candidate_providers(p_job_id, v_radius, 1);
+
+    if found then
+      select coalesce(max(sequence_no), 0) + 1 into v_seq
+      from public.job_offers where job_id = p_job_id;
+
+      insert into public.job_offers
+        (job_id, provider_id, sequence_no, distance_km, status, expires_at)
+      values
+        (p_job_id, v_candidate.provider_id, v_seq, v_candidate.distance_km, 'pending',
+         now() + make_interval(secs => v_timeout));
+
+      update public.jobs
+         set status             = 'offer_sent',
+             matching_pass      = v_pass,
+             matching_radius_km = v_radius
+       where id = p_job_id;
+
+      perform set_config('artisangh.job_status_change', 'off', true);
+      return 'offer_sent'::public.job_status;
+    end if;
+
+    v_pass := v_pass + 1;
+  end loop;
+
+  -- Every pass exhausted. A human takes over from here — PLAN.md §6 is blunt
+  -- that every real marketplace runs on this for its first six months.
+  update public.jobs
+     set status             = 'unmatched',
+         matching_pass      = v_max_pass,
+         matching_radius_km = public.matching_radius_for_pass(v_max_pass)
+   where id = p_job_id;
+
+  perform set_config('artisangh.job_status_change', 'off', true);
+  return 'unmatched'::public.job_status;
+end;
+$$;
+
+-- `post_job` now hands straight off to the matcher, so a posted job can never
+-- sit in `posted` waiting for somebody to remember to look for an artisan.
+-- Otherwise identical to the 0009 definition, landmark rule included.
+create or replace function public.post_job(p_job_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_job    public.jobs;
+  v_radius numeric;
+begin
+  select * into v_job from public.jobs where id = p_job_id for update;
+
+  if v_job.id is null then
+    raise exception 'Job not found.' using errcode = 'P0002';
+  end if;
+
+  if v_job.client_id is distinct from auth.uid() then
+    raise exception 'That is not your job.' using errcode = '42501';
+  end if;
+
+  if v_job.status <> 'draft' then
+    raise exception 'This job has already been posted.' using errcode = '22023';
+  end if;
+
+  if v_job.location is null then
+    raise exception 'Pin the job location before posting.' using errcode = '22023';
+  end if;
+
+  if length(coalesce(trim(v_job.landmark), '')) < 10 then
+    raise exception 'Add a landmark so the artisan can find the place — “blue gate opposite Melcom”.'
+      using errcode = '22023';
+  end if;
+
+  if coalesce(trim(v_job.description), '') = '' and v_job.voice_note_path is null then
+    raise exception 'Describe the job, or record a voice note, before posting.'
+      using errcode = '22023';
+  end if;
+
+  v_radius := public.matching_radius_for_pass(1);
+
+  perform set_config('artisangh.job_status_change', 'on', true);
+
+  update public.jobs
+     set status             = 'posted',
+         matching_radius_km = v_radius,
+         matching_pass      = 1
+   where id = p_job_id;
+
+  perform set_config('artisangh.job_status_change', 'off', true);
+
+  -- Fires the first offer in the same transaction as the post. If there is
+  -- nobody to offer it to, this lands the job in `unmatched` immediately, which
+  -- is a far better answer than a spinner that never resolves.
+  perform public.advance_matching(p_job_id);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 4. The artisan's 120 seconds
+-- ---------------------------------------------------------------------------
+
+create or replace function public.respond_to_offer(p_offer_id uuid, p_accept boolean)
+returns public.job_status
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_offer public.job_offers;
+  v_job   public.jobs;
+begin
+  select * into v_offer from public.job_offers where id = p_offer_id for update;
+
+  if v_offer.id is null then
+    raise exception 'That offer could not be found.' using errcode = 'P0002';
+  end if;
+
+  if v_offer.provider_id is distinct from auth.uid() then
+    raise exception 'That offer is not yours.' using errcode = '42501';
+  end if;
+
+  if v_offer.status <> 'pending' then
+    raise exception 'You have already responded to this job.' using errcode = '22023';
+  end if;
+
+  -- Losing the race is normal and must read as normal. The sweep may not have
+  -- run yet, so expiry is decided on the clock, not on the stored status.
+  if v_offer.expires_at <= now() then
+    update public.job_offers
+       set status = 'expired', responded_at = now()
+     where id = p_offer_id;
+
+    raise exception 'This job has moved on to another artisan.' using errcode = '22023';
+  end if;
+
+  select * into v_job from public.jobs where id = v_offer.job_id for update;
+
+  if not p_accept then
+    update public.job_offers
+       set status = 'declined', responded_at = now()
+     where id = p_offer_id;
+
+    return public.advance_matching(v_offer.job_id);
+  end if;
+
+  if v_job.status <> 'offer_sent' then
+    raise exception 'This job has moved on to another artisan.' using errcode = '22023';
+  end if;
+
+  update public.job_offers
+     set status = 'accepted', responded_at = now()
+   where id = p_offer_id;
+
+  -- Belt and braces: only one offer per job should ever be live, but a
+  -- superseded row is cheaper than an ambiguous audit trail.
+  update public.job_offers
+     set status = 'superseded', responded_at = now()
+   where job_id = v_offer.job_id and id <> p_offer_id and status = 'pending';
+
+  perform set_config('artisangh.job_status_change', 'on', true);
+
+  -- Straight to `quote_pending`. `assigned` would be a state the artisan sees
+  -- for no reason: the very next thing they do is price the job, and a status
+  -- nobody acts on is a status that only exists to be logged.
+  update public.jobs
+     set provider_id = v_offer.provider_id,
+         status      = 'quote_pending'
+   where id = v_offer.job_id;
+
+  perform set_config('artisangh.job_status_change', 'off', true);
+
+  return 'quote_pending'::public.job_status;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 5. The sweep
+-- ---------------------------------------------------------------------------
+-- Every 30 seconds: retire offers nobody answered, and push those jobs on.
+--
+-- Written to be safe at any frequency and safe to run twice at once. It takes
+-- no locks of its own — `advance_matching` does that per job — and it reads the
+-- job list into an array first so a long sweep cannot hold a cursor open across
+-- dozens of row locks.
+
+create or replace function public.expire_stale_offers()
+returns int
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_job_id uuid;
+  v_count  int := 0;
+begin
+  update public.job_offers
+     set status = 'expired', responded_at = now()
+   where status = 'pending' and expires_at <= now();
+
+  get diagnostics v_count = row_count;
+
+  for v_job_id in
+    select j.id
+    from public.jobs j
+    where j.status in ('posted', 'matching', 'offer_sent')
+      and not exists (
+        select 1 from public.job_offers o
+        where o.job_id = j.id and o.status = 'pending' and o.expires_at > now()
+      )
+  loop
+    -- One job's failure must not strand the rest of the queue.
+    begin
+      perform public.advance_matching(v_job_id);
+    exception when others then
+      raise warning 'advance_matching failed for job %: %', v_job_id, sqlerrm;
+    end;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 6. The admin fallback
+-- ---------------------------------------------------------------------------
+
+create or replace function public.admin_assign_job(p_job_id uuid, p_provider_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_job public.jobs;
+begin
+  if not public.is_admin() then
+    raise exception 'Only an administrator can assign a job.' using errcode = '42501';
+  end if;
+
+  select * into v_job from public.jobs where id = p_job_id for update;
+
+  if v_job.id is null then
+    raise exception 'Job not found.' using errcode = 'P0002';
+  end if;
+
+  if v_job.status not in ('posted', 'matching', 'offer_sent', 'unmatched') then
+    raise exception 'This job is past the point where it can be assigned by hand.'
+      using errcode = '22023';
+  end if;
+
+  if not exists (
+    select 1 from public.providers
+    where profile_id = p_provider_id
+      and verification_status = 'approved'
+      and suspended_at is null
+  ) then
+    raise exception 'That artisan is not approved to take jobs.' using errcode = '22023';
+  end if;
+
+  update public.job_offers
+     set status = 'superseded', responded_at = now()
+   where job_id = p_job_id and status = 'pending';
+
+  perform set_config('artisangh.job_status_change', 'on', true);
+
+  update public.jobs
+     set provider_id = p_provider_id,
+         status      = 'quote_pending'
+   where id = p_job_id;
+
+  perform set_config('artisangh.job_status_change', 'off', true);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 7. The quote
+-- ---------------------------------------------------------------------------
+-- Items arrive as JSON; every number that matters is derived here.
+--
+-- `p_items` is `[{ "kind": "labour"|"material", "description": text,
+--                  "quantity": numeric, "unit_price": numeric }, ...]`.
+--
+-- Transport is not a line the artisan types. It is looked up from the distance
+-- recorded on the accepted offer, through the admin-managed band table, and it
+-- passes to the artisan in full (PLAN.md §4). Letting an artisan set their own
+-- travel fee would make the one number the platform controls negotiable.
+
+create or replace function public.save_quote(
+  p_job_id uuid,
+  p_items  jsonb,
+  p_notes  text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, extensions, pg_temp
+as $$
+declare
+  v_job        public.jobs;
+  v_quote_id   uuid;
+  v_subtotal   numeric(12,2) := 0;
+  v_commission numeric(5,2);
+  v_transport  numeric(10,2);
+  v_distance   numeric;
+  v_city       text;
+  v_totals     record;
+  v_item       jsonb;
+  v_count      int := 0;
+  v_amount     numeric(12,2);
+begin
+  select * into v_job from public.jobs where id = p_job_id for update;
+
+  if v_job.id is null then
+    raise exception 'Job not found.' using errcode = 'P0002';
+  end if;
+
+  if v_job.provider_id is distinct from auth.uid() then
+    raise exception 'That is not your job.' using errcode = '42501';
+  end if;
+
+  if v_job.status not in ('quote_pending', 'quote_sent') then
+    raise exception 'This job is not waiting for a price.' using errcode = '22023';
+  end if;
+
+  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'Add at least one line to the quote.' using errcode = '22023';
+  end if;
+
+  if jsonb_array_length(p_items) > 30 then
+    raise exception 'A quote can have up to 30 lines.' using errcode = '22023';
+  end if;
+
+  -- Distance from the offer the artisan accepted, so the band cannot shift
+  -- under the client because the artisan drove somewhere between accepting and
+  -- quoting. Falls back to live PostGIS for an admin-assigned job, which never
+  -- had an offer.
+  select o.distance_km into v_distance
+  from public.job_offers o
+  where o.job_id = p_job_id and o.provider_id = auth.uid() and o.status = 'accepted'
+  order by o.responded_at desc
+  limit 1;
+
+  if v_distance is null then
+    select round((st_distance(p.current_location, v_job.location) / 1000)::numeric, 2)
+      into v_distance
+    from public.providers p
+    where p.profile_id = auth.uid() and p.current_location is not null;
+  end if;
+
+  select base_city into v_city from public.providers where profile_id = auth.uid();
+
+  v_transport := coalesce(
+    public.transport_fee_for_distance(coalesce(v_city, '*'), coalesce(v_distance, 0)),
+    0
+  );
+
+  v_commission := public.setting_int('platform_commission_pct', 12);
+
+  -- One draft per job. Replacing it wholesale is correct here for the same
+  -- reason it is in the trades picker: a quote line carries nothing worth
+  -- preserving across an edit, and a diff is a bug waiting to be written.
+  delete from public.quotes
+   where job_id = p_job_id and provider_id = auth.uid() and status = 'draft';
+
+  insert into public.quotes
+    (job_id, provider_id, status, subtotal, service_fee_pct, service_fee_amount,
+     transport_fee, total, deposit_amount, notes)
+  values
+    (p_job_id, auth.uid(), 'draft', 0, v_commission, 0, v_transport, 0, 0,
+     nullif(trim(coalesce(p_notes, '')), ''))
+  returning id into v_quote_id;
+
+  for v_item in select * from jsonb_array_elements(p_items) loop
+    v_count := v_count + 1;
+
+    if coalesce(trim(v_item ->> 'description'), '') = '' then
+      raise exception 'Every line needs a description.' using errcode = '22023';
+    end if;
+
+    if (v_item ->> 'kind') not in ('labour', 'material') then
+      raise exception 'Every line must be labour or materials.' using errcode = '22023';
+    end if;
+
+    if coalesce((v_item ->> 'quantity')::numeric, 0) <= 0 then
+      raise exception 'Quantity must be more than zero.' using errcode = '22023';
+    end if;
+
+    if coalesce((v_item ->> 'unit_price')::numeric, -1) < 0 then
+      raise exception 'A price cannot be negative.' using errcode = '22023';
+    end if;
+
+    v_amount := round((v_item ->> 'quantity')::numeric * (v_item ->> 'unit_price')::numeric, 2);
+    v_subtotal := v_subtotal + v_amount;
+
+    insert into public.quote_items
+      (quote_id, kind, description, quantity, unit_price, amount, sort_order)
+    values
+      (v_quote_id,
+       (v_item ->> 'kind')::public.quote_item_kind,
+       left(trim(v_item ->> 'description'), 200),
+       (v_item ->> 'quantity')::numeric,
+       (v_item ->> 'unit_price')::numeric,
+       v_amount,
+       v_count);
+  end loop;
+
+  if v_subtotal <= 0 then
+    raise exception 'A quote has to come to more than zero.' using errcode = '22023';
+  end if;
+
+  select * into v_totals
+  from public.compute_quote_totals(v_subtotal, v_commission, v_transport);
+
+  update public.quotes
+     set subtotal           = v_subtotal,
+         service_fee_amount = v_totals.service_fee_amount,
+         total              = v_totals.total,
+         deposit_amount     = v_totals.deposit_amount
+   where id = v_quote_id;
+
+  return v_quote_id;
+end;
+$$;
+
+create or replace function public.send_quote(p_quote_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_quote public.quotes;
+  v_min   int;
+begin
+  select * into v_quote from public.quotes where id = p_quote_id for update;
+
+  if v_quote.id is null then
+    raise exception 'That quote could not be found.' using errcode = 'P0002';
+  end if;
+
+  if v_quote.provider_id is distinct from auth.uid() then
+    raise exception 'That is not your quote.' using errcode = '42501';
+  end if;
+
+  if v_quote.status <> 'draft' then
+    raise exception 'That quote has already been sent.' using errcode = '22023';
+  end if;
+
+  -- PLAN.md §16: below the minimum the payout transfer fee makes the job
+  -- uneconomic for everyone. Warned about here, where it can still be changed.
+  v_min := public.setting_int('min_job_value_ghs', 0);
+  if v_min > 0 and v_quote.subtotal < v_min then
+    raise exception 'Quotes start at GHS %. Anything less costs more to process than it earns.', v_min
+      using errcode = '22023';
+  end if;
+
+  update public.quotes
+     set status = 'sent', sent_at = now()
+   where id = p_quote_id;
+
+  perform set_config('artisangh.job_status_change', 'on', true);
+  update public.jobs set status = 'quote_sent' where id = v_quote.job_id;
+  perform set_config('artisangh.job_status_change', 'off', true);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 8. The client's answer
+-- ---------------------------------------------------------------------------
+-- Declining is a normal, expected outcome, not a failure. With no price
+-- guidance in v1 (PLAN.md §2) artisans price freely and clients decline, so
+-- this path goes straight back to matching — and because
+-- `find_candidate_providers` already excludes anyone who has seen this job, the
+-- declined artisan is never re-offered it.
+
+create or replace function public.respond_to_quote(
+  p_quote_id uuid,
+  p_accept   boolean,
+  p_reason   text default null
+)
+returns public.job_status
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_quote      public.quotes;
+  v_job        public.jobs;
+  v_rejections int;
+  v_max        int;
+begin
+  select * into v_quote from public.quotes where id = p_quote_id for update;
+
+  if v_quote.id is null then
+    raise exception 'That quote could not be found.' using errcode = 'P0002';
+  end if;
+
+  select * into v_job from public.jobs where id = v_quote.job_id for update;
+
+  if v_job.client_id is distinct from auth.uid() then
+    raise exception 'That is not your job.' using errcode = '42501';
+  end if;
+
+  if v_quote.status <> 'sent' or v_job.status <> 'quote_sent' then
+    raise exception 'This quote is no longer open.' using errcode = '22023';
+  end if;
+
+  if p_accept then
+    update public.quotes
+       set status = 'accepted', responded_at = now()
+     where id = p_quote_id;
+
+    perform set_config('artisangh.job_status_change', 'on', true);
+    update public.jobs set status = 'awaiting_deposit' where id = v_job.id;
+    perform set_config('artisangh.job_status_change', 'off', true);
+
+    return 'awaiting_deposit'::public.job_status;
+  end if;
+
+  update public.quotes
+     set status = 'rejected', responded_at = now()
+   where id = p_quote_id;
+
+  v_rejections := coalesce(v_job.quote_rejections, 0) + 1;
+  v_max        := public.setting_int('max_quote_rejections', 3);
+
+  perform set_config('artisangh.job_status_change', 'on', true);
+
+  -- Endless rematching wastes artisan goodwill, which is the scarce resource
+  -- here. After the cap a human calls the client (PLAN.md §16 q5).
+  if v_rejections >= v_max then
+    update public.jobs
+       set status           = 'unmatched',
+           provider_id      = null,
+           quote_rejections = v_rejections
+     where id = v_job.id;
+
+    perform set_config('artisangh.job_status_change', 'off', true);
+    return 'unmatched'::public.job_status;
+  end if;
+
+  -- Back to the start of the search, at the original radius. Widening is for
+  -- artisans who did not answer, not for one who quoted too high.
+  update public.jobs
+     set status             = 'matching',
+         provider_id        = null,
+         quote_rejections   = v_rejections,
+         matching_pass      = 1,
+         matching_radius_km = public.matching_radius_for_pass(1)
+   where id = v_job.id;
+
+  perform set_config('artisangh.job_status_change', 'off', true);
+
+  return public.advance_matching(v_job.id);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 9. Reading the search, for the client's "we've contacted N so far"
+-- ---------------------------------------------------------------------------
+-- PLAN.md §6: "Tell the client what's happening — 'Finding your artisan — we've
+-- contacted 3 so far' beats a silent spinner." The offer rows carry provider
+-- ids, which the client must never see; this returns only the shape of the
+-- search.
+
+create or replace function public.job_matching_progress(p_job_id uuid)
+returns table (
+  contacted      int,
+  current_pass   int,
+  radius_km      numeric,
+  offer_expires_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select
+    (select count(*)::int from public.job_offers o where o.job_id = j.id),
+    coalesce(j.matching_pass, 1),
+    coalesce(j.matching_radius_km, public.matching_radius_for_pass(1)),
+    (select max(o.expires_at) from public.job_offers o
+      where o.job_id = j.id and o.status = 'pending' and o.expires_at > now())
+  from public.jobs j
+  where j.id = p_job_id
+    and (j.client_id = auth.uid() or public.is_admin());
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 10. Grants
+-- ---------------------------------------------------------------------------
+-- Revoked from PUBLIC first. Postgres grants EXECUTE to PUBLIC by default, so a
+-- bare `grant ... to authenticated` excludes nobody — the lesson of 0010.
+
+revoke execute on function public.advance_matching(uuid) from public;
+revoke execute on function public.respond_to_offer(uuid, boolean) from public;
+revoke execute on function public.expire_stale_offers() from public;
+revoke execute on function public.admin_assign_job(uuid, uuid) from public;
+revoke execute on function public.save_quote(uuid, jsonb, text) from public;
+revoke execute on function public.send_quote(uuid) from public;
+revoke execute on function public.respond_to_quote(uuid, boolean, text) from public;
+revoke execute on function public.job_matching_progress(uuid) from public;
+revoke execute on function public.setting_int(text, int) from public;
+revoke execute on function public.matching_radius_for_pass(int) from public;
+revoke execute on function public.matching_pass_count() from public;
+
+grant execute on function public.respond_to_offer(uuid, boolean) to authenticated;
+grant execute on function public.admin_assign_job(uuid, uuid) to authenticated;
+grant execute on function public.save_quote(uuid, jsonb, text) to authenticated;
+grant execute on function public.send_quote(uuid) to authenticated;
+grant execute on function public.respond_to_quote(uuid, boolean, text) to authenticated;
+grant execute on function public.job_matching_progress(uuid) to authenticated;
+
+-- `advance_matching` is deliberately NOT granted to end users. It is reachable
+-- only through the functions above and the sweep — a client who could call it
+-- directly could burn through their own candidate list.
+
+-- ---------------------------------------------------------------------------
+-- 11. The sweep's schedule
+-- ---------------------------------------------------------------------------
+-- pg_cron is not enabled on every Supabase plan and cannot be created from a
+-- migration on some of them, so this is best-effort: if the extension is there,
+-- schedule it; if not, say so and leave `/api/cron/matching` (which calls the
+-- same function) as the path. Either way the migration succeeds.
+
+do $$
+begin
+  if exists (select 1 from pg_available_extensions where name = 'pg_cron') then
+    begin
+      create extension if not exists pg_cron;
+
+      perform cron.unschedule('artisangh-expire-offers')
+      where exists (select 1 from cron.job where jobname = 'artisangh-expire-offers');
+
+      perform cron.schedule(
+        'artisangh-expire-offers',
+        '30 seconds',
+        $cron$ select public.expire_stale_offers(); $cron$
+      );
+
+      raise notice 'pg_cron: offer sweep scheduled every 30 seconds.';
+    exception when others then
+      raise notice 'pg_cron present but not schedulable here (%). Use /api/cron/matching.', sqlerrm;
+    end;
+  else
+    raise notice 'pg_cron unavailable. Drive the sweep from /api/cron/matching.';
+  end if;
+end;
+$$;
+
+-- ══════════════════════════════════════════════════════════════
+-- 0012_money_in.sql
+-- ══════════════════════════════════════════════════════════════
+-- ArtisanGH — 0012 money in (Phase 4)
+--
+-- The deposit leg: awaiting_deposit → deposit_paid, and every way that fails.
+--
+-- Five things this file has to get right:
+--
+--  1. **A retry must be possible.** `payments` carried `unique (job_id, leg)`,
+--     which means the first failed deposit permanently blocks the second
+--     attempt — and a declined MoMo prompt is the single most common real-world
+--     path, not an edge case. That becomes a PARTIAL unique index on
+--     `status = 'succeeded'`: as many attempts as the client needs, exactly one
+--     success, and the failed attempts stay on the record where a dispute can
+--     find them.
+--
+--  2. **The amount comes from the accepted quote.** Never from the browser,
+--     never recomputed in TypeScript at the moment of charging. `save_quote`
+--     already derived and stored `deposit_amount`; this reads that row back.
+--
+--  3. **The webhook is the only thing that moves money forward.** Not the
+--     callback screen, not the client tapping "I paid". `settle_payment()` is
+--     the one door, it is idempotent by reference, and it advances the job in
+--     the same transaction as the payment row.
+--
+--  4. **Cancellation after a deposit must refund.** PLAN.md §7 makes this a
+--     tiered, auto-enforced policy. `cancel_job` refused everything past
+--     `assigned`, which was right when nothing could be paid and is wrong now.
+--
+--  5. **Out-of-order and duplicate delivery are normal.** Providers retry, and
+--     a webhook can arrive twice or arrive for a charge we already reconciled
+--     by polling. Every function here is written to be run again safely.
+
+-- ---------------------------------------------------------------------------
+-- 1. Let a client try again
+-- ---------------------------------------------------------------------------
+
+alter table public.payments drop constraint if exists payments_job_id_leg_key;
+
+-- The invariant that actually matters: a job can never have two successful
+-- deposits, or two successful balances. Attempts are free.
+create unique index if not exists payments_one_success_per_leg_idx
+  on public.payments (job_id, leg)
+  where status = 'succeeded';
+
+-- Finding a client's live attempt, and the reconciliation sweep, both read this.
+create index if not exists payments_pending_idx
+  on public.payments (status, created_at)
+  where status in ('pending', 'processing');
+
+comment on index public.payments_one_success_per_leg_idx is
+  'Replaces unique(job_id, leg) from 0001, which blocked a retry after a declined MoMo prompt.';
+
+-- ---------------------------------------------------------------------------
+-- 2. What is owed
+-- ---------------------------------------------------------------------------
+-- Read from the accepted quote rather than recomputed. The quote is the
+-- agreement; recomputing it at charge time means a settings change between
+-- acceptance and payment silently alters what somebody agreed to pay.
+
+create or replace function public.deposit_due_for_job(p_job_id uuid)
+returns numeric
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_job    public.jobs;
+  v_amount numeric(12,2);
+begin
+  select * into v_job from public.jobs where id = p_job_id;
+
+  if v_job.id is null then
+    raise exception 'Job not found.' using errcode = 'P0002';
+  end if;
+
+  if v_job.client_id is distinct from auth.uid()
+     and v_job.provider_id is distinct from auth.uid()
+     and not public.is_admin()
+     and auth.uid() is not null then
+    raise exception 'That is not your job.' using errcode = '42501';
+  end if;
+
+  select q.deposit_amount into v_amount
+  from public.quotes q
+  where q.job_id = p_job_id and q.status = 'accepted'
+  order by q.responded_at desc nulls last
+  limit 1;
+
+  if v_amount is null then
+    raise exception 'No accepted price on this job yet.' using errcode = '22023';
+  end if;
+
+  return v_amount;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 3. The one door money comes through
+-- ---------------------------------------------------------------------------
+-- Called by the webhook handler holding the service role. Deliberately NOT
+-- granted to end users: a client who could call this could mark their own
+-- deposit paid, which is the entire security model gone.
+--
+-- Returns the job status afterwards so the caller can log what it did.
+
+create or replace function public.settle_payment(
+  p_reference text,
+  p_succeeded boolean,
+  p_reason    text default null,
+  p_channel   text default null
+)
+returns public.job_status
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_payment public.payments;
+  v_job     public.jobs;
+begin
+  select * into v_payment
+  from public.payments
+  where provider_reference = p_reference
+  for update;
+
+  if v_payment.id is null then
+    -- Not an error. A provider can deliver an event for a reference we never
+    -- recorded (a test ping, a charge started against another environment), and
+    -- answering 500 makes them retry it on a schedule for days.
+    return null;
+  end if;
+
+  select * into v_job from public.jobs where id = v_payment.job_id for update;
+
+  -- Idempotency. Providers retry, and a second delivery of a success we have
+  -- already banked must not re-run the state change.
+  if v_payment.status = 'succeeded' then
+    return v_job.status;
+  end if;
+
+  if not p_succeeded then
+    update public.payments
+       set status         = 'failed',
+           failure_reason = coalesce(p_reason, 'Payment failed')
+     where id = v_payment.id;
+
+    -- The job does NOT move. It stays in `awaiting_deposit` so the client can
+    -- try again — which is the whole point of the partial index above.
+    return v_job.status;
+  end if;
+
+  update public.payments
+     set status         = 'succeeded',
+         paid_at        = now(),
+         channel        = coalesce(p_channel, channel),
+         failure_reason = null
+   where id = v_payment.id;
+
+  -- Only the deposit leg moves the job in Phase 4. The balance leg lands in
+  -- Phase 5, where it sits between `awaiting_balance` and `paid`.
+  if v_payment.leg = 'deposit' and v_job.status = 'awaiting_deposit' then
+    perform set_config('artisangh.job_status_change', 'on', true);
+    update public.jobs set status = 'deposit_paid' where id = v_job.id;
+    perform set_config('artisangh.job_status_change', 'off', true);
+
+    return 'deposit_paid'::public.job_status;
+  end if;
+
+  return v_job.status;
+end;
+$$;
+
+comment on function public.settle_payment is
+  'The only function that may mark a payment succeeded. Idempotent by reference. Called by the webhook handler under the service role — never granted to end users.';
+
+-- ---------------------------------------------------------------------------
+-- 4. Refunds
+-- ---------------------------------------------------------------------------
+
+create or replace function public.refund_job_payments(
+  p_job_id uuid,
+  p_reason text default null
+)
+returns int
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_count int;
+begin
+  -- Because the platform holds the gross and pays artisans separately
+  -- (PLAN.md §4 Finding 1), a refund is a clean reversal of our own charge.
+  -- Nothing has been split away to claw back.
+  update public.payments
+     set status         = 'refunded',
+         failure_reason = coalesce(p_reason, 'Refunded')
+   where job_id = p_job_id
+     and status = 'succeeded';
+
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 5. Cancelling once money is involved
+-- ---------------------------------------------------------------------------
+-- PLAN.md §7, auto-enforced. Phase 4 reaches `deposit_paid`; `en_route` and
+-- everything past it arrives in Phase 5, and this refuses those rather than
+-- pretending to handle them.
+--
+--   before deposit                    client pays nothing
+--   after deposit, before en_route    nothing — full refund
+--   after en_route                    Phase 5
+--
+-- Replaces the 0007 definition, which refused everything past `assigned`.
+
+create or replace function public.cancel_job(p_job_id uuid, p_reason text default null)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_job      public.jobs;
+  v_refunded int := 0;
+begin
+  select * into v_job from public.jobs where id = p_job_id for update;
+
+  if v_job.id is null then
+    raise exception 'Job not found.' using errcode = 'P0002';
+  end if;
+
+  if v_job.client_id is distinct from auth.uid() and not public.is_admin() then
+    raise exception 'That is not your job.' using errcode = '42501';
+  end if;
+
+  if v_job.status not in (
+    'draft', 'posted', 'matching', 'offer_sent', 'unmatched', 'assigned',
+    'quote_pending', 'quote_sent', 'awaiting_deposit', 'deposit_paid'
+  ) then
+    raise exception 'Your artisan is already on the way. Call support to cancel this one.'
+      using errcode = '22023';
+  end if;
+
+  -- Free tier: nothing succeeded, so there is nothing to give back.
+  -- Refund tier: the deposit is returned in full, because nobody has travelled.
+  if v_job.status = 'deposit_paid' then
+    v_refunded := public.refund_job_payments(
+      p_job_id,
+      coalesce(p_reason, 'Cancelled before the artisan travelled')
+    );
+  end if;
+
+  perform set_config('artisangh.job_status_change', 'on', true);
+
+  update public.jobs
+     set status    = 'cancelled_by_client',
+         closed_at = now()
+   where id = p_job_id;
+
+  perform set_config('artisangh.job_status_change', 'off', true);
+
+  -- The reason lands on the audit row the status trigger writes, so a dispute
+  -- six weeks later can see both the cancellation and the refund that followed.
+  if p_reason is not null or v_refunded > 0 then
+    update public.job_events
+       set reason   = coalesce(p_reason, 'Cancelled'),
+           metadata = metadata || jsonb_build_object('refunded_payments', v_refunded)
+     where job_id = p_job_id
+       and to_status = 'cancelled_by_client'
+       and created_at > now() - interval '1 minute';
+  end if;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 6. Reconciliation
+-- ---------------------------------------------------------------------------
+-- A charge that was initialised and never heard about again is the failure mode
+-- PLAN.md §13 calls out: the webhook did not arrive, or arrived and was lost.
+-- This finds them so a sweep can re-verify against the provider.
+--
+-- Nothing is *decided* here. Deciding from a timeout would mean guessing at
+-- somebody's money; the sweep asks the provider and then calls settle_payment.
+
+create or replace function public.stale_pending_payments(p_older_than_minutes int default 15)
+returns table (
+  payment_id         uuid,
+  job_id             uuid,
+  provider_reference text,
+  leg                public.payment_leg,
+  amount             numeric,
+  created_at         timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select p.id, p.job_id, p.provider_reference, p.leg, p.amount, p.created_at
+  from public.payments p
+  where p.status in ('pending', 'processing')
+    and p.created_at < now() - make_interval(mins => p_older_than_minutes)
+  order by p.created_at;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 7. Grants
+-- ---------------------------------------------------------------------------
+-- Revoked from PUBLIC first — Postgres grants EXECUTE to PUBLIC by default, so
+-- a bare grant to `authenticated` excludes nobody (the lesson of 0010).
+
+revoke execute on function public.deposit_due_for_job(uuid) from public;
+revoke execute on function public.settle_payment(text, boolean, text, text) from public;
+revoke execute on function public.refund_job_payments(uuid, text) from public;
+revoke execute on function public.stale_pending_payments(int) from public;
+
+-- The only one an end user may call: "what do I owe?", scoped to their own job.
+grant execute on function public.deposit_due_for_job(uuid) to authenticated;
+
+-- settle_payment, refund_job_payments and stale_pending_payments are
+-- deliberately ungranted. They run under the service role, from the webhook
+-- handler and the reconciliation sweep. A client who could reach settle_payment
+-- could mark their own deposit paid.
+
+-- ══════════════════════════════════════════════════════════════
+-- 0013_function_privileges.sql
+-- ══════════════════════════════════════════════════════════════
+-- ArtisanGH — 0013 function privileges
+--
+-- **A `revoke ... from public` on a Supabase project does almost nothing, and
+-- three migrations have now relied on it.**
+--
+-- Supabase ships the `public` schema with default privileges:
+--
+--   alter default privileges in schema public
+--     grant execute on functions to anon, authenticated, service_role;
+--
+-- So every function created here is born with EXPLICIT grants to `anon` and
+-- `authenticated`. `revoke ... from public` removes only the PUBLIC pseudo-role
+-- grant and leaves those two untouched. 0010 introduced that pattern believing
+-- it closed the door; 0011 and 0012 copied it.
+--
+-- What that actually meant, verified against the live database with an
+-- anonymous key:
+--
+--   anon -> settle_payment       EXECUTED
+--   anon -> refund_job_payments  EXECUTED
+--   anon -> expire_stale_offers  EXECUTED
+--   anon -> advance_matching     reached the body (failed only on a bad job id)
+--
+-- `settle_payment` had no internal authority check at all, because the grant
+-- was believed to be the control. Anyone holding the publishable key and a
+-- payment reference could mark a deposit paid. That is the whole security model
+-- of the money path, gone.
+--
+-- Two fixes, because either alone is one mistake away from reopening it:
+--
+--   1. Revoke from `anon` and `authenticated` BY NAME, not from PUBLIC.
+--   2. Give every privileged function an internal caller check, so a future
+--      `create or replace` — which resets nothing but is easy to pair with a
+--      forgotten revoke — cannot silently re-expose it.
+
+-- ---------------------------------------------------------------------------
+-- 1. Who is a trusted backend caller?
+-- ---------------------------------------------------------------------------
+-- `auth.uid() is null` is NOT the answer, and that is the trap 0009 fell into:
+-- an anonymous PostgREST request also has a null uid. The role claim is what
+-- separates them.
+--
+--   service_role   the webhook handler and the cron route
+--   postgres       pg_cron, psql, migrations — no JWT at all
+--   anon           an unauthenticated browser
+--   authenticated  a signed-in user
+--
+-- Absent claims default to 'postgres' so a direct database connection (which is
+-- how pg_cron runs `expire_stale_offers`) stays trusted.
+
+create or replace function public.is_trusted_backend()
+returns boolean
+language sql
+stable
+set search_path = public, pg_temp
+as $$
+  select coalesce(
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
+    'postgres'
+  ) in ('service_role', 'postgres');
+$$;
+
+comment on function public.is_trusted_backend is
+  'True for the service role and for direct database connections (pg_cron, psql). False for anon and authenticated — unlike auth.uid() is null, which is true for anon too.';
+
+-- ---------------------------------------------------------------------------
+-- 2. Internal guards on the functions that move money
+-- ---------------------------------------------------------------------------
+
+create or replace function public.settle_payment(
+  p_reference text,
+  p_succeeded boolean,
+  p_reason    text default null,
+  p_channel   text default null
+)
+returns public.job_status
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_payment public.payments;
+  v_job     public.jobs;
+begin
+  -- NEW in 0013. This function is the only thing that may mark money received;
+  -- it is called by the webhook handler under the service role and by nothing
+  -- else. The grant below is the primary control and this is the backstop.
+  if not public.is_trusted_backend() then
+    raise exception 'Payments are settled by the payment provider, not by callers.'
+      using errcode = '42501';
+  end if;
+
+  select * into v_payment
+  from public.payments
+  where provider_reference = p_reference
+  for update;
+
+  if v_payment.id is null then
+    -- Not an error. A provider can deliver an event for a reference we never
+    -- recorded (a test ping, a charge from another environment), and answering
+    -- 500 makes them retry it on a schedule for days.
+    return null;
+  end if;
+
+  select * into v_job from public.jobs where id = v_payment.job_id for update;
+
+  -- Idempotency. Providers retry, and a second delivery of a success we have
+  -- already banked must not re-run the state change.
+  if v_payment.status = 'succeeded' then
+    return v_job.status;
+  end if;
+
+  if not p_succeeded then
+    update public.payments
+       set status         = 'failed',
+           failure_reason = coalesce(p_reason, 'Payment failed')
+     where id = v_payment.id;
+
+    -- The job does NOT move. It stays in `awaiting_deposit` so the client can
+    -- try again, which is what the partial unique index in 0012 exists for.
+    return v_job.status;
+  end if;
+
+  update public.payments
+     set status         = 'succeeded',
+         paid_at        = now(),
+         channel        = coalesce(p_channel, channel),
+         failure_reason = null
+   where id = v_payment.id;
+
+  if v_payment.leg = 'deposit' and v_job.status = 'awaiting_deposit' then
+    perform set_config('artisangh.job_status_change', 'on', true);
+    update public.jobs set status = 'deposit_paid' where id = v_job.id;
+    perform set_config('artisangh.job_status_change', 'off', true);
+
+    return 'deposit_paid'::public.job_status;
+  end if;
+
+  return v_job.status;
+end;
+$$;
+
+create or replace function public.refund_job_payments(
+  p_job_id uuid,
+  p_reason text default null
+)
+returns int
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_count int;
+begin
+  -- Callable from `cancel_job`, which is SECURITY DEFINER and runs with the
+  -- cancelling client's JWT — so a plain trusted-backend check would break the
+  -- legitimate path. An admin may also refund directly.
+  if not (public.is_trusted_backend() or public.is_admin() or public.job_status_change_permitted()) then
+    raise exception 'Refunds are issued by the platform.' using errcode = '42501';
+  end if;
+
+  -- Because the platform holds the gross and pays artisans separately
+  -- (PLAN.md §4 Finding 1), a refund is a clean reversal of our own charge.
+  update public.payments
+     set status         = 'refunded',
+         failure_reason = coalesce(p_reason, 'Refunded')
+   where job_id = p_job_id
+     and status = 'succeeded';
+
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+create or replace function public.expire_stale_offers()
+returns int
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_job_id uuid;
+  v_count  int := 0;
+begin
+  if not public.is_trusted_backend() then
+    raise exception 'The offer sweep is run by the platform.' using errcode = '42501';
+  end if;
+
+  update public.job_offers
+     set status = 'expired', responded_at = now()
+   where status = 'pending' and expires_at <= now();
+
+  get diagnostics v_count = row_count;
+
+  for v_job_id in
+    select j.id
+    from public.jobs j
+    where j.status in ('posted', 'matching', 'offer_sent')
+      and not exists (
+        select 1 from public.job_offers o
+        where o.job_id = j.id and o.status = 'pending' and o.expires_at > now()
+      )
+  loop
+    -- One job's failure must not strand the rest of the queue.
+    begin
+      perform public.advance_matching(v_job_id);
+    exception when others then
+      raise warning 'advance_matching failed for job %: %', v_job_id, sqlerrm;
+    end;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+create or replace function public.stale_pending_payments(p_older_than_minutes int default 15)
+returns table (
+  payment_id         uuid,
+  job_id             uuid,
+  provider_reference text,
+  leg                public.payment_leg,
+  amount             numeric,
+  created_at         timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if not (public.is_trusted_backend() or public.is_admin()) then
+    raise exception 'That is not yours to read.' using errcode = '42501';
+  end if;
+
+  return query
+    select p.id, p.job_id, p.provider_reference, p.leg, p.amount, p.created_at
+    from public.payments p
+    where p.status in ('pending', 'processing')
+      and p.created_at < now() - make_interval(mins => p_older_than_minutes)
+    order by p.created_at;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 3. Revoke by name
+-- ---------------------------------------------------------------------------
+-- The part 0010, 0011 and 0012 all got wrong. `anon` and `authenticated` hold
+-- their grants explicitly, courtesy of Supabase's default privileges, so they
+-- have to be named.
+
+do $$
+declare
+  v_signature text;
+begin
+  foreach v_signature in array array[
+    -- Money. Nothing outside the backend may reach these.
+    'public.settle_payment(text, boolean, text, text)',
+    'public.refund_job_payments(uuid, text)',
+    'public.stale_pending_payments(int)',
+    -- Matching internals. A client who could call advance_matching directly
+    -- could burn through their own job's candidate list.
+    'public.advance_matching(uuid)',
+    'public.expire_stale_offers()',
+    -- Guard predicates and settings readers. Harmless to read, but there is no
+    -- reason for a browser to hold EXECUTE on them.
+    'public.job_status_change_permitted()',
+    'public.provider_status_change_permitted()',
+    'public.setting_int(text, int)',
+    'public.matching_radius_for_pass(int)',
+    'public.matching_pass_count()'
+  ]
+  loop
+    execute format('revoke all on function %s from public, anon, authenticated', v_signature);
+  end loop;
+end;
+$$;
+
+-- `is_trusted_backend` is a read-only predicate about the CALLER, so it tells a
+-- browser nothing it does not already know about itself. Left readable rather
+-- than revoked, because the guards above call it and clarity beats ceremony.
+
+-- ---------------------------------------------------------------------------
+-- 4. Stop the next one
+-- ---------------------------------------------------------------------------
+-- Future functions are still born granted to anon and authenticated. Changing
+-- the schema-wide default would silently break every RPC the app relies on, so
+-- the rule stays "revoke by name" — enforced by scripts/verify.ts, which now
+-- asserts that an anonymous caller is refused by each function above.
+
+comment on function public.is_trusted_backend is
+  'True for service_role and direct database connections. See 0013: a revoke from PUBLIC does not remove Supabase''s default grants to anon and authenticated — revoke those by name.';
+
+-- ══════════════════════════════════════════════════════════════
+-- 0014_cancel_refund_order.sql
+-- ══════════════════════════════════════════════════════════════
+-- ArtisanGH — 0014 cancel/refund ordering
+--
+-- 0013 gave `refund_job_payments` an internal caller check, and one of the
+-- accepted callers is "we are already inside a platform state transition",
+-- signalled by the transaction-local flag `artisangh.job_status_change`.
+--
+-- `cancel_job` (0012) refunds BEFORE it opens that flag, so the guard fired on
+-- the one path it was written to allow: a client cancelling a paid job got
+-- "Refunds are issued by the platform." and the deposit stayed banked.
+--
+-- The fix is the ordering, not the guard. The flag now opens at the top of the
+-- cancellation, which is also more honest about what it means — everything
+-- between the two `set_config` calls is the platform acting, and the refund is
+-- part of that, not a preamble to it.
+
+create or replace function public.cancel_job(p_job_id uuid, p_reason text default null)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_job      public.jobs;
+  v_refunded int := 0;
+begin
+  select * into v_job from public.jobs where id = p_job_id for update;
+
+  if v_job.id is null then
+    raise exception 'Job not found.' using errcode = 'P0002';
+  end if;
+
+  if v_job.client_id is distinct from auth.uid() and not public.is_admin() then
+    raise exception 'That is not your job.' using errcode = '42501';
+  end if;
+
+  if v_job.status not in (
+    'draft', 'posted', 'matching', 'offer_sent', 'unmatched', 'assigned',
+    'quote_pending', 'quote_sent', 'awaiting_deposit', 'deposit_paid'
+  ) then
+    raise exception 'Your artisan is already on the way. Call support to cancel this one.'
+      using errcode = '22023';
+  end if;
+
+  -- Opened first, and held across both writes. Everything from here to the
+  -- matching close is the platform acting on the client's instruction.
+  perform set_config('artisangh.job_status_change', 'on', true);
+
+  -- PLAN.md §7. Before a deposit nothing was taken, so nothing comes back;
+  -- after one, the whole thing does, because nobody has travelled yet. Clean
+  -- only because the platform holds the gross rather than splitting at charge
+  -- time (§4 Finding 1).
+  if v_job.status = 'deposit_paid' then
+    v_refunded := public.refund_job_payments(
+      p_job_id,
+      coalesce(p_reason, 'Cancelled before the artisan travelled')
+    );
+  end if;
+
+  update public.jobs
+     set status    = 'cancelled_by_client',
+         closed_at = now()
+   where id = p_job_id;
+
+  perform set_config('artisangh.job_status_change', 'off', true);
+
+  -- The reason lands on the audit row the status trigger just wrote, so a
+  -- dispute later sees both the cancellation and the refund that followed it.
+  if p_reason is not null or v_refunded > 0 then
+    update public.job_events
+       set reason   = coalesce(p_reason, 'Cancelled'),
+           metadata = metadata || jsonb_build_object('refunded_payments', v_refunded)
+     where job_id = p_job_id
+       and to_status = 'cancelled_by_client'
+       and created_at > now() - interval '1 minute';
+  end if;
+end;
+$$;

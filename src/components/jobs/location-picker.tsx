@@ -62,6 +62,7 @@ export function LocationPicker({
   const [point, setPoint] = React.useState<LatLng | null>(initialPoint);
   const [address, setAddress] = React.useState(initialAddress ?? "");
   const [ghanaPost, setGhanaPost] = React.useState(initialGhanaPost ?? "");
+  const [landmark, setLandmark] = React.useState(initialLandmark ?? "");
 
   const [query, setQuery] = React.useState("");
   /**
@@ -311,6 +312,13 @@ export function LocationPicker({
         )}
       </div>
 
+      {/*
+        Required in earnest since migration 0009. It was drawn with a required
+        marker from the start and enforced nowhere, which meant a job could go
+        out with an OSM road name as its only human direction — and in Accra a
+        road name is frequently four unmarked gates. The pin gets an artisan to
+        the street; this gets them to the door.
+      */}
       <Field
         label="Landmark"
         htmlFor="landmark"
@@ -321,8 +329,11 @@ export function LocationPicker({
         <Input
           id="landmark"
           name="landmark"
-          defaultValue={initialLandmark ?? ""}
+          value={landmark}
+          onChange={(event) => setLandmark(event.target.value)}
           maxLength={200}
+          required
+          aria-required
           placeholder="Blue gate opposite Melcom"
           aria-invalid={Boolean(fieldErrors?.landmark)}
         />

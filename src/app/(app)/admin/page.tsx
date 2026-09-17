@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, Map, Radar, ShieldCheck } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { RoadmapPanel } from "@/components/app/roadmap-panel";
@@ -20,6 +20,7 @@ export default async function AdminDashboard() {
     { count: pendingCount },
     { count: approvedCount },
     { count: categoryCount },
+    { count: stalledCount },
   ] = await Promise.all([
     supabase.from("providers").select("profile_id", { count: "exact", head: true }),
     supabase
@@ -31,6 +32,10 @@ export default async function AdminDashboard() {
       .select("profile_id", { count: "exact", head: true })
       .eq("verification_status", "approved"),
     supabase.from("categories").select("id", { count: "exact", head: true }).eq("is_active", true),
+    supabase
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["unmatched", "expired_no_match"]),
   ]);
 
   // A worked example on the reference job from PLAN.md §4, computed by the same
@@ -84,6 +89,64 @@ export default async function AdminDashboard() {
             {pendingCount}
           </span>
         )}
+
+        <ArrowRight
+          className="size-4 shrink-0 text-ink-300 transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5 group-hover:text-ink-500"
+          aria-hidden
+        />
+      </Link>
+
+      <Link
+        href="/admin/matching"
+        className="group flex items-center gap-4 rounded-card border border-ink-200 bg-ink-0 px-5 py-4 shadow-sm transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong hover:border-ink-300 hover:shadow-md"
+      >
+        <span
+          className={
+            (stalledCount ?? 0) > 0
+              ? "grid size-11 shrink-0 place-items-center rounded-full bg-warning-50 text-warning-700"
+              : "grid size-11 shrink-0 place-items-center rounded-full bg-ink-100 text-ink-500"
+          }
+        >
+          <Radar className="size-5" aria-hidden />
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.9375rem] font-semibold text-ink-900">Stalled jobs</span>
+          <span className="block text-sm text-ink-600">
+            {(stalledCount ?? 0) === 0
+              ? "Nothing is stuck waiting for an artisan."
+              : `${stalledCount} job${stalledCount === 1 ? "" : "s"} the matcher could not place.`}
+          </span>
+        </span>
+
+        {(stalledCount ?? 0) > 0 && (
+          <span className="tabular shrink-0 font-mono text-2xl font-semibold text-ink-900">
+            {stalledCount}
+          </span>
+        )}
+
+        <ArrowRight
+          className="size-4 shrink-0 text-ink-300 transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5 group-hover:text-ink-500"
+          aria-hidden
+        />
+      </Link>
+
+      <Link
+        href="/admin/zones"
+        className="group flex items-center gap-4 rounded-card border border-ink-200 bg-ink-0 px-5 py-4 shadow-sm transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong hover:border-ink-300 hover:shadow-md"
+      >
+        <span className="grid size-11 shrink-0 place-items-center rounded-full bg-ink-100 text-ink-500">
+          <Map className="size-5" aria-hidden />
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.9375rem] font-semibold text-ink-900">
+            Transport bands
+          </span>
+          <span className="block text-sm text-ink-600">
+            What a client pays for travel, by distance. Still on placeholder numbers.
+          </span>
+        </span>
 
         <ArrowRight
           className="size-4 shrink-0 text-ink-300 transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5 group-hover:text-ink-500"
