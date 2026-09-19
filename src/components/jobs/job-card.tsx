@@ -37,7 +37,10 @@ export function JobCard({
     <Link
       href={href}
       className={cn(
-        "group block rounded-card border bg-ink-0 shadow-sm",
+        // `bg-white`, not `ink-0`: these now sit on the client shell's pure
+        // white ground, where the warm fill reads as a smudge rather than as a
+        // raised surface. Same reason the `outline` button variant exists.
+        "group block rounded-card border bg-white shadow-sm",
         "transition-[box-shadow,border-color,transform] duration-[var(--duration-fast)] ease-out-strong",
         "hover:-translate-y-px hover:border-ink-300 hover:shadow-md active:translate-y-0 active:shadow-sm",
         isDraft ? "border-dashed border-ink-300" : "border-ink-200",

@@ -1,163 +1,152 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, MapPin, Plus, Search } from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button-variants";
-import { Card, CardContent } from "@/components/ui/card";
+import { CategoryChips } from "@/components/mobile/category-chips";
 import { JobCard } from "@/components/jobs/job-card";
-import { RoadmapPanel } from "@/components/app/roadmap-panel";
-import { Stat } from "@/components/app/stat";
-import { countPhotosByJob, listClientJobs, summariseJobs } from "@/lib/jobs/queries";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { countPhotosByJob, listActiveCategories, listClientJobs } from "@/lib/jobs/queries";
+import { createClient, getCurrentProfile } from "@/lib/supabase/server";
 import { jobStatus } from "@/lib/jobs/status";
-import { getCurrentProfile } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "My jobs" };
+export const metadata: Metadata = { title: "Home" };
 
 /**
- * The client's home.
+ * The client's home (`@4-home` in the reference).
  *
- * Ordered by what the person is most likely to have come here to do: finish
- * something they started, check on something in flight, or start something new.
- * Completed work is a link, not a list — nobody opens this screen to admire a
- * tap that was fixed in March.
+ * The reference is a browse-first marketplace: search, categories, offers, a
+ * carousel of pros. That shape assumes every visit starts a new purchase. This
+ * product is not that — a client with a plumber currently on the way opens the
+ * app to see where the plumber is, and burying that under a category carousel
+ * would be following a layout off a cliff.
+ *
+ * So the order is: **what is already happening, then what you might start.**
+ * Live jobs first when there are any, browse first when there are none. The
+ * reference's furniture is all here; it is sequenced by what the person came
+ * for rather than by what a marketplace would like them to do.
+ *
+ * Four things from the reference are deliberately absent, each because the
+ * product does not have the thing behind them:
+ *
+ *   • **Discount cards.** PLAN.md §14 puts promo codes out of v1. A "Get 40%
+ *     Off" tile with nothing behind it is a lie on the first screen.
+ *   • **Per-hour prices on category cards.** §9: artisans price each job
+ *     freely and there is no price guidance in v1, so any figure here would be
+ *     invented.
+ *   • **A carousel of top-rated pros.** §14 excludes public artisan browsing.
+ *     Artisans are matched to a job, not shopped for.
+ *   • **A chat tab.** §14 excludes in-app messaging.
  */
-export default async function ClientDashboard() {
-  const [profile, jobs] = await Promise.all([getCurrentProfile(), listClientJobs()]);
+export default async function ClientHome() {
+  const [profile, jobs, categories] = await Promise.all([
+    getCurrentProfile(),
+    listClientJobs(),
+    listActiveCategories(),
+  ]);
 
   const photoCounts = await countPhotosByJob(jobs.map((job) => job.id));
-  const summary = summariseJobs(jobs);
+
+  const supabase = await createClient();
+  const { data: client } = await supabase
+    .from("clients")
+    .select("default_address")
+    .eq("profile_id", profile?.id ?? "")
+    .maybeSingle();
 
   const drafts = jobs.filter((job) => job.status === "draft");
   const active = jobs.filter((job) => jobStatus(job.status).group === "active");
-  const closed = jobs.filter((job) => jobStatus(job.status).group === "closed");
 
+  // Everything the client has on right now, drafts last: an unfinished draft is
+  // less urgent than an artisan who is on the way.
+  const inFlight = [...active, ...drafts];
   const firstName = profile?.full_name.split(" ")[0] ?? "there";
-  const empty = jobs.length === 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-ink-900">Hello, {firstName}</h1>
-          <p className="text-[0.9375rem] text-ink-600">
-            {empty
-              ? "Tell us what needs fixing and we'll find a verified artisan near you."
-              : active.length > 0
-                ? `${active.length} job${active.length === 1 ? "" : "s"} in progress.`
-                : "Nothing in progress right now."}
+    // pb-28 clears the fixed tab bar. The bar is out of flow, so it cannot
+    // reserve its own space — every screen under it owns that padding.
+    <div className="space-y-7 pb-28">
+      <header className="space-y-2">
+        <h1 className="text-title font-semibold text-ink-900">Hello, {firstName}</h1>
+        <p className="text-ui text-ink-600">
+          {inFlight.length > 0
+            ? "Here's what you have on."
+            : "What needs doing? We'll find a verified artisan near you."}
+        </p>
+
+        {client?.default_address && (
+          <p className="flex items-center gap-1.5 text-note text-ink-500">
+            <MapPin className="size-3.5 shrink-0 text-brand-700" aria-hidden />
+            <span className="truncate">{client.default_address}</span>
           </p>
-        </div>
+        )}
+      </header>
 
-        {/* A Link, wearing the button's clothes. `Button` renders a real
-            <button>, and an anchor inside one is invalid markup that swallows
-            the navigation — so the variants are applied to the Link directly. */}
-        <Link href="/client/post" className={cn(buttonVariants({ size: "lg" }), "shrink-0")}>
-          <Plus />
-          Book a service
-        </Link>
-      </div>
+      {/* Not a search input: there is nothing to search yet beyond 26
+          categories, and a box that only filters a list the user is about to
+          see anyway is a control that costs a tap and returns nothing. It is
+          a link to the picker, wearing a search bar's clothes because that is
+          where a thumb goes looking. */}
+      <Link
+        href="/client/post"
+        className="flex min-h-12 items-center gap-2.5 rounded-full border border-ink-200 bg-surface-sunken px-4 text-ink-500 transition-colors hover:border-ink-300 hover:text-ink-700"
+      >
+        <Search className="size-4.5 shrink-0" aria-hidden />
+        <span className="text-ui">What do you need doing?</span>
+      </Link>
 
-      {empty ? (
-        <EmptyState />
-      ) : (
-        <>
-          <div className="grid grid-cols-3 gap-3">
-            <Stat label="In progress" value={String(summary.active)} />
-            <Stat label="Drafts" value={String(summary.drafts)} />
-            <Stat label="Completed" value={String(summary.completed)} />
-          </div>
-
-          {drafts.length > 0 && (
-            <Section
-              title="Pick up where you left off"
-              description="These are not posted yet, so no artisan has seen them."
-            >
-              {drafts.map((job) => (
-                <JobCard key={job.id} job={job} photoCount={photoCounts[job.id] ?? 0} />
-              ))}
-            </Section>
-          )}
-
-          {active.length > 0 && (
-            <Section title="In progress">
-              {active.map((job) => (
-                <JobCard key={job.id} job={job} photoCount={photoCounts[job.id] ?? 0} />
-              ))}
-            </Section>
-          )}
-
-          {closed.length > 0 && (
+      {inFlight.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-lede font-semibold text-ink-900">Your jobs</h2>
             <Link
               href="/client/jobs"
-              className="group flex items-center justify-between gap-3 rounded-card border border-ink-200 bg-ink-0 px-4 py-3.5 shadow-sm transition-colors hover:border-ink-300"
+              className="tap text-sm text-ink-500 underline-offset-4 transition-colors hover:text-ink-900 hover:underline"
             >
-              <span className="text-sm text-ink-700">
-                <span className="tabular font-mono font-medium text-ink-900">{closed.length}</span>{" "}
-                past job{closed.length === 1 ? "" : "s"}
-              </span>
-              <span className="inline-flex items-center gap-1 text-sm font-medium text-brand-700">
-                View history
-                <ArrowRight
-                  className="size-4 transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5"
-                  aria-hidden
-                />
-              </span>
+              All jobs
             </Link>
-          )}
-        </>
-      )}
+            </div>
 
-      <RoadmapPanel
-        title="What's still to come"
-        description="Booking, paying, tracking, sign-off and rating all work. What is left is making the money and the messages real."
-        items={[
-          { label: "Real mobile money — payments are simulated today", phase: "Phase 8" },
-          { label: "SMS updates as your job moves", phase: "Phase 8" },
-          { label: "Terms and privacy policy", phase: "Phase 7" },
-        ]}
-      />
-    </div>
-  );
-}
+            <ul className="space-y-2.5">
+              {inFlight.slice(0, 3).map((job) => (
+                <li key={job.id}>
+                  <JobCard job={job} photoCount={photoCounts[job.id] ?? 0} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-2.5">
-      <div className="space-y-0.5">
-        <h2 className="text-sm font-semibold text-ink-800">{title}</h2>
-        {description && <p className="text-sm text-ink-500">{description}</p>}
-      </div>
-      <div className="space-y-2.5">{children}</div>
-    </section>
-  );
-}
+        <section className="space-y-3">
+          <h2 className="text-lede font-semibold text-ink-900">Browse by category</h2>
+          <CategoryChips categories={categories} />
+        </section>
 
-function EmptyState() {
-  return (
-    <Card>
-      <CardContent className="space-y-4 py-10 text-center">
-        <div className="space-y-1.5">
-          <p className="text-base font-semibold text-ink-900">No jobs yet</p>
-          <p className="mx-auto max-w-sm text-sm leading-relaxed text-ink-600">
-            Describe the problem, we find the nearest verified artisan, and you approve their
-            price before anyone travels. Posting costs nothing.
+        <section className="rounded-card border border-ink-200 bg-surface-sunken p-5 text-center">
+          <h2 className="text-title-sm font-semibold text-balance text-ink-900">
+            Can&rsquo;t find what you need?
+          </h2>
+          <p className="mx-auto mt-1.5 max-w-xs text-ui text-ink-600">
+            Describe the problem in your own words and we&rsquo;ll match you to someone who does it.
           </p>
-        </div>
+          <Link
+            href="/client/post"
+            className={cn(buttonVariants({ size: "lg", shape: "pill" }), "mt-4")}
+          >
+            <Plus />
+            Post a job
+          </Link>
+        </section>
 
-        <Link href="/client/post" className={cn(buttonVariants({ size: "lg" }), "mx-auto")}>
-          <Plus />
-          Book your first service
-        </Link>
-      </CardContent>
-    </Card>
+        {inFlight.length === 0 && jobs.length > 0 && (
+          <Link
+            href="/client/jobs"
+            className="flex min-h-12 items-center gap-2 rounded-card border border-ink-200 bg-white px-4 text-ui text-ink-700 transition-colors hover:border-ink-300"
+          >
+            Past jobs
+            <ArrowRight className="ml-auto size-4 shrink-0 text-ink-400" aria-hidden />
+          </Link>
+        )}
+    </div>
   );
 }

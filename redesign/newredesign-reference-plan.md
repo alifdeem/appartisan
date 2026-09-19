@@ -119,7 +119,7 @@ never sees — and because the app should be settled before the shopfront is.
 | Phase | Status |
 |---|---|
 | 1 — Foundations & auth | **in progress** — tokens, primitives, splash and the option screen done; form screens, verify step and success outstanding |
-| 2 — Home & bottom nav | not started |
+| 2 — Home & bottom nav | done |
 | 3 — Browse categories | not started |
 | 4 — Post a job | not started |
 | 5 — Account | not started |

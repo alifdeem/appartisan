@@ -40,7 +40,10 @@ export function DevPanel({
   }, []);
 
   return (
-    <div className="pointer-events-none fixed bottom-4 left-4 z-50 print:hidden">
+    // `bottom-24` clears the client shell's floating tab bar, which is also
+    // fixed to the bottom of the viewport. At `bottom-4` the two overlapped and
+    // the dev pill sat on top of the Home tab.
+    <div className="pointer-events-none fixed bottom-24 left-4 z-50 print:hidden">
       {open ? (
         <div className="animate-fade-up pointer-events-auto w-[19rem] rounded-card border border-ink-700 bg-ink-950 p-3 text-ink-100 shadow-xl">
           <div className="mb-3 flex items-center gap-2">

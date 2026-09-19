@@ -247,3 +247,104 @@ sat above "Check your phone number".
   which is correct — but the landing page itself is Phase 6 and still carries the
   warm-paper design, so `/` → `/signup` is a visible change of visual language.
   Expected until Phase 6.
+
+---
+
+## Phase 2 — Home & bottom nav `@4-home`
+
+### 2.1 Bottom nav — **done**
+
+`src/components/mobile/bottom-nav.tsx`. Floating pill bar, active tab filled
+and labelled, inactive tabs bare icons — which is what lets four tabs fit at
+360px without truncating. Inactive labels stay in the DOM as `sr-only`.
+
+**Four tabs, and what the third one is not.** The reference's third slot is
+chat. PLAN.md §14 puts in-app messaging out of v1 and points at masked calling
+or WhatsApp, so that slot carries **Jobs** — the thing a returning client
+actually opens the app for. A chat tab opening an empty screen would be worse
+than three tabs.
+
+`position: fixed`, not `sticky`: rules §4 asks for RN-translatable CSS and a
+fixed bottom bar maps onto a tab navigator directly. It lives in the layout
+rather than in each page — a bar that appears a frame late reads as the page
+jumping.
+
+### 2.2 The shell — **done**
+
+`src/app/(app)/layout.tsx` now serves **two shells, chosen by `profile.role`**.
+
+The client app is the redesigned one: phone-width column on white, no top
+chrome, floating tab bar. The admin console and provider screens are not
+redesigned — they are dense and multi-column and still want the header with its
+role badge and the wide container. Branching on role rather than pathname
+because the layout already has the profile and a Server Component cannot read
+the path. When the other two roles land, the fork disappears and the mobile
+shell becomes the only one, which is what the plan means by "the app shell every
+signed-in screen inherits".
+
+### 2.3 Client home — **done**
+
+`src/app/(app)/client/page.tsx`, rebuilt.
+
+**The order is the whole argument.** The reference is browse-first: search,
+categories, offers, a carousel of pros — a shape that assumes every visit starts
+a new purchase. This product is not that. A client with a plumber currently on
+the way opens the app to see where the plumber is, so live jobs come first when
+there are any and browse comes first when there are none. The reference's
+furniture is all present; it is sequenced by what the person came for.
+
+**Four things from the reference are deliberately absent**, each because the
+product has nothing behind them:
+
+| reference | why not |
+|---|---|
+| "Get 40% Off" promo cards | §14 — promo codes are out of v1. A discount tile with nothing behind it is a lie on the first screen. |
+| `$29/hr` on category cards | §9 — artisans price each job freely, there is no price guidance in v1, so any figure would be invented. |
+| "Explore our top rated pros" | §14 — no public artisan browsing. Artisans are matched to a job, not shopped for. |
+| Chat tab | §14 — no in-app messaging. |
+
+`CategoryChips` uses **icons, not photographs**. The reference fills each card
+with a stock photo; there are 26 trades here and four photographs in
+`public/img/`, so matching it would mean either sourcing 26 images the client
+has not paid for or repeating four across twenty-six tiles, which reads as a
+bug. `categories.icon` is already in the database and already admin-editable.
+
+No "Available · at your area" badge: in the reference it is decoration, here it
+would be a claim about supply we cannot make until the matcher has actually run.
+
+The search bar is a **link to the picker, not an input**. There is nothing to
+search beyond 26 categories, and a box that filters a list the user is about to
+see anyway costs a tap and returns nothing — but that is where a thumb goes
+looking, so it keeps the shape.
+
+### 2.4 Account tab — **done**
+
+`src/app/(app)/client/account/page.tsx`. Deliberately small: who you are, how we
+reach you, the documents you agreed to, and the way out. The reference's account
+screen carries an earnings overview and a booking history — history has its own
+tab here and a client has no earnings. It exists now because a fourth tab that
+opens nothing is worse than three tabs; the fuller `@7-account` lands with that
+screen's work.
+
+### Fixed while building
+
+- **Dev panel collided with the tab bar.** Both are fixed to the bottom; the dev
+  pill sat on top of the Home tab. Raised to `bottom-24`.
+- **`JobCard` kept its warm `ink-0` fill** on the new white ground, where it
+  reads as a smudge. Now `bg-white` — the third time this exact correction has
+  been needed, after the `outline` button variant and the OTP slots.
+
+### Verification
+
+- `tsc`, `lint`, `build`, `check:props` — clean
+- `npm run a11y` — every page clean; `npm run smoke` — every screen renders
+  **across all three roles**, so the layout fork did not strip the admin console
+- `npm run e2e`, `e2e:execution`, `db:verify` — unchanged and passing
+- Live DOM: 26 category tiles, 4 nav tabs with correct `aria-current`, zero
+  horizontal overflow at 360px
+
+### Still open in Phase 2
+
+- Tab filters with the underline indicator (`All / Popular / Near you`) — needs
+  data the product does not collect yet, so deferred rather than faked.
+- The provider and admin shells still use the old header.
