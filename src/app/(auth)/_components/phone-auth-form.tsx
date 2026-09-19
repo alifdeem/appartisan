@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Hammer, House, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, Hammer, House, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/input";
+import { UnderlineField, UnderlineInput } from "@/components/mobile/underline-field";
 import { OtpField } from "@/components/ui/otp-input";
 import { SimulatedBadge } from "@/components/ui/badge";
 import { formatPhoneForDisplay } from "@/lib/phone";
@@ -17,10 +17,35 @@ type Mode = "login" | "signup";
 
 const LANGUAGES = ["English", "Twi", "Ga", "Ewe", "Hausa", "Dagbani", "Fante"] as const;
 
-export function PhoneAuthForm({ mode }: { mode: Mode }) {
+export function PhoneAuthForm({
+  mode,
+  initialRole,
+  title,
+  subtitle,
+}: {
+  mode: Mode;
+  /**
+   * The screen's heading, rendered here rather than by the page.
+   *
+   * The page cannot own it: which step we are on is client state derived
+   * inside this component, and the verify step needs a heading of its own.
+   * Left in the page, "Create your account" sat above "Check your phone
+   * number" — two competing headings and an h2-then-h1 outline.
+   */
+  title?: string;
+  subtitle?: string;
+  /**
+   * Set when the role was already chosen on the preceding screen
+   * (`/signup?role=…`). When present the in-form role picker is hidden — asking
+   * the same question twice makes the first answer look like it was ignored.
+   * The value still posts as a hidden input, so `requestCodeAction` receives
+   * exactly the same `FormData` either way.
+   */
+  initialRole?: "client" | "provider";
+}) {
   const [phone, setPhone] = React.useState("");
   const [fullName, setFullName] = React.useState("");
-  const [role, setRole] = React.useState<"client" | "provider">("client");
+  const [role, setRole] = React.useState<"client" | "provider">(initialRole ?? "client");
   const [languages, setLanguages] = React.useState<string[]>(["English"]);
 
   const [requestState, requestAction, requesting] = React.useActionState<ActionState | null, FormData>(
@@ -88,38 +113,53 @@ export function PhoneAuthForm({ mode }: { mode: Mode }) {
 
   return (
     <form action={requestAction} className="space-y-5">
+      {title && (
+        <div className="space-y-1.5">
+          <h1 className="text-title font-semibold text-ink-900">{title}</h1>
+          {subtitle && <p className="text-ui text-ink-600">{subtitle}</p>}
+        </div>
+      )}
+
       <input type="hidden" name="mode" value={mode} />
 
       {mode === "signup" && (
         <>
-          <fieldset className="space-y-2">
-            <legend className="mb-2 block text-sm font-medium text-ink-800">
-              I want to
-              <span className="ml-0.5 text-danger-600" aria-hidden>
-                *
-              </span>
-            </legend>
-            <div className="grid grid-cols-2 gap-3">
-              <RoleCard
-                selected={role === "client"}
-                onSelect={() => setRole("client")}
-                icon={<House />}
-                title="Book a service"
-                subtitle="I need work done"
-              />
-              <RoleCard
-                selected={role === "provider"}
-                onSelect={() => setRole("provider")}
-                icon={<Hammer />}
-                title="Work as an artisan"
-                subtitle="I offer a service"
-              />
-            </div>
+          {initialRole ? (
             <input type="hidden" name="role" value={role} />
-          </fieldset>
+          ) : (
+            <fieldset className="space-y-2">
+              <legend className="mb-2 block text-sm font-medium text-ink-800">
+                I want to
+                <span className="ml-0.5 text-danger-600" aria-hidden>
+                  *
+                </span>
+              </legend>
+              <div className="grid grid-cols-2 gap-3">
+                <RoleCard
+                  selected={role === "client"}
+                  onSelect={() => setRole("client")}
+                  icon={<House />}
+                  title="Book a service"
+                  subtitle="I need work done"
+                />
+                <RoleCard
+                  selected={role === "provider"}
+                  onSelect={() => setRole("provider")}
+                  icon={<Hammer />}
+                  title="Work as an artisan"
+                  subtitle="I offer a service"
+                />
+              </div>
+              <input type="hidden" name="role" value={role} />
+            </fieldset>
+          )}
 
-          <Field label="Full name" htmlFor="fullName" required error={requestState?.fieldErrors?.fullName}>
-            <Input
+          <UnderlineField
+            label="Your name"
+            htmlFor="fullName"
+            error={requestState?.fieldErrors?.fullName}
+          >
+            <UnderlineInput
               id="fullName"
               name="fullName"
               autoComplete="name"
@@ -129,18 +169,26 @@ export function PhoneAuthForm({ mode }: { mode: Mode }) {
               aria-invalid={Boolean(requestState?.fieldErrors?.fullName)}
               required
             />
-          </Field>
+          </UnderlineField>
         </>
       )}
 
-      <Field
-        label="Mobile number"
+      <UnderlineField
+        label="Phone number"
         htmlFor="phone"
-        required
         error={requestState?.fieldErrors?.phone}
         hint="We'll text you a 6-digit code. Standard rates apply."
       >
-        <Input
+        {/* The dial code sits inside the rule as a sibling of the input, the
+            way the reference sets its flag and +1. It is not an input: every
+            number on this platform is Ghanaian, so offering a country picker
+            would be offering a choice that has one answer. */}
+        <span className="tabular flex shrink-0 items-center gap-1.5 text-base text-ink-700">
+          <span aria-hidden>🇬🇭</span>
+          +233
+        </span>
+
+        <UnderlineInput
           id="phone"
           name="phone"
           type="tel"
@@ -148,13 +196,12 @@ export function PhoneAuthForm({ mode }: { mode: Mode }) {
           autoComplete="tel"
           autoFocus={mode === "login"}
           placeholder="024 123 4567"
-          leading={<span className="tabular text-sm font-medium">🇬🇭 +233</span>}
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           aria-invalid={Boolean(requestState?.fieldErrors?.phone)}
           required
         />
-      </Field>
+      </UnderlineField>
 
       {mode === "signup" && role === "provider" && (
         <fieldset className="space-y-2">
@@ -204,23 +251,26 @@ export function PhoneAuthForm({ mode }: { mode: Mode }) {
         </p>
       )}
 
-      <Button type="submit" size="lg" block loading={requesting}>
+      <Button type="submit" size="lg" shape="pill" block loading={requesting}>
         Send code
-        <ArrowRight />
+        <ArrowUpRight />
       </Button>
 
       <p className="text-center text-sm text-ink-500">
         {mode === "login" ? (
           <>
             New here?{" "}
-            <Link href="/signup" className="font-medium text-brand-700 hover:underline">
+            {/* `.tap` grows the hit area on coarse pointers without disturbing
+                the layout of the line — an inline link is ~17px tall, which
+                fails the 44px rule this app holds itself to. */}
+            <Link href="/signup" className="tap font-medium text-brand-700 hover:underline">
               Create an account
             </Link>
           </>
         ) : (
           <>
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-brand-700 hover:underline">
+            <Link href="/login" className="tap font-medium text-brand-700 hover:underline">
               Log in
             </Link>
           </>
@@ -228,8 +278,16 @@ export function PhoneAuthForm({ mode }: { mode: Mode }) {
       </p>
 
       {mode === "signup" && (
-        <p className="text-center text-xs leading-relaxed text-ink-400">
-          By continuing you agree to the ArtisanGH Terms of Service and Privacy Policy.
+        <p className="text-center text-note leading-relaxed text-ink-500">
+          By continuing you agree to the ArtisanGH{" "}
+          <Link href="/legal/terms" className="tap font-medium text-brand-700 underline-offset-4 hover:underline">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/legal/privacy" className="tap font-medium text-brand-700 underline-offset-4 hover:underline">
+            Privacy Policy
+          </Link>
+          .
         </p>
       )}
     </form>
@@ -336,18 +394,15 @@ function CodeStep({
       <input type="hidden" name="spokenLanguages" value={languages.join(",")} />
       <input type="hidden" name="code" value={shownCode} />
 
-      <div className="space-y-1.5">
-        <button
-          type="button"
-          onClick={onBack}
-          className="-ml-1 inline-flex items-center gap-1 rounded-field px-1 py-0.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
-        >
-          <ArrowLeft className="size-4" />
-          Change number
-        </button>
-        <p className="text-sm text-ink-600">
-          Enter the 6-digit code sent to{" "}
-          <span className="font-medium tabular text-ink-900">{formatPhoneForDisplay(phone)}</span>
+      {/* Centred, the way the reference sets it: on a screen with one question
+          the title belongs over the answer, not up in the corner. */}
+      <div className="space-y-2 text-center">
+        <h1 className="text-title-sm text-ink-900">Check your phone number</h1>
+        <p className="text-ui text-ink-600">
+          A 6-digit code has been sent to{" "}
+          <span className="tabular font-medium whitespace-nowrap text-ink-900">
+            {formatPhoneForDisplay(phone)}
+          </span>
         </p>
       </div>
 
@@ -359,6 +414,22 @@ function CodeStep({
           disabled={pending}
         />
       </div>
+
+      {/* The reference pairs "Didn't get the code?" with a resend. Ours changes
+          the number instead: `issueOtp` enforces a 60-second cooldown and six
+          sends an hour per number, so a resend control that is refused most of
+          the time it is pressed teaches people it is broken. Going back and
+          sending again costs one tap and goes through the same limits honestly. */}
+      <p className="text-center text-ui text-ink-600">
+        Wrong number?{" "}
+        <button
+          type="button"
+          onClick={onBack}
+          className="tap font-medium text-brand-700 underline-offset-4 hover:underline"
+        >
+          Change it
+        </button>
+      </p>
 
       {simulated && devCode && (
         <div className="animate-fade-in rounded-card border border-dashed border-warning-500/50 bg-warning-50 p-3.5">
@@ -382,8 +453,16 @@ function CodeStep({
         </p>
       )}
 
-      <Button type="submit" size="lg" block loading={pending} disabled={shownCode.length !== 6}>
+      <Button
+        type="submit"
+        size="lg"
+        shape="pill"
+        block
+        loading={pending}
+        disabled={shownCode.length !== 6}
+      >
         {mode === "signup" ? "Create account" : "Log in"}
+        <ArrowUpRight />
       </Button>
     </form>
   );

@@ -22,7 +22,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 export const buttonVariants = cva(
   [
     "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium",
-    "rounded-field select-none",
+    "select-none",
     "transition-[background-color,border-color,color,box-shadow,transform,opacity]",
     "duration-[var(--duration-instant)] ease-out-strong",
     "active:scale-[0.98]",
@@ -38,6 +38,14 @@ export const buttonVariants = cva(
         money: "bg-accent-600 text-ink-950 shadow-sm hover:bg-accent-500",
         secondary:
           "bg-ink-0 text-ink-800 border border-ink-300 shadow-xs hover:bg-ink-50 hover:border-ink-400",
+        /**
+         * The new-reference secondary. Every screen in that redesign grounds on
+         * pure white, where `secondary`'s warm `ink-0` fill reads as a faint
+         * stain rather than as a surface. No shadow either — the reference's
+         * outlined buttons are flat, and depth there comes from the border.
+         */
+        outline:
+          "bg-white text-ink-900 border border-ink-200 hover:bg-ink-50 hover:border-ink-300",
         ghost: "text-ink-700 hover:bg-ink-100 hover:text-ink-900",
         danger: "bg-danger-600 text-white shadow-sm hover:bg-danger-700",
         link: "text-brand-700 underline-offset-4 hover:underline active:scale-100 h-auto min-h-0 p-0",
@@ -51,8 +59,17 @@ export const buttonVariants = cva(
       block: {
         true: "w-full",
       },
+      /**
+       * `rect` is the app's existing 0.625rem field radius and stays the
+       * default, so nothing already built moves. `pill` is the new-reference
+       * shape — every primary action in those mockups is fully rounded.
+       */
+      shape: {
+        rect: "rounded-field",
+        pill: "rounded-full",
+      },
     },
-    defaultVariants: { variant: "primary", size: "md" },
+    defaultVariants: { variant: "primary", size: "md", shape: "rect" },
   },
 );
 

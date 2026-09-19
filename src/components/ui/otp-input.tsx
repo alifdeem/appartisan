@@ -24,7 +24,11 @@ function Slot({ char, hasFakeCaret, isActive }: SlotProps) {
     <div
       className={cn(
         "relative flex h-14 w-11 items-center justify-center sm:w-12",
-        "rounded-field border bg-ink-0 text-xl font-semibold tabular text-ink-900",
+        // White, not `ink-0`. These sit on the pure-white auth ground, where the
+        // warm fill reads as a smudge — the same reason the `outline` button
+        // variant exists. Everywhere else the component is on `ink-25`, where
+        // white is still the correct raised surface.
+        "rounded-field border bg-white text-xl font-semibold tabular text-ink-900",
         "transition-[border-color,box-shadow,transform] duration-[var(--duration-fast)] ease-out-strong",
         isActive
           ? "z-10 -translate-y-0.5 border-brand-600 ring-4 ring-brand-600/12"
