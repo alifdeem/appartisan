@@ -1,0 +1,102 @@
+# The scheduled sweeps that keep jobs and money moving.
+#
+# These used to live in `vercel.json` as four Vercel Cron Jobs. The Hobby plan
+# allows two, running once a day, and this app declared four with three of them
+# sub-daily - so Vercel rejected the deployment at config validation, before it
+# ever reached a build log. That is why the project imported from GitHub and
+# then showed nothing.
+#
+# Every endpoint below is an ordinary HTTP route guarded by a bearer token, so
+# any scheduler can drive them. GitHub Actions is free, lives beside the code,
+# and its runs are visible in the same place as everything else.
+#
+# TWO THINGS TO KNOW about Actions as a scheduler:
+#
+#   1. The shortest interval is five minutes, and runs are queued rather than
+#      guaranteed - under load GitHub delays them, sometimes by several
+#      minutes. That is fine for reconciliation and payouts. It is NOT fine for
+#      the offer sweep, where an offer expires after 120 seconds: see the note
+#      on `matching` below.
+#   2. Scheduled workflows are disabled automatically after 60 days without a
+#      commit to the repository. If the sweeps go quiet, that is the first
+#      thing to check.
+#
+# Required repository secrets (Settings > Secrets and variables > Actions):
+#   APP_URL      https://your-deployment.vercel.app   (no trailing slash)
+#   CRON_SECRET  the same value set in the Vercel environment
+
+name: Scheduled sweeps
+
+on:
+  schedule:
+    # Offers and payouts. Money out is the one people notice.
+    - cron: "*/5 * * * *"
+    # Charge reconciliation. The webhook is the primary path; this is the net
+    # beneath it, and the route only looks at charges older than 15 minutes.
+    - cron: "*/15 * * * *"
+    # Reliability scores. 03:00 UTC, which is 03:00 in Accra.
+    - cron: "0 3 * * *"
+  # So a sweep can be forced by hand while debugging.
+  workflow_dispatch:
+
+# A slow sweep must never stack on top of the next one.
+concurrency:
+  group: artisangh-cron
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the secrets are set
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::APP_URL and CRON_SECRET must both be set as repository secrets."
+            exit 1
+          fi
+
+      - name: Expire stale offers
+        if: github.event.schedule == '*/5 * * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          # --fail-with-body so a 401 or a 500 fails the run loudly instead of
+          # logging a body and exiting 0.
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            -X POST "$APP_URL/api/cron/matching" \
+            -H "Authorization: Bearer $CRON_SECRET"
+
+      - name: Send queued payouts
+        if: github.event.schedule == '*/5 * * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 120 \
+            -X POST "$APP_URL/api/cron/payouts" \
+            -H "Authorization: Bearer $CRON_SECRET"
+
+      - name: Reconcile payments
+        if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 120 \
+            -X POST "$APP_URL/api/cron/payments" \
+            -H "Authorization: Bearer $CRON_SECRET"
+
+      - name: Recompute reliability
+        if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 120 \
+            -X POST "$APP_URL/api/cron/reliability" \
+            -H "Authorization: Bearer $CRON_SECRET"
