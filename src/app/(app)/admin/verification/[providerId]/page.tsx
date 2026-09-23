@@ -55,7 +55,7 @@ export default async function ReviewProviderPage({
       <div className="space-y-3">
         <Link
           href="/admin/verification"
-          className="inline-flex items-center gap-1.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
+          className="inline-flex items-center gap-1.5 text-sm text-copy-muted transition-colors hover:text-navy-900"
         >
           <ArrowLeft className="size-4" aria-hidden />
           Verification queue
@@ -64,7 +64,7 @@ export default async function ReviewProviderPage({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-2xl font-semibold text-ink-900">{name}</h1>
+              <h1 className="text-2xl font-semibold text-navy-900">{name}</h1>
               <Badge
                 tone={
                   provider.verification_status === "approved"
@@ -80,7 +80,7 @@ export default async function ReviewProviderPage({
               </Badge>
             </div>
 
-            <p className="text-[0.9375rem] text-ink-600">
+            <p className="text-[0.9375rem] text-copy-muted">
               {provider.application_submitted_at
                 ? `Applied ${timeAgo(provider.application_submitted_at)}`
                 : "Has not submitted an application yet."}
@@ -93,7 +93,7 @@ export default async function ReviewProviderPage({
           {phone && (
             <a
               href={`tel:${phone}`}
-              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-field border border-ink-300 bg-ink-0 px-4 text-[0.9375rem] font-medium text-ink-800 shadow-xs transition-[background-color,border-color,transform] duration-[var(--duration-instant)] ease-out-strong hover:border-ink-400 hover:bg-ink-50 active:scale-[0.98]"
+              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-field border border-hairline bg-white px-4 text-[0.9375rem] font-medium text-navy-900 shadow-xs transition-[background-color,border-color,transform] duration-[var(--duration-instant)] ease-out-strong hover:border-copy-muted hover:bg-canvas active:scale-[0.98]"
             >
               <Phone className="size-4" aria-hidden />
               <span className="tabular font-mono">{formatPhoneForDisplay(phone)}</span>
@@ -107,8 +107,8 @@ export default async function ReviewProviderPage({
           <Card>
             <CardContent className="space-y-4">
               <div className="flex items-baseline justify-between gap-3">
-                <h2 className="text-base font-semibold text-ink-900">Documents</h2>
-                <p className="tabular font-mono text-sm text-ink-600">
+                <h2 className="text-base font-semibold text-navy-900">Documents</h2>
+                <p className="tabular font-mono text-sm text-copy-muted">
                   {provider.ghana_card_number ?? "no card number"}
                 </p>
               </div>
@@ -119,7 +119,7 @@ export default async function ReviewProviderPage({
 
           <Card>
             <CardContent className="space-y-4">
-              <h2 className="text-base font-semibold text-ink-900">Record a decision</h2>
+              <h2 className="text-base font-semibold text-navy-900">Record a decision</h2>
               <ReviewDecision
                 providerId={providerId}
                 currentStatus={provider.verification_status}
@@ -131,14 +131,14 @@ export default async function ReviewProviderPage({
         <aside className="space-y-6 lg:sticky lg:top-24">
           <Card>
             <CardContent className="space-y-4">
-              <h2 className="text-sm font-semibold text-ink-800">What they told us</h2>
+              <h2 className="text-sm font-semibold text-navy-900">What they told us</h2>
 
               {provider.bio ? (
-                <p className="text-sm leading-relaxed whitespace-pre-wrap text-ink-700">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap text-copy">
                   {provider.bio}
                 </p>
               ) : (
-                <p className="text-sm text-ink-400">No description written.</p>
+                <p className="text-sm text-copy-muted">No description written.</p>
               )}
 
               {trades.length > 0 && (
@@ -151,22 +151,22 @@ export default async function ReviewProviderPage({
                 </div>
               )}
 
-              <dl className="space-y-2 border-t border-ink-100 pt-3 text-sm">
+              <dl className="space-y-2 border-t border-azure-50 pt-3 text-sm">
                 <Row label="Experience">
                   {provider.years_experience !== null ? (
                     <>
                       <span className="tabular font-mono">{provider.years_experience}</span> years
                     </>
                   ) : (
-                    "—"
+                    "-"
                   )}
                 </Row>
-                <Row label="Based in">{provider.base_city ?? "—"}</Row>
+                <Row label="Based in">{provider.base_city ?? "-"}</Row>
                 <Row label="Travels">
                   <span className="tabular font-mono">{Number(provider.service_radius_km)}</span> km
                 </Row>
                 <Row label="Languages">
-                  {(provider.profile?.spoken_languages ?? []).join(", ") || "—"}
+                  {(provider.profile?.spoken_languages ?? []).join(", ") || "-"}
                 </Row>
                 <Row label="Paid on">
                   {provider.momo_number && provider.momo_network ? (
@@ -174,13 +174,13 @@ export default async function ReviewProviderPage({
                       <span className="tabular font-mono">
                         {formatPhoneForDisplay(provider.momo_number)}
                       </span>
-                      <span className="text-ink-500">
+                      <span className="text-copy-muted">
                         {" "}
                         · {MOMO_NETWORK_LABELS[provider.momo_network]}
                       </span>
                     </>
                   ) : (
-                    "—"
+                    "-"
                   )}
                 </Row>
               </dl>
@@ -190,11 +190,11 @@ export default async function ReviewProviderPage({
           {reviews.length > 0 && (
             <Card>
               <CardContent className="space-y-3">
-                <h2 className="text-sm font-semibold text-ink-800">Previous decisions</h2>
+                <h2 className="text-sm font-semibold text-navy-900">Previous decisions</h2>
 
                 <ol className="space-y-3">
                   {reviews.map((review) => (
-                    <li key={review.id} className="space-y-1 border-l-2 border-ink-200 pl-3">
+                    <li key={review.id} className="space-y-1 border-l-2 border-hairline pl-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge
                           tone={
@@ -207,13 +207,13 @@ export default async function ReviewProviderPage({
                         >
                           {review.decision}
                         </Badge>
-                        <span className="text-xs text-ink-500">
+                        <span className="text-xs text-copy-muted">
                           {review.admin?.full_name ?? "Admin"} · {timeAgo(review.reviewed_at)}
                         </span>
                       </div>
 
                       {review.call_notes && (
-                        <p className="text-sm leading-relaxed text-ink-700">{review.call_notes}</p>
+                        <p className="text-sm leading-relaxed text-copy">{review.call_notes}</p>
                       )}
                     </li>
                   ))}
@@ -230,8 +230,8 @@ export default async function ReviewProviderPage({
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className="shrink-0 text-ink-500">{label}</dt>
-      <dd className="text-right text-ink-800">{children}</dd>
+      <dt className="shrink-0 text-copy-muted">{label}</dt>
+      <dd className="text-right text-navy-900">{children}</dd>
     </div>
   );
 }

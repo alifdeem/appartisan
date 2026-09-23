@@ -16,6 +16,7 @@
     "check:props": "tsx scripts/check-server-props.ts",
     "smoke": "tsx scripts/smoke-render.ts",
     "a11y": "tsx scripts/a11y-check.ts",
+    "compare": "tsx scripts/compare-shot.ts",
     "shots": "tsx scripts/shoot.ts",
     "monitoring:check": "tsx scripts/monitoring-check.ts",
     "e2e": "tsx scripts/e2e-matching.ts",

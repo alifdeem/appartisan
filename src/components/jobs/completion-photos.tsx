@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { callAction } from "@/lib/action-call";
+
 import { attachCompletionPhotoAction } from "@/app/(app)/provider/actions";
 import { ACCEPTED_PHOTO_TYPES, JOB_PHOTO_BUCKET, MAX_PHOTO_BYTES } from "@/lib/jobs/media";
 import { createClient } from "@/lib/supabase/browser";
@@ -62,7 +64,7 @@ export function CompletionPhotos({ jobId, photos }: { jobId: string; photos: Sig
       return;
     }
 
-    const result = await attachCompletionPhotoAction(jobId, objectName);
+    const result = await callAction(() => attachCompletionPhotoAction(jobId, objectName));
     setUploading(false);
 
     if (!result.ok) {
@@ -77,10 +79,10 @@ export function CompletionPhotos({ jobId, photos }: { jobId: string; photos: Sig
   }
 
   return (
-    <section className="space-y-3 rounded-card border border-ink-200 bg-ink-0 p-4 shadow-sm">
+    <section className="space-y-3 rounded-[1.5rem] border border-hairline bg-white p-5">
       <div>
-        <h2 className="text-sm font-semibold text-ink-900">Photos of the finished work</h2>
-        <p className="mt-0.5 text-sm text-ink-600">
+        <h2 className="font-space text-lede font-bold text-navy-900">Photos of the finished work</h2>
+        <p className="mt-0.5 text-note text-copy-muted">
           The client signs off on these, and they settle any question later. Two or three is plenty.
         </p>
       </div>
@@ -89,15 +91,15 @@ export function CompletionPhotos({ jobId, photos }: { jobId: string; photos: Sig
         {photos.map((photo) => (
           <span
             key={photo.id}
-            className="relative size-20 overflow-hidden rounded-field border border-ink-200 bg-ink-100"
+            className="relative size-20 overflow-hidden rounded-[1rem] border border-hairline bg-canvas"
           >
             {photo.url && <Image src={photo.url} alt="" fill sizes="80px" className="object-cover" />}
           </span>
         ))}
 
         {uploading && (
-          <span className="grid size-20 place-items-center rounded-field border border-dashed border-ink-300 bg-ink-25">
-            <Loader2 className="size-4 animate-spin text-ink-400" aria-hidden />
+          <span className="grid size-20 place-items-center rounded-[1rem] border border-dashed border-hairline bg-canvas">
+            <Loader2 className="size-4 animate-spin text-copy-muted" aria-hidden />
           </span>
         )}
 
@@ -105,7 +107,7 @@ export function CompletionPhotos({ jobId, photos }: { jobId: string; photos: Sig
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="grid size-20 place-items-center rounded-field border border-dashed border-ink-300 bg-ink-25 text-ink-500 transition-colors hover:border-ink-400 hover:text-ink-700 disabled:opacity-50"
+          className="grid size-20 place-items-center rounded-[1rem] border border-dashed border-hairline bg-canvas text-copy-muted transition-colors hover:border-azure-300 hover:text-navy-900 disabled:opacity-50"
         >
           <Camera className="size-6" aria-hidden />
           <span className="sr-only">Add a photo of the finished work</span>
@@ -118,6 +120,11 @@ export function CompletionPhotos({ jobId, photos }: { jobId: string; photos: Sig
         accept={ACCEPTED_PHOTO_TYPES.join(",")}
         capture="environment"
         hidden
+        /* Named even though it is `hidden` and driven by the button above.
+           `hidden` keeps it out of the accessibility tree in every current
+           browser, but a bare file input with no name is one CSS reset away
+           from being announced as "unlabelled", and the label costs nothing. */
+        aria-label="Photo of the finished work"
         onChange={onPick}
       />
     </section>

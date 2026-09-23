@@ -1,32 +1,34 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, FileText, ImageOff, MapPin, Mic, Phone } from "lucide-react";
+import { CalendarClock, FileText, MapPin, Mic, Phone } from "lucide-react";
 
 import { CancelJob } from "@/components/jobs/cancel-job";
-import { CategoryIcon } from "@/components/marketplace/category-icon";
-import { BalancePanel } from "@/components/jobs/balance-panel";
-import { DepositPanel } from "@/components/jobs/deposit-panel";
-import { SignOff } from "@/components/jobs/sign-off";
+import { CounterpartyCard } from "@/components/jobs/counterparty-card";
+import { DetailPanel, DetailSection, JobDetailHeader } from "@/components/jobs/job-detail-chrome";
+import { JobStatusHero } from "@/components/jobs/job-status-hero";
+import { JobTimeline } from "@/components/jobs/job-timeline";
+import { LocationMap } from "@/components/jobs/location-map";
 import { MatchingProgress } from "@/components/jobs/matching-progress";
+import { MomoPayPanel } from "@/components/jobs/momo-pay-panel";
 import { PaymentReceipt } from "@/components/jobs/payment-receipt";
+import { PhotoGrid } from "@/components/jobs/photo-grid";
+import { PostedBanner } from "@/components/jobs/posted-banner";
+import { QuoteReview } from "@/components/jobs/quote-review";
+import { RefreshOnReturn } from "@/components/jobs/refresh-on-return";
 import { RaiseDispute } from "@/components/jobs/raise-dispute";
 import { RateJob } from "@/components/jobs/rate-job";
+import { SignOff } from "@/components/jobs/sign-off";
 import { getBalanceDue, getDepositDue, legState, listJobPayments } from "@/lib/payments/queries";
 import { detectMomoNetwork } from "@/lib/phone";
 import { getCurrentProfile } from "@/lib/supabase/server";
-import { QuoteReview } from "@/components/jobs/quote-review";
 import { getLatestQuote, getMatchingProgress } from "@/lib/jobs/matching";
-import { JobProgress } from "@/components/jobs/job-progress";
-import { JobStatusBadge } from "@/components/jobs/job-status-badge";
-import { JobTimeline } from "@/components/jobs/job-timeline";
-import { LocationMap } from "@/components/jobs/location-map";
-import { Card, CardContent } from "@/components/ui/card";
 import { isCancellable, jobStatus } from "@/lib/jobs/status";
 import {
   getClientJob,
+  getJobCounterparty,
   getJobDispute,
+  getJobProvider,
   getJobRating,
   listJobEvents,
   listJobPhotos,
@@ -34,6 +36,7 @@ import {
   signVoiceNote,
 } from "@/lib/jobs/queries";
 import { INVOICEABLE_STATUSES, invoiceNumber } from "@/lib/jobs/invoice";
+import { scheduleSummary } from "@/lib/jobs/schedule";
 import { timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Your job" };
@@ -44,14 +47,45 @@ const PASS_COUNT = 3;
 /**
  * The one screen that changes with state (PLAN.md §11).
  *
- * Phase 1 only reaches `posted`, so what is here is the frame: status, the
- * progress rail, everything the client submitted, and the audit trail. The
- * later phases hang the quote, the map tracking, the sign-off and the receipt
- * off the same page rather than adding screens — a client should have one place
- * to look at a job, not six.
+ * Every phase of a job hangs off this route rather than getting a screen of its
+ * own — the quote, the deposit, the tracking, the sign-off, the receipt. A
+ * client should have one place to look at a job, not six.
+ *
+ * **The order, and the one rule behind it.** *What is happening → what you must
+ * do → what you asked for → what happened.* Reading down the screen answers the
+ * questions in the order somebody actually has them, and the second band is
+ * empty most of the time, which is exactly right: a job that needs nothing from
+ * the client should not invent something for them to look at.
+ *
+ * Three things this rebuild fixed that were not about colour:
+ *
+ *  • **The layout was a two-column grid that has never rendered.** It asked for
+ *    `lg:grid-cols-[1.4fr_1fr]` inside a `max-w-[26rem]` phone shell, so the
+ *    sidebar has always stacked. Two columns of code producing one column of
+ *    output, with the running order decided by which `<div>` a panel happened
+ *    to be in rather than by what the reader needed next.
+ *
+ *  • **Nobody was named.** `provider_public` and the counterparty policy in
+ *    `0003_rls.sql` both existed and neither was read, so the screen never said
+ *    who was coming to the house, and never offered their number. See
+ *    `CounterpartyCard` — in a market with no in-app messaging and no live
+ *    tracking, the phone call *is* the tracking.
+ *
+ *  • **The artisan's completion photographs were filed under "What you told
+ *    us".** They are the evidence a client signs off on, mixed in with the
+ *    client's own pictures of the original problem. They are separated now, and
+ *    the finished-work set sits directly above the sign-off form.
  */
-export default async function JobDetailPage({ params }: PageProps<"/client/jobs/[jobId]">) {
+export default async function JobDetailPage({
+  params,
+  searchParams,
+}: PageProps<"/client/jobs/[jobId]">) {
   const { jobId } = await params;
+
+  // `postJobAction` has always redirected here with `?posted=1`. Until now
+  // nothing read it, so the last step of posting a job was a screen that looked
+  // identical to opening an old one.
+  const justPosted = (await searchParams).posted === "1";
 
   const job = await getClientJob(jobId);
   if (!job) notFound();
@@ -68,7 +102,12 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
     getLatestQuote(jobId),
   ]);
 
-  const [payments, profile] = await Promise.all([listJobPayments(jobId), getCurrentProfile()]);
+  const [payments, profile, provider, contact] = await Promise.all([
+    listJobPayments(jobId),
+    getCurrentProfile(),
+    getJobProvider(job.provider_id),
+    getJobCounterparty(job.provider_id),
+  ]);
 
   // Only fetched once the job is finished — a rating and a dispute are both
   // meaningless before then, and this screen is already doing plenty of reads.
@@ -103,244 +142,246 @@ export default async function JobDetailPage({ params }: PageProps<"/client/jobs/
       ? { lat: job.location_lat, lng: job.location_lng }
       : null;
 
+  // The client's own pictures of the problem, and the artisan's of the finished
+  // work. Two different things that were being shown as one pile.
+  const completionIds = new Set(
+    photoRows.filter((row) => row.stage === "completion").map((row) => row.id),
+  );
+  const requestPhotos = photos.filter((photo) => !completionIds.has(photo.id));
+  const completionPhotos = photos.filter((photo) => completionIds.has(photo.id));
+
+  // pb-28 clears the fixed tab bar. The bar is out of flow, so it cannot
+  // reserve its own space — every screen under it owns that padding.
   return (
-    <div className="space-y-6">
-      <Link
-        href="/client/jobs"
-        className="inline-flex items-center gap-1.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
+    <div className="space-y-7 pb-28">
+      {/* While the job is running, what it says changes without the client
+          doing anything — an artisan sets out, a price arrives. */}
+      {presentation.group === "active" && <RefreshOnReturn />}
+
+      {justPosted && <PostedBanner />}
+
+      <JobDetailHeader
+        back="/client/jobs"
+        backLabel="Back to all jobs"
+        icon={job.category?.icon ?? "wrench"}
+        title={job.category?.name ?? "Your job"}
+        meta={`${job.reference} · posted ${timeAgo(job.created_at)}`}
+      />
+
+      {/* ---- What is happening ------------------------------------------- */}
+      <JobStatusHero
+        status={job.status}
+        blurb={presentation.blurb}
+        footer={
+          provider &&
+          contact && (
+            <CounterpartyCard
+              on="dark"
+              name={contact.fullName}
+              phone={contact.phone}
+              role={job.category?.name ?? "Artisan"}
+              rating={{ average: provider.ratingAvg, count: provider.ratingCount }}
+              jobsCompleted={provider.jobsCompleted}
+              verified
+            />
+          )
+        }
       >
-        <ArrowLeft className="size-4" aria-hidden />
-        All jobs
-      </Link>
+        {/* The honest version of a spinner. PLAN.md §6 is explicit that a silent
+            wait is the failure mode here, so the hero says what the matcher is
+            actually doing, how far out it has looked, and how many artisans it
+            has already asked. It polls itself, so when somebody accepts, this
+            becomes the "artisan assigned" screen unaided. */}
+        {isMatching && progress && <MatchingProgress progress={progress} passCount={PASS_COUNT} />}
+      </JobStatusHero>
 
-      <div className="flex flex-wrap items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-field bg-brand-50 text-brand-700">
-          <CategoryIcon name={job.category?.icon ?? "wrench"} className="size-[1.375rem]" />
-        </span>
-
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold text-ink-900">
-              {job.category?.name ?? "Service"}
-            </h1>
-            <JobStatusBadge status={job.status} />
-          </div>
-
-          <p className="tabular font-mono text-sm text-ink-500">
-            {job.reference} · posted {timeAgo(job.created_at)}
-          </p>
-        </div>
-      </div>
-
-      <Card>
-        <CardContent className="space-y-5">
-          <JobProgress status={job.status} />
-
-          <p className="border-t border-ink-200 pt-4 text-[0.9375rem] leading-relaxed text-ink-700">
-            {presentation.blurb}
-          </p>
-
-          {/* The honest version of a spinner. PLAN.md §6 is explicit that a
-              silent wait is the failure mode here, so the screen says what the
-              matcher is actually doing, how far out it has looked, and how many
-              artisans it has already asked. It polls itself, so when somebody
-              accepts, this becomes the "artisan assigned" screen unaided. */}
-          {isMatching && progress && (
-            <MatchingProgress progress={progress} passCount={PASS_COUNT} />
-          )}
-
-          {job.status === "unmatched" && (
-            <a
-              href="tel:+233000000000"
-              className="inline-flex min-h-11 items-center gap-2 rounded-field border border-ink-300 bg-ink-0 px-4 text-sm font-medium text-ink-800 shadow-xs transition-colors hover:bg-ink-50"
-            >
-              <Phone className="size-4" aria-hidden />
-              Call support
-            </a>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Money is the only thing on this screen the client can act on, so it
-          outranks everything — including their own photographs and the quote
-          they have already read. */}
-      {job.status === "awaiting_deposit" && depositDue !== null && (
-        <section className="animate-fade-up">
-          <DepositPanel
-            jobId={job.id}
-            amountDue={depositDue}
-            defaultNetwork={profile ? detectMomoNetwork(profile.phone) : null}
-            lastFailure={deposit.lastFailure?.failure_reason ?? null}
-          />
-        </section>
+      {/* The one state where the platform has run out of automatic options and
+          a human has to take over. `settings.support_phone` is admin-only under
+          RLS, so the number is the one compiled in rather than a read that
+          would always come back empty for a client. */}
+      {job.status === "unmatched" && (
+        <a
+          href="tel:+233000000000"
+          className="flex min-h-13 items-center justify-center gap-2 rounded-full border border-hairline bg-white text-ui font-semibold text-navy-900 transition-colors duration-[var(--duration-fast)] hover:border-azure-300 hover:bg-azure-50"
+        >
+          <Phone className="size-4" aria-hidden />
+          Call support
+        </a>
       )}
 
-      {/* The price sits directly under the status and above everything the
-          client already knows — it is the only thing on this screen that is
-          waiting on them, and burying it under their own photographs would be
-          the one genuine usability failure available on this page. */}
-      {awaitingDecision && quote && (
-        <section className="animate-fade-up space-y-3">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-ink-900">Your artisan has sent a price</h2>
-            <p className="max-w-prose text-sm leading-relaxed text-ink-600">
-              Nothing is charged until you accept, and nobody travels until the deposit is paid.
-            </p>
-          </div>
+      {/* ---- What you have to do ------------------------------------------
+          Everything in this band is waiting on the client, and at most one of
+          them is ever true at a time. It sits directly under the status and
+          above everything they already know, because burying the one thing
+          asking for an answer under their own photographs would be the single
+          genuine usability failure available on this page. */}
 
+      {job.status === "awaiting_deposit" && depositDue !== null && (
+        <MomoPayPanel
+          jobId={job.id}
+          leg="deposit"
+          amountDue={depositDue}
+          defaultNetwork={profile ? detectMomoNetwork(profile.phone) : null}
+          lastFailure={deposit.lastFailure?.failure_reason ?? null}
+        />
+      )}
+
+      {awaitingDecision && quote && (
+        <DetailSection title="Your artisan has sent a price" className="animate-fade-up">
+          <p className="mb-3.5 -mt-1 text-note leading-relaxed text-copy-muted">
+            Nothing is charged until you accept, and nobody travels until the deposit is paid.
+          </p>
           <QuoteReview
             quote={quote}
             items={quote.items}
             reference={job.reference}
             rejectionsLeft={Math.max(0, PASS_COUNT - (job.quote_rejections ?? 0))}
           />
-        </section>
+        </DetailSection>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-        <div className="space-y-5">
-          <Card>
-            <CardContent className="space-y-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-500">
-                What you told us
-              </h2>
-
-              {job.description?.trim() ? (
-                <p className="whitespace-pre-wrap text-[0.9375rem] leading-relaxed text-ink-800">
-                  {job.description}
-                </p>
-              ) : (
-                <p className="text-[0.9375rem] text-ink-500">Described by voice note.</p>
-              )}
-
-              {job.voice_note_path && (
-                <div className="flex items-center gap-2.5 rounded-field border border-ink-200 bg-ink-50 p-2.5">
-                  <Mic className="size-4 shrink-0 text-ink-500" aria-hidden />
-                  {voiceNoteUrl ? (
-                    <audio
-                      src={voiceNoteUrl}
-                      controls
-                      preload="none"
-                      className="h-9 min-w-0 flex-1"
-                    />
-                  ) : (
-                    <span className="text-sm text-ink-600">Voice note attached</span>
-                  )}
-                </div>
-              )}
-
-              {photos.length > 0 && (
-                <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {photos.map((photo) => (
-                    <li
-                      key={photo.id}
-                      className="relative aspect-square overflow-hidden rounded-field border border-ink-200 bg-ink-100"
-                    >
-                      {photo.url ? (
-                        <Image
-                          src={photo.url}
-                          alt=""
-                          fill
-                          sizes="(max-width: 640px) 33vw, 160px"
-                          className="object-cover"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="grid size-full place-items-center text-ink-400">
-                          <ImageOff className="size-4" aria-hidden />
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-500">
-                Where
-              </h2>
-
-              {/* No `onChange`. This is a Server Component, and a function prop
-                  cannot cross into a Client Component. */}
-              {point && <LocationMap value={point} interactive={false} className="h-44 w-full" />}
-
-              <div className="space-y-1.5">
-                {job.landmark && (
-                  <p className="flex items-start gap-2 text-[0.9375rem] text-ink-800">
-                    <MapPin className="mt-0.5 size-4 shrink-0 text-ink-500" aria-hidden />
-                    <span>{job.landmark}</span>
-                  </p>
-                )}
-                {job.address_text && (
-                  <p className="pl-6 text-sm text-ink-600">{job.address_text}</p>
-                )}
-                {job.ghanapost_code && (
-                  <p className="tabular pl-6 font-mono text-sm text-ink-600">
-                    {job.ghanapost_code}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-5">
-          {/* The artisan has marked the work done and it is the client's move.
-              Sign-off and payment are two steps, not one: mobile money needs a
+      {/* The artisan has marked the work done and it is the client's move. The
+          photographs come first: signing off on work you have not been shown is
+          not a signature, it is a formality. */}
+      {job.status === "awaiting_signoff" && (
+        <div className="space-y-4">
+          {completionPhotos.length > 0 && (
+            <DetailSection title="The finished work">
+              <PhotoGrid photos={completionPhotos} />
+            </DetailSection>
+          )}
+          {/* Sign-off and payment are two steps, not one: mobile money needs a
               fresh prompt the client approves, so the money cannot move on the
               signature itself (PLAN.md §4). */}
-          {job.status === "awaiting_signoff" && <SignOff jobId={jobId} />}
+          <SignOff jobId={jobId} />
+        </div>
+      )}
 
-          {job.status === "awaiting_balance" && balanceDue !== null && (
-            <BalancePanel
-              jobId={jobId}
-              amountDue={balanceDue}
-              defaultNetwork={profile ? detectMomoNetwork(profile.phone) : null}
-              lastFailure={balance.lastFailure?.failure_reason ?? null}
-            />
+      {job.status === "awaiting_balance" && balanceDue !== null && (
+        <MomoPayPanel
+          jobId={jobId}
+          leg="balance"
+          amountDue={balanceDue}
+          defaultNetwork={profile ? detectMomoNetwork(profile.phone) : null}
+          lastFailure={balance.lastFailure?.failure_reason ?? null}
+        />
+      )}
+
+      {/* The rating comes first on a finished job. It is the one thing we want
+          from the client at this point, and burying it under the receipt is how
+          a marketplace ends up with no reviews. */}
+      {isFinished && job.provider_id && <RateJob jobId={jobId} existing={rating} />}
+
+      {/* ---- What you asked for -------------------------------------------- */}
+      <DetailSection title="What you asked for">
+        <DetailPanel className="space-y-4">
+          {job.description?.trim() ? (
+            <p className="text-ui leading-relaxed whitespace-pre-wrap text-navy-900">
+              {job.description}
+            </p>
+          ) : (
+            <p className="text-ui text-copy-muted">Described by voice note.</p>
           )}
 
-          {/* The rating comes first on a finished job. It is the one thing we
-              want from the client at this point, and burying it under the
-              receipt is how a marketplace ends up with no reviews. */}
-          {isFinished && job.provider_id && <RateJob jobId={jobId} existing={rating} />}
+          {job.voice_note_path && (
+            <div className="flex items-center gap-2.5 rounded-[1rem] bg-canvas p-2.5">
+              <Mic className="size-4 shrink-0 text-navy-800" aria-hidden />
+              {voiceNoteUrl ? (
+                <audio src={voiceNoteUrl} controls preload="none" className="h-9 min-w-0 flex-1" />
+              ) : (
+                <span className="text-note text-copy-muted">Voice note attached</span>
+              )}
+            </div>
+          )}
 
-          {/* Above the timeline: somebody checking a job after paying is
-              looking for the money, not for the history of the match. */}
-          <PaymentReceipt payments={payments} />
+          {/* Scheduling landed in migration 0023 and nothing has ever shown it
+              back. Somebody who chose Thursday morning should be able to see
+              that they did — and it is a preference rather than a booking, so
+              the line says when they asked for, not when it is confirmed. */}
+          <div className="flex items-center gap-2.5 border-t border-hairline pt-3.5 text-note">
+            <CalendarClock className="size-4 shrink-0 text-copy-muted" aria-hidden />
+            <span className="text-copy-muted">You asked for</span>
+            <span className="ml-auto text-right font-semibold text-navy-900">
+              {scheduleSummary(job.preferred_date, job.preferred_window)}
+            </span>
+          </div>
+        </DetailPanel>
 
-          {/* The invoice only exists once the money is in — before that the
-              quote is the document that describes the price. */}
+        {requestPhotos.length > 0 && <PhotoGrid photos={requestPhotos} className="mt-3" />}
+      </DetailSection>
+
+      {/* Once a job is finished the completion photographs stop being a thing
+          to check and become part of the record — so they move down here rather
+          than staying in the action band where the sign-off put them. */}
+      {isFinished && completionPhotos.length > 0 && (
+        <DetailSection title="The finished work">
+          <PhotoGrid photos={completionPhotos} />
+        </DetailSection>
+      )}
+
+      {/* ---- Where --------------------------------------------------------- */}
+      <DetailSection title="Where">
+        <div className="overflow-hidden rounded-[1.25rem] border border-hairline bg-white">
+          {/* No `onChange`. This is a Server Component, and a function prop
+              cannot cross into a Client Component. */}
+          {point && <LocationMap value={point} interactive={false} className="h-44 w-full" />}
+
+          <div className="space-y-1.5 p-4">
+            {job.landmark && (
+              <p className="flex items-start gap-2.5 text-ui font-semibold text-navy-900">
+                <MapPin className="mt-0.5 size-4 shrink-0 text-azure-500" aria-hidden />
+                <span>{job.landmark}</span>
+              </p>
+            )}
+            {job.address_text && <p className="pl-7 text-note text-copy-muted">{job.address_text}</p>}
+            {job.ghanapost_code && (
+              <p className="tabular pl-7 font-mono text-note text-copy-muted">
+                {job.ghanapost_code}
+              </p>
+            )}
+          </div>
+        </div>
+      </DetailSection>
+
+      {/* ---- What happened -------------------------------------------------- */}
+
+      {/* Above the timeline: somebody checking a job after paying is looking for
+          the money, not for the history of the match. */}
+      {payments.length > 0 && (
+        <DetailSection title="Payments">
+          <PaymentReceipt payments={payments} headingLevel={3} />
+        </DetailSection>
+      )}
+
+      {/* The invoice only exists once the money is in — before that the quote is
+          the document that describes the price. */}
+      {isInvoiceable && (
+        <Link
+          href={`/client/jobs/${jobId}/invoice`}
+          className="flex min-h-13 items-center gap-2.5 rounded-[1.25rem] border border-hairline bg-white px-4 text-ui font-semibold text-navy-900 transition-colors duration-[var(--duration-fast)] hover:border-azure-300 hover:bg-azure-50"
+        >
+          <FileText className="size-4 shrink-0 text-azure-500" aria-hidden />
+          View invoice
+          <span className="tabular ml-auto font-mono text-2xs text-copy-muted">
+            {invoiceNumber(job.reference)}
+          </span>
+        </Link>
+      )}
+
+      <DetailSection title="History">
+        <DetailPanel>
+          <JobTimeline events={events} />
+        </DetailPanel>
+      </DetailSection>
+
+      {/* The two ways out, last and quiet. Neither is something we want a
+          client to reach for, and both have to be findable without help. */}
+      {(isFinished || isCancellable(job.status)) && (
+        <div className="space-y-2.5 border-t border-hairline pt-5">
           {isFinished && <RaiseDispute jobId={jobId} existing={dispute} />}
-
-          {isInvoiceable && (
-            <Link
-              href={`/client/jobs/${jobId}/invoice`}
-              className="flex min-h-11 items-center gap-2 rounded-card border border-ink-200 bg-ink-0 px-4 text-sm font-medium text-ink-800 shadow-sm transition-colors hover:border-ink-300 hover:text-ink-900"
-            >
-              <FileText className="size-4 text-ink-500" aria-hidden />
-              View invoice
-              <span className="tabular ml-auto font-mono text-[0.75rem] text-ink-500">
-                {invoiceNumber(job.reference)}
-              </span>
-            </Link>
-          )}
-
-          <Card>
-            <CardContent className="space-y-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-500">
-                History
-              </h2>
-              <JobTimeline events={events} />
-            </CardContent>
-          </Card>
-
           {isCancellable(job.status) && <CancelJob jobId={job.id} />}
         </div>
-      </div>
+      )}
     </div>
   );
 }

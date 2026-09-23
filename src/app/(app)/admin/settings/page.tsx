@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeft, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 
 import { SettingField } from "./_components/setting-field";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,28 +24,21 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/admin"
-        className="inline-flex items-center gap-1.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        Admin
-      </Link>
 
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-ink-900">Platform settings</h1>
-        <p className="max-w-2xl text-[0.9375rem] text-ink-600">
+        <h1 className="text-2xl font-semibold text-navy-900">Platform settings</h1>
+        <p className="max-w-2xl text-[0.9375rem] text-copy-muted">
           Commission, deposit split, matching behaviour and the reliability thresholds. Changes
-          apply to the next job — quotes already agreed keep the numbers they were agreed at.
+          apply to the next job. Quotes already agreed keep the numbers they were agreed at.
         </p>
       </div>
 
       {settings.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center">
-            <SlidersHorizontal className="mx-auto size-6 text-ink-300" aria-hidden />
-            <p className="mt-2 text-sm font-medium text-ink-800">No settings found</p>
-            <p className="mt-1 text-sm text-ink-500">
+            <SlidersHorizontal className="mx-auto size-6 text-hairline" aria-hidden />
+            <p className="mt-2 text-sm font-medium text-navy-900">No settings found</p>
+            <p className="mt-1 text-sm text-copy-muted">
               Migration 0004 seeds these. Run <span className="font-mono">npm run db:push</span>.
             </p>
           </CardContent>

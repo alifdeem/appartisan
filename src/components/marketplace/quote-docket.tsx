@@ -14,13 +14,31 @@ import { formatAmount, type QuoteBreakdown } from "@/lib/money";
  * doing most of the persuasive work here; the moment the digits stop aligning
  * it stops looking like a receipt and starts looking like a web page.
  *
- * Amber appears exactly twice — on the grand total and the deposit due — and
- * nowhere else in the entire app except money. That restraint is what makes it
- * mean something.
- *
  * Takes a real `QuoteBreakdown` from `src/lib/money.ts`, which mirrors
- * `compute_quote_totals` in migration 0002. The landing page and the Phase 1
- * booking flow render the same arithmetic.
+ * `compute_quote_totals` in migration 0002. The landing page and the booking
+ * flow render the same arithmetic.
+ *
+ * ---
+ *
+ * **Two tones, and why this one component has a prop where nothing else does.**
+ *
+ * The docket appears in exactly two places: twice on the marketing landing page,
+ * which is still the original warm `ink` palette, and on the client's job
+ * screen, which is now navy and azure. It is the only object in the app that
+ * straddles the redesign boundary, because it is the only one that is an
+ * argument on one page and a record on the other.
+ *
+ * `warm` is the default so the landing page does not move. `cool` exists
+ * because on the job screen the docket sits directly above the navy payment
+ * panel, and a warm cream document next to it reads as a screenshot from
+ * another app.
+ *
+ * **In `cool`, the total band is navy rather than amber.** The app's long
+ * standing rule is that amber means money and nothing else, and on the warm
+ * screens it still does. The redesign spends navy on money instead — the
+ * artisan's earnings hero, the deposit panel, this total — so within a cool
+ * screen the rule holds in a different colour. What would break it is showing
+ * both on one screen, which is precisely what this prop prevents.
  */
 
 export interface QuoteLine {
@@ -29,6 +47,49 @@ export interface QuoteLine {
   description: string;
   amount: number;
 }
+
+type Tone = "warm" | "cool";
+
+const TONES = {
+  warm: {
+    shell: "border-ink-200 bg-ink-0",
+    header: "border-ink-200 bg-ink-25",
+    headerText: "text-ink-700",
+    unit: "text-ink-500",
+    reference: "text-ink-400",
+    divide: "divide-ink-100",
+    rule: "border-ink-200",
+    label: "text-ink-500",
+    detail: "text-ink-800",
+    detailMuted: "text-ink-600",
+    amount: "text-ink-900",
+    amountMuted: "text-ink-600",
+    totalBand: "border-t-2 border-ink-900 bg-accent-50",
+    totalLabel: "text-accent-800",
+    totalDetail: "text-accent-800",
+    totalAmount: "text-accent-900",
+    splitBand: "border-ink-200 bg-ink-25",
+  },
+  cool: {
+    shell: "border-hairline bg-white",
+    header: "border-hairline bg-canvas",
+    headerText: "text-navy-900",
+    unit: "text-copy-muted",
+    reference: "text-copy-muted",
+    divide: "divide-hairline",
+    rule: "border-hairline",
+    label: "text-copy-muted",
+    detail: "text-navy-900",
+    detailMuted: "text-copy-muted",
+    amount: "text-navy-900",
+    amountMuted: "text-copy-muted",
+    totalBand: "bg-linear-to-br from-navy-700 via-navy-800 to-navy-900",
+    totalLabel: "text-white/60",
+    totalDetail: "text-white/75",
+    totalAmount: "text-white",
+    splitBand: "border-hairline bg-canvas",
+  },
+} satisfies Record<Tone, Record<string, string>>;
 
 export interface QuoteDocketProps {
   /**
@@ -46,6 +107,7 @@ export interface QuoteDocketProps {
   showDeposit?: boolean;
   className?: string;
   elevated?: boolean;
+  tone?: Tone;
 }
 
 function Row({
@@ -53,25 +115,24 @@ function Row({
   detail,
   amount,
   muted = false,
+  t,
 }: {
   label: string;
   detail?: string;
   amount: number;
   muted?: boolean;
+  t: (typeof TONES)[Tone];
 }) {
   return (
     <div className="flex items-baseline gap-3 px-4 py-2">
-      <span className="w-[4.75rem] shrink-0 font-mono text-[0.6875rem] tracking-wide text-ink-500 uppercase">
+      <span className={cn("w-[4.75rem] shrink-0 font-mono text-2xs tracking-wide uppercase", t.label)}>
         {label}
       </span>
-      <span className={cn("min-w-0 flex-1 text-[0.8125rem]", muted ? "text-ink-600" : "text-ink-800")}>
+      <span className={cn("min-w-0 flex-1 text-note", muted ? t.detailMuted : t.detail)}>
         {detail}
       </span>
       <span
-        className={cn(
-          "shrink-0 font-mono text-[0.8125rem] tabular",
-          muted ? "text-ink-600" : "text-ink-900",
-        )}
+        className={cn("tabular shrink-0 font-mono text-note", muted ? t.amountMuted : t.amount)}
       >
         {formatAmount(amount)}
       </span>
@@ -88,64 +149,91 @@ export function QuoteDocket({
   className,
   elevated = false,
   headingLevel = 3,
+  tone = "warm",
 }: QuoteDocketProps) {
   const Heading = `h${headingLevel}` as const;
+  const t = TONES[tone];
+  const cool = tone === "cool";
+
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-card border border-ink-200 bg-ink-0",
-        elevated ? "shadow-lg" : "shadow-sm",
+        "overflow-hidden border",
+        cool ? "rounded-[1.25rem]" : "rounded-card",
+        t.shell,
+        elevated
+          ? cool
+            ? "shadow-[var(--shadow-sheet)]"
+            : "shadow-lg"
+          : cool
+            ? "shadow-[var(--shadow-float)]"
+            : "shadow-sm",
         className,
       )}
       aria-label={`${title} breakdown`}
     >
-      <header className="flex items-baseline justify-between gap-3 border-b border-ink-200 bg-ink-25 px-4 py-2.5">
-        <Heading className="font-mono text-[0.6875rem] font-semibold tracking-[0.08em] text-ink-700 uppercase">
+      <header className={cn("flex items-baseline justify-between gap-3 border-b px-4 py-2.5", t.header)}>
+        <Heading
+          className={cn("font-mono text-2xs font-semibold tracking-[0.08em] uppercase", t.headerText)}
+        >
           {title}
         </Heading>
         <div className="flex items-baseline gap-2.5">
           {reference && (
-            <span className="font-mono text-[0.6875rem] tabular text-ink-400">{reference}</span>
+            <span className={cn("tabular font-mono text-2xs", t.reference)}>{reference}</span>
           )}
-          <span className="font-mono text-[0.6875rem] tracking-wide text-ink-500 uppercase">
-            GHS
-          </span>
+          <span className={cn("font-mono text-2xs tracking-wide uppercase", t.unit)}>GHS</span>
         </div>
       </header>
 
-      <div className="divide-y divide-ink-100">
+      <div className={cn("divide-y", t.divide)}>
         {lines.map((line, i) => (
-          <Row key={i} label={line.kind} detail={line.description} amount={line.amount} />
+          <Row key={i} label={line.kind} detail={line.description} amount={line.amount} t={t} />
         ))}
       </div>
 
-      <div className="border-t border-ink-200">
+      <div className={cn("border-t", t.rule)}>
         <Row
           label="Fee"
           detail={`ArtisanGH service fee, ${breakdown.commissionPct}%`}
           amount={breakdown.serviceFee}
           muted
+          t={t}
         />
       </div>
 
-      {/* The total. Amber, heavier, and a size step up — the one thing on the
-          docket the eye should land on first. */}
-      <div className="flex items-baseline gap-3 border-t-2 border-ink-900 bg-accent-50 px-4 py-3">
-        <span className="w-[4.75rem] shrink-0 font-mono text-[0.6875rem] font-semibold tracking-wide text-accent-800 uppercase">
+      {/* The total. Heavier, a size step up, and on its own ground — the one
+          thing on the docket the eye should land on first. */}
+      <div className={cn("flex items-baseline gap-3 px-4 py-3.5", t.totalBand)}>
+        <span
+          className={cn("w-[4.75rem] shrink-0 font-mono text-2xs font-semibold tracking-wide uppercase", t.totalLabel)}
+        >
           Total
         </span>
-        <span className="min-w-0 flex-1 text-[0.8125rem] text-accent-800">
+        <span className={cn("min-w-0 flex-1 text-note", t.totalDetail)}>
           Agreed before work starts
         </span>
-        <span className="shrink-0 font-mono text-base font-semibold tabular text-accent-900">
+        <span className={cn("tabular shrink-0 font-mono text-lede font-bold", t.totalAmount)}>
           {formatAmount(breakdown.grandTotal)}
         </span>
       </div>
 
       {showDeposit && (
-        <div className="divide-y divide-ink-100 border-t border-ink-200 bg-ink-25">
-          <Row label="Deposit" detail="Held by ArtisanGH until sign-off" amount={breakdown.depositDue} muted />
-          <Row label="Balance" detail="On completion, after you approve" amount={breakdown.balanceDue} muted />
+        <div className={cn("divide-y border-t", t.divide, t.splitBand)}>
+          <Row
+            label="Deposit"
+            detail="Held by ArtisanGH until sign-off"
+            amount={breakdown.depositDue}
+            muted
+            t={t}
+          />
+          <Row
+            label="Balance"
+            detail="On completion, after you approve"
+            amount={breakdown.balanceDue}
+            muted
+            t={t}
+          />
         </div>
       )}
     </section>

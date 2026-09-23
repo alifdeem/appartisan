@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Check, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { callAction } from "@/lib/action-call";
+
 import { saveCategoryAction, type AdminActionState } from "@/app/(app)/admin/actions";
 import { CategoryIcon } from "@/components/marketplace/category-icon";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +44,7 @@ export function CategoryRow({ category }: { category: Category | null }) {
     const formData = new FormData(form);
 
     startTransition(async () => {
-      const next = await saveCategoryAction(null, formData);
+      const next = await callAction(() => saveCategoryAction(null, formData));
       setState(next);
 
       if (next.ok) {
@@ -58,17 +60,17 @@ export function CategoryRow({ category }: { category: Category | null }) {
 
   if (!editing && category) {
     return (
-      <div className="flex items-center gap-3 border-b border-ink-100 py-3 last:border-0">
-        <span className="grid size-9 shrink-0 place-items-center rounded-field bg-brand-50 text-brand-700">
+      <div className="flex items-center gap-3 border-b border-azure-50 py-3 last:border-0">
+        <span className="grid size-9 shrink-0 place-items-center rounded-field bg-azure-50 text-navy-800">
           <CategoryIcon name={category.icon ?? "wrench"} className="size-[1.125rem]" />
         </span>
 
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="text-[0.9375rem] font-medium text-ink-900">{category.name}</span>
+            <span className="text-[0.9375rem] font-medium text-navy-900">{category.name}</span>
             {!category.is_active && <Badge tone="neutral">retired</Badge>}
           </span>
-          <span className="tabular block font-mono text-[0.75rem] text-ink-500">
+          <span className="tabular block font-mono text-[0.75rem] text-copy-muted">
             {category.slug}
           </span>
         </span>
@@ -82,7 +84,7 @@ export function CategoryRow({ category }: { category: Category | null }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3 border-b border-ink-100 py-4 last:border-0">
+    <form onSubmit={onSubmit} className="space-y-3 border-b border-azure-50 py-4 last:border-0">
       {category && <input type="hidden" name="id" value={category.id} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -117,7 +119,7 @@ export function CategoryRow({ category }: { category: Category | null }) {
           htmlFor={`${idPrefix}-icon`}
           required
           error={state?.fieldErrors?.icon}
-          hint="A lucide icon name — plug, wrench, hammer."
+          hint="A lucide icon name: plug, wrench, hammer."
         >
           <Input
             id={`${idPrefix}-icon`}
@@ -157,12 +159,12 @@ export function CategoryRow({ category }: { category: Category | null }) {
         />
       </Field>
 
-      <label className="flex min-h-11 items-center gap-2.5 text-sm text-ink-800">
+      <label className="flex min-h-11 items-center gap-2.5 text-sm text-navy-900">
         <input
           type="checkbox"
           name="isActive"
           defaultChecked={category?.is_active ?? true}
-          className="size-4 accent-ink-900"
+          className="size-4 accent-navy-900"
         />
         Offered to clients
       </label>

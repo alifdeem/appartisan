@@ -4,6 +4,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { callAction } from "@/lib/action-call";
+
 import { updateSettingAction, type AdminActionState } from "@/app/(app)/admin/actions";
 import { Button } from "@/components/ui/button";
 
@@ -43,7 +45,7 @@ export function SettingField({
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const next = await updateSettingAction(null, formData);
+      const next = await callAction(() => updateSettingAction(null, formData));
       setState(next);
 
       if (next.ok) {
@@ -59,24 +61,24 @@ export function SettingField({
   const error = state?.fieldErrors?.[settingKey];
 
   return (
-    <form onSubmit={onSubmit} className="space-y-2 border-b border-ink-100 py-4 last:border-0">
+    <form onSubmit={onSubmit} className="space-y-2 border-b border-azure-50 py-4 last:border-0">
       <input type="hidden" name="key" value={settingKey} />
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <label
           htmlFor={`setting-${settingKey}`}
-          className="tabular font-mono text-[0.8125rem] font-medium text-ink-900"
+          className="tabular font-mono text-[0.8125rem] font-medium text-navy-900"
         >
           {label}
         </label>
         {dirty && (
-          <span className="font-mono text-[0.6875rem] tracking-wide text-accent-700 uppercase">
+          <span className="font-mono text-[0.6875rem] tracking-wide text-copy-muted uppercase">
             unsaved
           </span>
         )}
       </div>
 
-      {description && <p className="text-sm text-ink-500">{description}</p>}
+      {description && <p className="text-sm text-copy-muted">{description}</p>}
 
       <div className="flex flex-wrap items-center gap-2">
         <input
@@ -85,7 +87,7 @@ export function SettingField({
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           spellCheck={false}
-          className="tabular min-h-11 min-w-0 flex-1 rounded-field border border-ink-200 bg-ink-25 px-3 font-mono text-sm text-ink-900 focus:border-ink-400 focus:outline-none"
+          className="tabular min-h-11 min-w-0 flex-1 rounded-field border border-hairline bg-canvas px-3 font-mono text-sm text-navy-900 focus:border-copy-muted focus:outline-none"
         />
         <Button type="submit" size="sm" variant="secondary" disabled={pending || !dirty}>
           {pending ? "Saving…" : "Save"}

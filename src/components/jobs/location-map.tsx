@@ -186,7 +186,7 @@ export function LocationMap({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-card border border-ink-300 bg-ink-100",
+        "relative overflow-hidden rounded-[1.25rem] border border-hairline bg-azure-50",
         className,
       )}
       onPointerDown={enableWheel}
@@ -203,8 +203,8 @@ export function LocationMap({
       />
 
       {!ready && (
-        <div className="absolute inset-0 z-20 grid place-items-center bg-ink-100">
-          <Loader2 className="size-5 animate-spin text-ink-400" aria-hidden />
+        <div className="absolute inset-0 z-20 grid place-items-center bg-azure-50">
+          <Loader2 className="size-5 animate-spin text-navy-800/40" aria-hidden />
           <span className="sr-only">Loading map</span>
         </div>
       )}
@@ -227,9 +227,9 @@ export function LocationMap({
             <svg width="30" height="40" viewBox="0 0 30 40" fill="none" className="drop-shadow-md">
               <path
                 d="M15 0C6.716 0 0 6.716 0 15c0 10.5 15 25 15 25s15-14.5 15-25c0-8.284-6.716-15-15-15Z"
-                className="fill-brand-700"
+                className="fill-navy-800"
               />
-              <circle cx="15" cy="15" r="5.5" className="fill-ink-0" />
+              <circle cx="15" cy="15" r="5.5" className="fill-white" />
             </svg>
           </div>
 
@@ -237,7 +237,7 @@ export function LocationMap({
               than floating over it. Shrinks as the pin lifts. */}
           <div
             className={cn(
-              "mx-auto -mt-1 h-1.5 rounded-[50%] bg-ink-950/25 blur-[2px]",
+              "mx-auto -mt-1 h-1.5 rounded-[50%] bg-navy-950/25 blur-[2px]",
               "transition-all duration-[var(--duration-fast)] ease-out-strong",
               moving && interactive ? "w-2.5 opacity-40" : "w-4 opacity-70",
             )}
@@ -274,8 +274,8 @@ function MapButton({
       onClick={onClick}
       title={label}
       className={cn(
-        "grid size-9 place-items-center rounded-field border border-ink-300 bg-ink-0/95 text-ink-700 shadow-sm backdrop-blur",
-        "transition-colors duration-[var(--duration-instant)] hover:bg-ink-50 hover:text-ink-900 active:scale-[0.96]",
+        "grid size-9 place-items-center rounded-[0.75rem] border border-white/80 bg-white/95 text-navy-900 shadow-[var(--shadow-float)] backdrop-blur",
+        "transition-colors duration-[var(--duration-instant)] hover:bg-white active:scale-[0.96]",
       )}
     >
       {children}

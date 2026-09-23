@@ -35,12 +35,32 @@ const TABS = [
 export function BottomNav() {
   const pathname = usePathname();
 
+  /**
+   * Hidden inside a draft.
+   *
+   * `/client/post` itself is the Browse tab and keeps the bar. Everything under
+   * `/client/post/<jobId>/` is the three-step posting flow, which has its own
+   * back control, its own step rail and its own pinned action — and in the
+   * reference it is a focused flow with no tab bar at all.
+   *
+   * Two reasons beyond matching the reference. The bar and the flow's pinned
+   * Continue would stack two full-width controls at the bottom of the screen,
+   * and a thumb reaching for one finds the other. And "Browse" mid-flow walks
+   * away from a half-written draft with no warning, which is a trap rather than
+   * a shortcut — the flow's own back button is the way out.
+   */
+  if (/^\/client\/post\/[^/]+/.test(pathname)) return null;
+
   return (
     <nav
       aria-label="Main"
       className="fixed inset-x-0 bottom-0 z-40 mx-auto flex w-full max-w-[26rem] justify-center px-4 pb-4 print:hidden"
     >
-      <ul className="flex w-full items-center justify-around gap-1 rounded-full border border-ink-200/70 bg-white/95 p-1.5 shadow-lg backdrop-blur">
+      {/* The one place `backdrop-blur` earns its cost: this bar sits over
+          content that scrolls underneath it, which is exactly the case a solid
+          fill cannot handle and a blur can. Everywhere else in this redesign
+          the blur was declined for being expensive on low-end Android. */}
+      <ul className="flex w-full items-center justify-around gap-1 rounded-full border border-white/80 bg-white/85 p-1.5 shadow-[var(--shadow-sheet)] backdrop-blur-xl">
         {TABS.map((tab) => {
           const active = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href);
           const Icon = tab.icon;
@@ -51,10 +71,12 @@ export function BottomNav() {
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex min-h-11 items-center gap-2 rounded-full px-4 transition-colors",
+                  "flex min-h-11 items-center gap-2 rounded-full px-4",
+                  "transition-[background-color,color,transform] duration-[var(--duration-fast)] ease-spring",
+                  "active:scale-[0.94]",
                   active
-                    ? "bg-brand-700 text-white"
-                    : "text-ink-500 hover:bg-ink-100 hover:text-ink-800",
+                    ? "bg-linear-to-b from-navy-800 to-navy-900 text-white shadow-[var(--shadow-glow-navy)]"
+                    : "text-copy-muted hover:bg-azure-50 hover:text-navy-800",
                 )}
               >
                 <Icon className="size-5 shrink-0" aria-hidden />

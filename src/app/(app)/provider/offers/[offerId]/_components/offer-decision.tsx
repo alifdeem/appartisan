@@ -4,11 +4,14 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ImageOff, MapPin, Mic, Navigation, X } from "lucide-react";
+import { ImageOff, MapPin, Mic, Navigation, X } from "lucide-react";
 import { toast } from "sonner";
+
+import { callAction } from "@/lib/action-call";
 
 import { respondToOfferAction } from "@/app/(app)/provider/actions";
 import { Button } from "@/components/ui/button";
+import { SlideToConfirm } from "@/components/ui/slide-to-confirm";
 import { CategoryIcon } from "@/components/marketplace/category-icon";
 import { OfferCountdown } from "@/components/provider/offer-countdown";
 import { buttonVariants } from "@/components/ui/button-variants";
@@ -81,7 +84,7 @@ export function OfferDecision({
     setChoice(accept ? "accept" : "pass");
 
     startTransition(async () => {
-      const result = await respondToOfferAction(offerId, accept);
+      const result = await callAction(() => respondToOfferAction(offerId, accept));
 
       if (!result.ok) {
         setChoice(null);
@@ -242,33 +245,48 @@ export function OfferDecision({
           </section>
 
           {/* Sticky, because the evidence above is scrollable and a decision
-              button you have to hunt for is a decision that times out. */}
-          <div className="sticky bottom-0 -mx-5 grid grid-cols-[auto_1fr] gap-3 border-t border-ink-200 bg-ink-25/95 px-5 py-3 backdrop-blur-md sm:mx-0 sm:rounded-card sm:border sm:px-4">
+              control you have to hunt for is a decision that times out. */}
+          <div className="sticky bottom-0 -mx-5 space-y-3 border-t border-hairline bg-white/95 px-5 py-4 backdrop-blur-md sm:mx-0 sm:rounded-[1.5rem] sm:border sm:px-4">
+            {/**
+             * Accept is a slide, not a tap — and the asymmetry is the point.
+             *
+             * Accepting is the consequential half of this screen: it locks the
+             * artisan to a job, and abandoning one afterwards costs them a
+             * cancellation against their reliability score (migration 0018).
+             * A thumb resting on a phone in a trotro should not be able to take
+             * a job by brushing the glass, so accepting asks for a deliberate
+             * gesture that a stray touch cannot produce.
+             *
+             * Passing stays a plain button. Making both deliberate would be
+             * ceremony for its own sake: declining costs nothing, the offer
+             * simply moves to the next artisan, and the clock is running.
+             */}
+            <SlideToConfirm
+              label="Slide to accept"
+              confirmingLabel="Accepting…"
+              confirmedLabel="Accepted"
+              onConfirm={() => respond(true)}
+              pending={pending && choice === "accept"}
+              disabled={pending}
+              tone="success"
+            />
+
             <Button
               type="button"
-              variant="secondary"
+              variant="navyOutline"
               size="lg"
+              shape="pill"
+              block
               onClick={() => respond(false)}
               loading={pending && choice === "pass"}
               disabled={pending}
             >
               <X />
-              Pass
-            </Button>
-
-            <Button
-              type="button"
-              size="lg"
-              onClick={() => respond(true)}
-              loading={pending && choice === "accept"}
-              disabled={pending}
-            >
-              <Check />
-              Accept this job
+              Pass on this one
             </Button>
           </div>
 
-          <p className="text-center text-xs leading-relaxed text-ink-500">
+          <p className="text-center text-2xs leading-relaxed text-copy-muted">
             Accepting does not commit you to a price. You build the quote next, and the client
             has to approve it before you travel.
           </p>

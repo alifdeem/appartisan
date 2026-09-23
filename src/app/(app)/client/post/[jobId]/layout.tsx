@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
-import { CategoryIcon } from "@/components/marketplace/category-icon";
 import { DiscardDraft } from "@/app/(app)/client/post/[jobId]/_components/discard-draft";
 import { PostSteps } from "@/app/(app)/client/post/[jobId]/_components/post-steps";
 import { getClientJob } from "@/lib/jobs/queries";
@@ -19,6 +18,11 @@ import { getClientJob } from "@/lib/jobs/queries";
  * than redirecting to the job. Posting is the one irreversible step in this
  * flow, and silently bouncing someone who used the back button into a live job
  * screen makes it look as though their edit went through.
+ *
+ * **The trade lives on the form, not here.** The reference (`@1-main`) puts a
+ * scrollable row of trades directly above the description with the chosen one
+ * filled, so changing your mind is one tap. That row is `TradeSwitcher`, and
+ * repeating the trade in this bar as well would name it twice on one screen.
  */
 export default async function PostJobLayout({
   children,
@@ -30,33 +34,28 @@ export default async function PostJobLayout({
   if (!job || job.status !== "draft") notFound();
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <Link
-          href="/client/post"
-          className="inline-flex items-center gap-1.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          Change service
-        </Link>
+    // pb-32 clears the pinned action every step renders. The tab bar hides
+    // itself inside this flow — see `bottom-nav.tsx`.
+    <div className="pb-32">
+      <header className="-mx-5 -mt-6 mb-6 border-b border-hairline bg-canvas px-5 pt-3 pb-5">
+        <div className="flex items-center justify-between gap-2">
+          <Link
+            href="/client"
+            aria-label="Leave and go home"
+            className="-ml-2 grid size-11 place-items-center rounded-full text-navy-900 transition-colors duration-[var(--duration-instant)] hover:bg-white active:bg-azure-50"
+          >
+            <ArrowLeft className="size-5" aria-hidden />
+          </Link>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-field bg-brand-50 text-brand-700">
-            <CategoryIcon name={job.category?.icon ?? "wrench"} />
-          </span>
-
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-xl font-semibold text-ink-900">
-              {job.category?.name ?? "New request"}
-            </h1>
-            <p className="text-sm text-ink-500">Draft — not posted yet</p>
-          </div>
+          <p className="text-note font-semibold text-navy-900">Post a job</p>
 
           <DiscardDraft jobId={job.id} />
         </div>
 
-        <PostSteps />
-      </div>
+        <div className="mt-4">
+          <PostSteps />
+        </div>
+      </header>
 
       {children}
     </div>

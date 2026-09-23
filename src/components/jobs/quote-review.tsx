@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { Check, Info, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { callAction } from "@/lib/action-call";
+
 import { respondToQuoteAction } from "@/app/(app)/client/actions";
 import { Button } from "@/components/ui/button";
 import { QuoteDocket, type QuoteLine } from "@/components/marketplace/quote-docket";
-import { Textarea } from "@/components/ui/input";
+import { panelControlClasses } from "@/components/mobile/panel-field";
 import { computeQuote, formatCedis } from "@/lib/money";
 import type { QuoteItemRow, QuoteRow } from "@/lib/supabase/types";
 
@@ -81,7 +83,9 @@ export function QuoteReview({
     setChoice(accept ? "accept" : "decline");
 
     startTransition(async () => {
-      const result = await respondToQuoteAction(quote.id, accept, accept ? undefined : reason);
+      const result = await callAction(() =>
+        respondToQuoteAction(quote.id, accept, accept ? undefined : reason),
+      );
 
       if (!result.ok) {
         setChoice(null);
@@ -105,15 +109,16 @@ export function QuoteReview({
         breakdown={breakdown}
         reference={reference}
         title="Your quote"
+        tone="cool"
         elevated
       />
 
       {quote.notes && (
-        <div className="flex items-start gap-2.5 rounded-card border border-ink-200 bg-ink-0 px-4 py-3 shadow-xs">
-          <Info className="mt-0.5 size-4 shrink-0 text-ink-500" aria-hidden />
+        <div className="flex items-start gap-2.5 rounded-[1.25rem] border border-hairline bg-white px-4 py-3">
+          <Info className="mt-0.5 size-4 shrink-0 text-copy-muted" aria-hidden />
           <div className="min-w-0">
-            <p className="text-xs font-medium text-ink-500">From your artisan</p>
-            <p className="mt-0.5 text-sm leading-relaxed whitespace-pre-wrap text-ink-800">
+            <p className="text-2xs font-medium text-copy-muted">From your artisan</p>
+            <p className="mt-0.5 text-note leading-relaxed whitespace-pre-wrap text-navy-900">
               {quote.notes}
             </p>
           </div>
@@ -121,12 +126,12 @@ export function QuoteReview({
       )}
 
       {decliningOpen ? (
-        <div className="animate-fade-up space-y-3 rounded-card border border-ink-200 bg-ink-0 p-4 shadow-sm">
+        <div className="animate-fade-up space-y-3 rounded-[1.25rem] border border-hairline bg-white p-4">
           <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-ink-900">
+            <h3 className="font-space text-note font-bold text-navy-900">
               We&rsquo;ll find you another artisan
             </h3>
-            <p className="text-sm leading-relaxed text-ink-600">
+            <p className="text-note leading-relaxed text-copy-muted">
               Nothing is charged and your job stays exactly as you described it. This artisan
               won&rsquo;t be offered it again.
               {rejectionsLeft <= 1 && (
@@ -139,17 +144,18 @@ export function QuoteReview({
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="declineReason" className="block text-sm font-medium text-ink-800">
+            <label htmlFor="declineReason" className="block text-note font-medium text-navy-900">
               Anything you want to tell us?
-              <span className="ml-1.5 text-xs font-normal text-ink-400">optional</span>
+              <span className="ml-1.5 text-2xs font-normal text-copy-muted">optional</span>
             </label>
-            <Textarea
+            <textarea
               id="declineReason"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               rows={2}
               maxLength={300}
               placeholder="Too expensive for what I need, or I wanted it sooner."
+              className={panelControlClasses(false, "resize-none")}
             />
           </div>
 
@@ -157,6 +163,7 @@ export function QuoteReview({
             <Button
               type="button"
               variant="danger"
+              shape="pill"
               loading={pending && choice === "decline"}
               disabled={pending}
               onClick={() => respond(false)}
@@ -167,6 +174,7 @@ export function QuoteReview({
             <Button
               type="button"
               variant="ghost"
+              shape="pill"
               disabled={pending}
               onClick={() => setDecliningOpen(false)}
             >
@@ -180,8 +188,9 @@ export function QuoteReview({
               number is the thing being agreed to. */}
           <Button
             type="button"
-            variant="money"
+            variant="navy"
             size="lg"
+            shape="pill"
             block
             loading={pending && choice === "accept"}
             disabled={pending}
@@ -193,8 +202,9 @@ export function QuoteReview({
 
           <Button
             type="button"
-            variant="secondary"
+            variant="navyOutline"
             size="lg"
+            shape="pill"
             block
             disabled={pending}
             onClick={() => setDecliningOpen(true)}
@@ -202,7 +212,7 @@ export function QuoteReview({
             This isn&rsquo;t right for me
           </Button>
 
-          <p className="text-center text-xs leading-relaxed text-ink-500">
+          <p className="text-center text-2xs leading-relaxed text-copy-muted">
             You pay {formatCedis(breakdown.depositDue)} now and{" "}
             {formatCedis(breakdown.balanceDue)} when the work is signed off. Nothing is charged
             until you accept.

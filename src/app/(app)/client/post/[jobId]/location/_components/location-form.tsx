@@ -1,12 +1,12 @@
 "use client";
 
 import { useActionState } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
 import { saveLocationAction } from "@/app/(app)/client/actions";
 import { LocationPicker } from "@/components/jobs/location-picker";
+import { StickyAction } from "@/components/mobile/sticky-action";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import type { LatLng } from "@/lib/integrations/maps/types";
 
 export function LocationForm({
@@ -25,33 +25,32 @@ export function LocationForm({
   const [state, formAction, pending] = useActionState(saveLocationAction, null);
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form action={formAction} className="space-y-6">
       <input type="hidden" name="jobId" value={jobId} />
 
-      <Card>
-        <CardContent>
-          <LocationPicker
-            initialPoint={initialPoint}
-            initialAddress={initialAddress}
-            initialLandmark={initialLandmark}
-            initialGhanaPost={initialGhanaPost}
-            fieldErrors={state?.fieldErrors}
-          />
-        </CardContent>
-      </Card>
+      {/* No card. The picker is the whole screen — a border around it would be
+          a box drawn around the only content, which is the habit the audit
+          counted 46 instances of. */}
+      <LocationPicker
+        initialPoint={initialPoint}
+        initialAddress={initialAddress}
+        initialLandmark={initialLandmark}
+        initialGhanaPost={initialGhanaPost}
+        fieldErrors={state?.fieldErrors}
+      />
 
       {state?.error && (
-        <p role="alert" className="animate-fade-in text-sm text-danger-600">
+        <p role="alert" className="animate-fade-in text-note text-danger-600">
           {state.error}
         </p>
       )}
 
-      <div className="flex justify-end">
-        <Button type="submit" size="lg" loading={pending}>
+      <StickyAction>
+        <Button type="submit" variant="navy" size="lg" shape="pill" block loading={pending}>
           Continue
-          <ArrowRight />
+          <ArrowUpRight />
         </Button>
-      </div>
+      </StickyAction>
     </form>
   );
 }

@@ -26,6 +26,7 @@ export function Button({
   variant,
   size,
   block,
+  shape,
   loading = false,
   disabled,
   children,
@@ -33,7 +34,12 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={cn(buttonVariants({ variant, size, block }), className)}
+      // `shape` was missing here until the 2026 auth redesign. Left out of the
+      // destructure it fell through into `...props` and was spread onto the
+      // DOM node, so every `shape="pill"` button rendered as a square button
+      // carrying a stray `shape` attribute. `buttonVariants` was right all
+      // along; nothing was passing it the value.
+      className={cn(buttonVariants({ variant, size, block, shape }), className)}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       {...props}

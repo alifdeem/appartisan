@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { DescribeForm } from "@/app/(app)/client/post/[jobId]/describe/_components/describe-form";
 import {
   getClientJob,
+  listActiveCategories,
   listJobPhotos,
   signJobPhotos,
   signVoiceNote,
@@ -24,14 +25,17 @@ export default async function DescribeStepPage({
   if (!job || job.status !== "draft") notFound();
 
   const photoRows = await listJobPhotos(jobId);
-  const [photos, voiceNoteUrl] = await Promise.all([
+  const [photos, voiceNoteUrl, categories] = await Promise.all([
     signJobPhotos(photoRows),
     signVoiceNote(job.voice_note_path),
+    listActiveCategories(),
   ]);
 
   return (
     <DescribeForm
       jobId={job.id}
+      categories={categories}
+      categoryId={job.category_id}
       initialDescription={job.description}
       photos={photos}
       voiceNoteUrl={voiceNoteUrl}

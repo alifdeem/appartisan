@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Camera, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { callAction } from "@/lib/action-call";
+
 import {
   ACCEPTED_PHOTO_TYPES,
   JOB_PHOTO_BUCKET,
@@ -15,6 +17,7 @@ import { createClient } from "@/lib/supabase/browser";
 
 import { raiseDisputeAction } from "@/app/(app)/client/actions";
 import { Button } from "@/components/ui/button";
+import { panelControlClasses } from "@/components/mobile/panel-field";
 import type { JobActionState } from "@/app/(app)/client/actions";
 import type { DisputeRow } from "@/lib/supabase/types";
 
@@ -123,7 +126,7 @@ export function RaiseDispute({ jobId, existing }: { jobId: string; existing: Dis
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const next = await raiseDisputeAction(null, formData);
+      const next = await callAction(() => raiseDisputeAction(null, formData));
       setState(next);
 
       if (next.ok) {
@@ -139,21 +142,21 @@ export function RaiseDispute({ jobId, existing }: { jobId: string; existing: Dis
   if (existing) {
     const live = OPEN_STATUSES.includes(existing.status);
     return (
-      <section className="rounded-card border border-ink-200 bg-ink-0 p-4 shadow-sm">
+      <section className="rounded-[1.25rem] border border-hairline bg-white p-4">
         <div className="flex items-start gap-2.5">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-accent-600" aria-hidden />
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning-700" aria-hidden />
           <div className="min-w-0 space-y-1">
-            <p className="text-sm font-medium text-ink-900">
+            <p className="font-space text-note font-bold text-navy-900">
               {live ? "You reported a problem" : "Your report was closed"}
             </p>
-            <p className="text-sm text-ink-600">{existing.reason}</p>
+            <p className="text-note text-copy-muted">{existing.reason}</p>
             {existing.resolution && (
-              <p className="text-sm text-ink-700">
+              <p className="text-note text-copy-muted">
                 <span className="font-medium">Outcome:</span> {existing.resolution}
               </p>
             )}
             {live && (
-              <p className="text-sm text-ink-500">
+              <p className="text-note text-copy-muted">
                 Someone from ArtisanGH will call you about this.
               </p>
             )}
@@ -168,9 +171,9 @@ export function RaiseDispute({ jobId, existing }: { jobId: string; existing: Dis
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex min-h-11 w-full items-center gap-2 rounded-card border border-ink-200 bg-ink-0 px-4 text-sm text-ink-600 shadow-sm transition-colors hover:border-ink-300 hover:text-ink-900"
+        className="flex min-h-11 w-full items-center gap-2 rounded-[1.25rem] border border-hairline bg-white px-4 text-note text-copy-muted shadow-sm transition-colors hover:border-hairline hover:text-navy-900"
       >
-        <AlertTriangle className="size-4 text-ink-400" aria-hidden />
+        <AlertTriangle className="size-4 text-copy-muted" aria-hidden />
         Report a problem with this job
       </button>
     );
@@ -179,33 +182,33 @@ export function RaiseDispute({ jobId, existing }: { jobId: string; existing: Dis
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-4 rounded-card border border-ink-200 bg-ink-0 p-4 shadow-sm"
+      className="space-y-4 rounded-[1.25rem] border border-hairline bg-white p-4"
     >
       <input type="hidden" name="jobId" value={jobId} />
 
       <div>
-        <h2 className="text-sm font-semibold text-ink-900">What went wrong?</h2>
-        <p className="mt-0.5 text-sm text-ink-500">
+        <h2 className="font-space text-lede font-bold text-navy-900">What went wrong?</h2>
+        <p className="mt-0.5 text-note text-copy-muted">
           We hold the artisan&rsquo;s payout while this is looked at.
         </p>
       </div>
 
       <div className="space-y-2">
         {REASONS.map((reason, index) => (
-          <label key={reason} className="flex min-h-11 items-center gap-2.5 text-sm text-ink-800">
+          <label key={reason} className="flex min-h-11 items-center gap-2.5 text-note text-navy-900">
             <input
               type="radio"
               name="reason"
               value={reason}
               defaultChecked={index === 0}
-              className="size-4 accent-ink-900"
+              className="size-4 accent-navy-800"
             />
             {reason}
           </label>
         ))}
       </div>
       {state?.fieldErrors?.reason && (
-        <p className="text-sm text-danger-700">{state.fieldErrors.reason}</p>
+        <p className="text-note text-danger-700">{state.fieldErrors.reason}</p>
       )}
 
       <textarea
@@ -213,7 +216,8 @@ export function RaiseDispute({ jobId, existing }: { jobId: string; existing: Dis
         rows={3}
         placeholder="What happened? (optional, but it helps)"
         maxLength={2000}
-        className="w-full rounded-field border border-ink-200 bg-ink-25 px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-ink-400 focus:outline-none"
+        aria-label="What happened"
+        className={panelControlClasses(false, "resize-none py-2.5 text-ui")}
       />
 
       {/* Evidence. Same rule as job photos: the browser uploads straight to
@@ -227,7 +231,7 @@ export function RaiseDispute({ jobId, existing }: { jobId: string; existing: Dis
           {evidence.map((path) => (
             <span
               key={path}
-              className="relative size-16 overflow-hidden rounded-field border border-ink-200 bg-ink-100"
+              className="relative size-16 overflow-hidden rounded-[1rem] border border-hairline bg-canvas"
             >
               {previews[path] && (
                 <Image src={previews[path]} alt="" fill sizes="64px" className="object-cover" />
@@ -236,7 +240,7 @@ export function RaiseDispute({ jobId, existing }: { jobId: string; existing: Dis
                 type="button"
                 onClick={() => void discard(path)}
                 aria-label="Remove this photo"
-                className="absolute top-0.5 right-0.5 grid size-5 place-items-center rounded-full bg-ink-950/70 text-ink-0"
+                className="absolute top-0.5 right-0.5 grid size-5 place-items-center rounded-full bg-navy-950/70 text-white"
               >
                 <X className="size-3" aria-hidden />
               </button>
@@ -244,8 +248,8 @@ export function RaiseDispute({ jobId, existing }: { jobId: string; existing: Dis
           ))}
 
           {uploading && (
-            <span className="grid size-16 place-items-center rounded-field border border-dashed border-ink-300 bg-ink-25">
-              <Loader2 className="size-4 animate-spin text-ink-400" aria-hidden />
+            <span className="grid size-16 place-items-center rounded-[1rem] border border-dashed border-hairline bg-canvas">
+              <Loader2 className="size-4 animate-spin text-copy-muted" aria-hidden />
             </span>
           )}
 
@@ -253,7 +257,7 @@ export function RaiseDispute({ jobId, existing }: { jobId: string; existing: Dis
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="grid size-16 place-items-center rounded-field border border-dashed border-ink-300 bg-ink-25 text-ink-500 transition-colors hover:border-ink-400 hover:text-ink-700"
+              className="grid size-16 place-items-center rounded-[1rem] border border-dashed border-hairline bg-canvas text-copy-muted transition-colors hover:border-azure-300 hover:text-copy-muted"
             >
               <Camera className="size-5" aria-hidden />
               <span className="sr-only">Add a photo</span>
@@ -261,7 +265,7 @@ export function RaiseDispute({ jobId, existing }: { jobId: string; existing: Dis
           )}
         </div>
 
-        <p className="text-[0.75rem] text-ink-500">
+        <p className="text-[0.75rem] text-copy-muted">
           Photos help more than words here. Up to {MAX_EVIDENCE}.
         </p>
 
@@ -271,15 +275,16 @@ export function RaiseDispute({ jobId, existing }: { jobId: string; existing: Dis
           accept={ACCEPTED_PHOTO_TYPES.join(",")}
           capture="environment"
           hidden
+          aria-label="Photo of the problem"
           onChange={onPick}
         />
       </div>
 
       <div className="flex items-center gap-2">
-        <Button type="submit" variant="danger" disabled={pending}>
+        <Button type="submit" variant="danger" shape="pill" disabled={pending}>
           {pending ? "Sending…" : "Report it"}
         </Button>
-        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+        <Button type="button" variant="ghost" shape="pill" onClick={() => setOpen(false)}>
           Cancel
         </Button>
       </div>

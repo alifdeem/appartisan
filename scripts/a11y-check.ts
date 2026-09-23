@@ -142,6 +142,44 @@ async function page(label: string, path: string, cookie = "") {
   audit(label, await response.text());
 }
 
+/**
+ * A real job id for a given role, looked up rather than hard-coded.
+ *
+ * The job screens are the biggest stateful pages in the app — twenty-two
+ * statuses between them — and they were the two the audit did not cover, which
+ * is how a heading-level skip on a `DetailSection` would have shipped unseen.
+ *
+ * Resolved at run time from whatever the database happens to hold. A UUID
+ * pasted into this file works exactly until somebody re-seeds, and a check that
+ * quietly stops running is worse than no check: it still prints PASS for
+ * everything else and nobody notices the two missing lines.
+ *
+ * Returns null when there is nothing to audit — a fresh database with no jobs
+ * is not a failure, so the caller skips rather than reporting one.
+ */
+async function newestJobFor(
+  column: "client_id" | "provider_id",
+  phone: string,
+): Promise<string | null> {
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("phone", phone)
+    .maybeSingle();
+  if (!profile) return null;
+
+  const { data } = await admin
+    .from("jobs")
+    .select("id")
+    .eq(column, profile.id)
+    .neq("status", "draft")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data?.id ?? null;
+}
+
 async function main() {
   console.log(`\n  Auditing ${origin}\n`);
 
@@ -156,12 +194,30 @@ async function main() {
   await page("client dashboard", "/client", client);
   await page("post a job", "/client/post", client);
 
+  const clientJob = await newestJobFor("client_id", "+233241111111");
+  if (clientJob) await page("client job", `/client/jobs/${clientJob}`, client);
+  else console.log("  SKIP  client job — no posted job in the database");
+
   const provider = await sessionCookieFor("+233242222222");
   await page("provider dashboard", "/provider", provider);
 
+  const providerJob = await newestJobFor("provider_id", "+233242222222");
+  if (providerJob) await page("provider job", `/provider/jobs/${providerJob}`, provider);
+  else console.log("  SKIP  provider job — no assigned job in the database");
+
   const adminUser = await sessionCookieFor("+233243333333");
+  // The whole console, not a sample of it. Two of these routes are new, and
+  // the console is the one surface here built around tables and filters -
+  // exactly the shapes that go wrong for a keyboard and a screen reader.
   await page("admin dashboard", "/admin", adminUser);
+  await page("admin jobs", "/admin/jobs", adminUser);
+  await page("admin transactions", "/admin/transactions", adminUser);
+  await page("verification queue", "/admin/verification", adminUser);
   await page("disputes", "/admin/disputes", adminUser);
+  await page("matching", "/admin/matching", adminUser);
+  await page("trades", "/admin/categories", adminUser);
+  await page("transport bands", "/admin/zones", adminUser);
+  await page("platform settings", "/admin/settings", adminUser);
 
   console.log(
     failures === 0

@@ -22,10 +22,12 @@ export default async function LocationStepPage({
       : null;
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-ink-900">Where is the job?</h2>
-        <p className="max-w-prose text-[0.9375rem] text-ink-600">
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h1 className="font-space text-title-sm font-bold text-balance text-navy-900">
+          Where is the job?
+        </h1>
+        <p className="text-note leading-relaxed text-copy-muted">
           We match you with the closest available artisan, so the pin matters more than the
           address. Put it on the building, then add the landmark you would give over the phone.
         </p>

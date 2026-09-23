@@ -1,0 +1,669 @@
+<title>Artisan Side Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --navy-900: #081f4d;
+    --navy-800: #0a2e73;
+    --azure: #2f80ed;
+    --azure-50: #eaf3ff;
+    --azure-100: #d7e8ff;
+
+    --ground: #f8fbff;
+    --surface: #ffffff;
+    --hairline: #dce8f7;
+    --ink: #111827;
+    --muted: #64748b;
+
+    --actor-artisan: #0a2e73;
+    --actor-artisan-bg: #eaf3ff;
+    --actor-client: #6d28d9;
+    --actor-client-bg: #f1ebfe;
+    --actor-platform: #64748b;
+    --actor-platform-bg: #eef2f7;
+
+    --money-held: #b45309;
+    --money-held-bg: #fdf3e3;
+    --money-paid: #2e7d4f;
+    --money-paid-bg: #e6f4ec;
+
+    --shadow: 0 1px 2px rgba(8, 31, 77, .06), 0 8px 24px -16px rgba(8, 31, 77, .28);
+  }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+
+    --ground: #070d1a;
+    --surface: #0e1728;
+    --hairline: #1e2c45;
+    --ink: #e8eef9;
+    --muted: #8da2c0;
+
+    --navy-800: #6ea8ff;
+    --navy-900: #a9c9ff;
+    --azure: #6ea8ff;
+    --azure-50: #132239;
+    --azure-100: #1a3050;
+
+    --actor-artisan: #8fbcff;
+    --actor-artisan-bg: #132239;
+    --actor-client: #c4a9fb;
+    --actor-client-bg: #241c3d;
+    --actor-platform: #9fb0c9;
+    --actor-platform-bg: #18202f;
+
+    --money-held: #e2ab63;
+    --money-held-bg: #2c2114;
+    --money-paid: #6cc79a;
+    --money-paid-bg: #12291f;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 8px 24px -16px rgba(0, 0, 0, .8);
+  }
+}
+
+  :root[data-theme="dark"] {
+    --ground: #070d1a;
+    --surface: #0e1728;
+    --hairline: #1e2c45;
+    --ink: #e8eef9;
+    --muted: #8da2c0;
+
+    --navy-800: #6ea8ff;
+    --navy-900: #a9c9ff;
+    --azure: #6ea8ff;
+    --azure-50: #132239;
+    --azure-100: #1a3050;
+
+    --actor-artisan: #8fbcff;
+    --actor-artisan-bg: #132239;
+    --actor-client: #c4a9fb;
+    --actor-client-bg: #241c3d;
+    --actor-platform: #9fb0c9;
+    --actor-platform-bg: #18202f;
+
+    --money-held: #e2ab63;
+    --money-held-bg: #2c2114;
+    --money-paid: #6cc79a;
+    --money-paid-bg: #12291f;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 8px 24px -16px rgba(0, 0, 0, .8);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 400 16px/1.6 Inter, ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 66rem;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 6rem;
+  }
+
+  h1, h2, h3 {
+    font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    text-wrap: balance;
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  h1 { font-size: clamp(2rem, 5vw, 2.75rem); line-height: 1.1; color: var(--navy-900); }
+  h2 { font-size: 1.375rem; color: var(--navy-900); }
+  h3 { font-size: 1rem; color: var(--ink); }
+
+  p { margin: 0; }
+
+  code, .mono {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eyebrow {
+    font: 600 .6875rem/1.4 Inter, sans-serif;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---- header ---- */
+  header.masthead { display: flex; flex-direction: column; gap: .875rem; }
+  .lede { max-width: 38rem; color: var(--muted); font-size: 1.0625rem; }
+
+  .counts {
+    display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem;
+  }
+  .count {
+    display: inline-flex; align-items: baseline; gap: .4rem;
+    background: var(--surface); border: 1px solid var(--hairline);
+    border-radius: 999px; padding: .4rem .85rem;
+    font-size: .8125rem; color: var(--muted);
+  }
+  .count b {
+    font-family: "JetBrains Mono", monospace; font-weight: 600;
+    font-size: .9375rem; color: var(--navy-800);
+  }
+
+  section { margin-top: 3.5rem; }
+  .sec-head { display: flex; flex-direction: column; gap: .35rem; margin-bottom: 1.25rem; }
+  .sec-head p { color: var(--muted); font-size: .9375rem; max-width: 46rem; }
+
+  /* ---- actor chips: the structural device. Every step names who is acting,
+         because the artisan's real experience of this flow is how much of it
+         is spent waiting on somebody else. ---- */
+  .actor {
+    display: inline-block; flex: none;
+    font: 600 .625rem/1 Inter, sans-serif;
+    letter-spacing: .07em; text-transform: uppercase;
+    padding: .3rem .5rem; border-radius: .3rem;
+  }
+  .actor.artisan  { color: var(--actor-artisan);  background: var(--actor-artisan-bg); }
+  .actor.client   { color: var(--actor-client);   background: var(--actor-client-bg); }
+  .actor.platform { color: var(--actor-platform); background: var(--actor-platform-bg); }
+
+  /* ---- stage rail ---- */
+  .rail { display: flex; flex-direction: column; gap: 0; }
+
+  .step {
+    display: grid;
+    grid-template-columns: 2.25rem 1fr;
+    gap: 0 1rem;
+    position: relative;
+    padding-bottom: 1.25rem;
+  }
+  .step:last-child { padding-bottom: 0; }
+
+  .node {
+    grid-row: 1 / span 2;
+    position: relative;
+    display: flex; justify-content: center;
+  }
+  .dot {
+    width: 1.75rem; height: 1.75rem; border-radius: 999px;
+    background: var(--surface); border: 2px solid var(--hairline);
+    display: grid; place-items: center;
+    font: 600 .75rem/1 "JetBrains Mono", monospace;
+    color: var(--muted);
+    z-index: 1;
+  }
+  .step.key .dot { background: var(--navy-800); border-color: var(--navy-800); color: var(--surface); }
+  .step:not(:last-child) .node::after {
+    content: ""; position: absolute; top: 1.75rem; bottom: -1.25rem;
+    width: 2px; background: var(--hairline);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: .875rem;
+    padding: .9rem 1rem;
+    box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: .4rem;
+  }
+  .card-top { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+  .card-top h3 { font-size: .9375rem; }
+  .card p { font-size: .875rem; color: var(--muted); }
+
+  .meta { display: flex; flex-wrap: wrap; gap: .35rem .6rem; align-items: center; margin-top: .15rem; }
+  .route {
+    font-family: "JetBrains Mono", monospace; font-size: .75rem;
+    color: var(--azure); background: var(--azure-50);
+    padding: .2rem .45rem; border-radius: .3rem;
+    overflow-wrap: anywhere;
+  }
+  .status {
+    font-family: "JetBrains Mono", monospace; font-size: .6875rem;
+    color: var(--muted); border: 1px dashed var(--hairline);
+    padding: .2rem .45rem; border-radius: .3rem;
+  }
+  .status.held { color: var(--money-held); background: var(--money-held-bg); border-style: solid; border-color: transparent; }
+  .status.paid { color: var(--money-paid); background: var(--money-paid-bg); border-style: solid; border-color: transparent; }
+
+  /* ---- tab grid ---- */
+  .tabs { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+  .tab { background: var(--surface); border: 1px solid var(--hairline); border-radius: 1rem; overflow: hidden; box-shadow: var(--shadow); }
+  .tab-head { background: var(--navy-800); color: #fff; padding: .7rem 1rem; display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+  :root[data-theme="dark"] .tab-head, :root:not([data-theme="light"]) .tab-head { color: var(--ground); }
+  .tab-head h3 { color: inherit; font-size: .9375rem; }
+  .tab-head .mono { font-size: .6875rem; opacity: .75; }
+  .tab ul { list-style: none; margin: 0; padding: .6rem .75rem .8rem; display: flex; flex-direction: column; gap: .1rem; }
+  .tab li { font-size: .8125rem; color: var(--muted); padding: .35rem .25rem; border-bottom: 1px solid var(--hairline); }
+  .tab li:last-child { border-bottom: 0; }
+  .tab li b { color: var(--ink); font-weight: 600; }
+
+  /* ---- inventory table ---- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--hairline); border-radius: 1rem; background: var(--surface); box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; min-width: 46rem; }
+  th, td { text-align: left; padding: .65rem .9rem; border-bottom: 1px solid var(--hairline); font-size: .8125rem; vertical-align: top; }
+  th { font: 600 .6875rem/1.4 Inter, sans-serif; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); background: var(--azure-50); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.n { font-family: "JetBrains Mono", monospace; color: var(--muted); width: 2.5rem; }
+  td .route { display: inline-block; }
+  td b { font-weight: 600; }
+
+  .pill { display: inline-block; font: 600 .6875rem/1 Inter, sans-serif; padding: .28rem .5rem; border-radius: .3rem; white-space: nowrap; }
+  .pill.done { color: var(--money-paid); background: var(--money-paid-bg); }
+  .pill.todo { color: var(--money-held); background: var(--money-held-bg); }
+
+  .note {
+    margin-top: 1rem; padding: .9rem 1.1rem;
+    border-left: 3px solid var(--azure);
+    background: var(--azure-50);
+    border-radius: 0 .6rem .6rem 0;
+    font-size: .875rem; color: var(--ink);
+  }
+  .note b { font-weight: 600; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: center; margin-bottom: 1.25rem; }
+  .legend span { display: inline-flex; align-items: center; gap: .4rem; font-size: .8125rem; color: var(--muted); }
+
+  @media (max-width: 40rem) {
+    .wrap { padding: 2rem 1rem 4rem; }
+    .step { grid-template-columns: 1.75rem 1fr; gap: 0 .75rem; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">ArtisanGH · provider side</p>
+    <h1>Artisan Side Map</h1>
+    <p class="lede">
+      Every screen an artisan sees, in the order they see it — read out of the routes, the
+      <code>job_status</code> machine and the RLS policies as they actually stand today. Use it to
+      walk the app, screenshot each state, and send them out for redesign.
+    </p>
+    <div class="counts">
+      <span class="count"><b>16</b> routes</span>
+      <span class="count"><b>31</b> states worth shooting</span>
+      <span class="count"><b>6</b> of them the application funnel</span>
+      <span class="count"><b>120s</b> to answer an offer</span>
+    </div>
+  </header>
+
+  <div class="note" style="margin-top:2rem">
+    <b>The thing this map is really for.</b> Count the chips below: of the eleven states after a job
+    is accepted, <b>six are the artisan waiting on somebody else</b>. That is the artisan product's
+    central design problem — not the screens where they act, but the ones where they cannot. Those
+    are the screens worth the most care in a redesign.
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Stage one</p>
+      <h2>Getting verified</h2>
+      <p>Walked once, never again. Nothing else in the app is reachable until it ends in
+        <code>approved</code> — the availability toggle renders locked, and three of the four tabs
+        have nothing in them.</p>
+    </div>
+
+    <div class="legend">
+      <span><i class="actor artisan">Artisan</i> they act</span>
+      <span><i class="actor client">Client</i> they wait on the client</span>
+      <span><i class="actor platform">Platform</i> they wait on us</span>
+    </div>
+
+    <div class="rail">
+      <div class="step key">
+        <div class="node"><div class="dot">1</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Work as an artisan</h3><span class="actor artisan">Artisan</span></div>
+          <p>The role split on the sign-up screen. Chooses <code>role=provider</code>, which is what
+            creates the <code>providers</code> row.</p>
+          <div class="meta"><span class="route">/signup?role=provider</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">2</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Phone, then a 6-digit code</h3><span class="actor artisan">Artisan</span></div>
+          <p>Same two-step form the client uses. No password anywhere in the product.</p>
+          <div class="meta"><span class="route">/signup</span><span class="status">step 2 of the same screen</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">3</div></div>
+        <div class="card">
+          <div class="card-top"><h3>About you</h3><span class="actor artisan">Artisan</span></div>
+          <p>Bio, years of experience, base city, and the service radius that decides which jobs can
+            ever reach them.</p>
+          <div class="meta"><span class="route">/provider/apply/about</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">4</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Trades you cover</h3><span class="actor artisan">Artisan</span></div>
+          <p>From the 26 categories. Picking none means never being offered anything, so this is the
+            screen that quietly decides their income.</p>
+          <div class="meta"><span class="route">/provider/apply/trades</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">5</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Ghana Card and documents</h3><span class="actor artisan">Artisan</span></div>
+          <p>Card front and back, a selfie, proof of skill. Camera capture on the phone; the files go
+            to a private bucket only an admin reviewer can read.</p>
+          <div class="meta"><span class="route">/provider/apply/documents</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">6</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Mobile Money</h3><span class="actor artisan">Artisan</span></div>
+          <p>Number and network. Without it there is no way to pay them, which the earnings screen
+            says out loud rather than failing silently later.</p>
+          <div class="meta"><span class="route">/provider/apply/payout</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">7</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Review and submit</h3><span class="actor artisan">Artisan</span></div>
+          <p>Last look at everything, then the Ghana Card number freezes.</p>
+          <div class="meta"><span class="route">/provider/apply/review</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">8</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Pending review</h3><span class="actor platform">Platform</span></div>
+          <p>A human checks the Ghana Card. The artisan can do nothing but wait — the first of the
+            waiting screens, and the one a new artisan judges the whole platform by.</p>
+          <div class="meta"><span class="route">/provider</span><span class="status">verification_status = pending</span></div>
+        </div>
+      </div>
+
+      <div class="step key">
+        <div class="node"><div class="dot">9</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Approved — or rejected with a reason</h3><span class="actor platform">Platform</span></div>
+          <p>Approval unlocks the toggle. Rejection shows the reviewer's note verbatim and sends them
+            back to documents; it is not a dead end.</p>
+          <div class="meta"><span class="status paid">approved</span><span class="status held">rejected → resubmit</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Stage two</p>
+      <h2>The daily loop</h2>
+      <p>What an approved artisan actually does every day. Four screens, and the whole thing turns on
+        one toggle.</p>
+    </div>
+
+    <div class="rail">
+      <div class="step key">
+        <div class="node"><div class="dot">1</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Go online</h3><span class="actor artisan">Artisan</span></div>
+          <p>The hero of the Today screen. Offline is navy and shouts; online is green and pulses;
+            on a job it locks. Nothing is offered while it is off.</p>
+          <div class="meta"><span class="route">/provider</span><span class="status">availability = offline · online · on_job</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">2</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Waiting for an offer</h3><span class="actor platform">Platform</span></div>
+          <p>The matcher works outward in widening passes. The artisan sees a listening state, not a
+            spinner.</p>
+          <div class="meta"><span class="route">/provider</span></div>
+        </div>
+      </div>
+
+      <div class="step key">
+        <div class="node"><div class="dot">3</div></div>
+        <div class="card">
+          <div class="card-top"><h3>An offer, with a clock on it</h3><span class="actor artisan">Artisan</span></div>
+          <p>The only screen in the app with a deadline. Trade, distance, the client's description,
+            their photos, a voice note, and the landmark — everything except the exact pin, which is
+            withheld until acceptance.</p>
+          <div class="meta"><span class="route">/provider/offers/[offerId]</span><span class="status">120 second countdown</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">4</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Slide to accept, or pass</h3><span class="actor artisan">Artisan</span></div>
+          <p>Accepting asks for a deliberate gesture because abandoning a job afterwards costs a
+            cancellation against their reliability score. Passing is a plain tap — it costs nothing
+            and the clock is running.</p>
+          <div class="meta"><span class="status paid">accepted → job assigned</span><span class="status">passed → next artisan</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Stage three</p>
+      <h2>One job, start to paid</h2>
+      <p>Eleven states on a single route. The screen rebuilds itself around
+        <code>jobs.status</code> — so these are eleven screenshots of one URL, and the chips show who
+        is holding the ball at each.</p>
+    </div>
+
+    <div class="rail">
+      <div class="step key">
+        <div class="node"><div class="dot">1</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Build the price</h3><span class="actor artisan">Artisan</span></div>
+          <p>Itemised: labour, materials, transport. The client sees every line, which is the whole
+            trust proposition of the product.</p>
+          <div class="meta"><span class="route">/provider/jobs/[jobId]</span><span class="status">assigned · quote_pending</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">2</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Price sent</h3><span class="actor client">Client</span></div>
+          <p>Nothing to do. Decline sends the job back to matching and the artisan loses it.</p>
+          <div class="meta"><span class="status">quote_sent</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">3</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Waiting on the deposit</h3><span class="actor client">Client</span></div>
+          <p>Accepted, but nobody travels yet. This is the rule the product will not bend.</p>
+          <div class="meta"><span class="status held">awaiting_deposit</span></div>
+        </div>
+      </div>
+
+      <div class="step key">
+        <div class="node"><div class="dot">4</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Deposit is in — set off</h3><span class="actor artisan">Artisan</span></div>
+          <p>The first execution control appears. From here it is one button at a time, never two.</p>
+          <div class="meta"><span class="status paid">deposit_paid</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">5</div></div>
+        <div class="card">
+          <div class="card-top"><h3>On the way</h3><span class="actor artisan">Artisan</span></div>
+          <p>The exact pin is finally shared.</p>
+          <div class="meta"><span class="status">en_route</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">6</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Arrived</h3><span class="actor artisan">Artisan</span></div>
+          <div class="meta"><span class="status">arrived</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">7</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Work in progress</h3><span class="actor artisan">Artisan</span></div>
+          <p>Completion photos are attached here — they become the client's evidence and the cover
+            image on their job history.</p>
+          <div class="meta"><span class="status">in_progress</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">8</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Sent for sign-off</h3><span class="actor client">Client</span></div>
+          <p>Waiting again, this time with the work already done — the most anxious wait in the flow.</p>
+          <div class="meta"><span class="status held">awaiting_signoff</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">9</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Signed off, balance due</h3><span class="actor client">Client</span></div>
+          <div class="meta"><span class="status held">awaiting_balance</span></div>
+        </div>
+      </div>
+
+      <div class="step key">
+        <div class="node"><div class="dot">10</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Paid</h3><span class="actor platform">Platform</span></div>
+          <p>The platform takes its 12% and raises a payout to their Mobile Money. Until the network
+            settles it, the earnings screen shows it as <b>on the way</b> — never as earned.</p>
+          <div class="meta"><span class="status paid">paid → payout</span></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="node"><div class="dot">11</div></div>
+        <div class="card">
+          <div class="card-top"><h3>Closed</h3><span class="actor client">Client</span></div>
+          <p>The client rates the job, which moves the artisan's public rating.</p>
+          <div class="meta"><span class="status">closed</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">The shell</p>
+      <h2>Four tabs</h2>
+      <p>An artisan chooses nothing — work is offered to them. These are the four questions they
+        have instead.</p>
+    </div>
+
+    <div class="tabs">
+      <div class="tab">
+        <div class="tab-head"><h3>Today</h3><span class="mono">/provider</span></div>
+        <ul>
+          <li><b>Am I on?</b></li>
+          <li>Availability toggle</li>
+          <li>Live offer, when there is one</li>
+          <li>Earned this week</li>
+          <li>Work on now</li>
+          <li>Reliability and verification</li>
+        </ul>
+      </div>
+
+      <div class="tab">
+        <div class="tab-head"><h3>Jobs</h3><span class="mono">/provider/jobs</span></div>
+        <ul>
+          <li><b>What have I got on?</b></li>
+          <li>On now — the default</li>
+          <li>Finished</li>
+          <li>Opens the job screen above</li>
+        </ul>
+      </div>
+
+      <div class="tab">
+        <div class="tab-head"><h3>Earnings</h3><span class="mono">/provider/earnings</span></div>
+        <ul>
+          <li><b>What have I been paid?</b></li>
+          <li>This week · all time · on the way</li>
+          <li>Failed transfers, loudly</li>
+          <li>Payout per job</li>
+          <li>Where the money lands</li>
+        </ul>
+      </div>
+
+      <div class="tab">
+        <div class="tab-head"><h3>Account</h3><span class="mono">/provider/account</span></div>
+        <ul>
+          <li><b>Who am I here?</b></li>
+          <li>Verification badge</li>
+          <li>Jobs done · rating</li>
+          <li>Trades · where you work</li>
+          <li>Mobile Money</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Shot list</p>
+      <h2>Every screen, and what to trigger</h2>
+      <p>Sixteen routes. The right-hand column is the state you need the app in before the screenshot
+        is worth sending out — several routes are worth shooting more than once.</p>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Screen</th><th>Route</th><th>Shoot it in this state</th><th>Built</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="n">1</td><td><b>Role split</b></td><td><span class="route">/signup</span></td><td>Fresh, no session</td><td><span class="pill done">Redesigned</span></td></tr>
+          <tr><td class="n">2</td><td><b>Sign-up form</b></td><td><span class="route">/signup?role=provider</span></td><td>Empty, then filled</td><td><span class="pill done">Redesigned</span></td></tr>
+          <tr><td class="n">3</td><td><b>Verify code</b></td><td><span class="route">/signup</span></td><td>Step 2, code partly entered</td><td><span class="pill done">Redesigned</span></td></tr>
+          <tr><td class="n">4</td><td><b>Log in</b></td><td><span class="route">/login</span></td><td>Fresh</td><td><span class="pill done">Redesigned</span></td></tr>
+          <tr><td class="n">5</td><td><b>Application start</b></td><td><span class="route">/provider/apply</span></td><td>Nothing filled in yet</td><td><span class="pill todo">Old palette</span></td></tr>
+          <tr><td class="n">6</td><td><b>About you</b></td><td><span class="route">/provider/apply/about</span></td><td>Empty, then filled</td><td><span class="pill todo">Old palette</span></td></tr>
+          <tr><td class="n">7</td><td><b>Trades</b></td><td><span class="route">/provider/apply/trades</span></td><td>None chosen, then three chosen</td><td><span class="pill todo">Old palette</span></td></tr>
+          <tr><td class="n">8</td><td><b>Documents</b></td><td><span class="route">/provider/apply/documents</span></td><td>Empty, mid-capture, all four uploaded</td><td><span class="pill todo">Old palette</span></td></tr>
+          <tr><td class="n">9</td><td><b>Payout details</b></td><td><span class="route">/provider/apply/payout</span></td><td>Empty, then a valid MTN number</td><td><span class="pill todo">Old palette</span></td></tr>
+          <tr><td class="n">10</td><td><b>Review and submit</b></td><td><span class="route">/provider/apply/review</span></td><td>Everything complete</td><td><span class="pill todo">Old palette</span></td></tr>
+          <tr><td class="n">11</td><td><b>Today — not verified</b></td><td><span class="route">/provider</span></td><td><code>unsubmitted</code>, then <code>pending</code>, then <code>rejected</code></td><td><span class="pill done">Redesigned</span></td></tr>
+          <tr><td class="n">12</td><td><b>Today — approved</b></td><td><span class="route">/provider</span></td><td>Offline · online · on a job</td><td><span class="pill done">Redesigned</span></td></tr>
+          <tr><td class="n">13</td><td><b>Offer</b></td><td><span class="route">/provider/offers/[offerId]</span></td><td>Live clock, and the taken-by-someone-else state</td><td><span class="pill todo">Old palette</span></td></tr>
+          <tr><td class="n">14</td><td><b>Jobs list</b></td><td><span class="route">/provider/jobs</span></td><td>On now with work · empty · finished</td><td><span class="pill done">Redesigned</span></td></tr>
+          <tr><td class="n">15</td><td><b>The job</b></td><td><span class="route">/provider/jobs/[jobId]</span></td><td>All eleven states above — the biggest single job on this list</td><td><span class="pill todo">Old palette</span></td></tr>
+          <tr><td class="n">16</td><td><b>Earnings</b></td><td><span class="route">/provider/earnings</span></td><td>Empty · money on the way · a failed transfer</td><td><span class="pill done">Redesigned</span></td></tr>
+          <tr><td class="n">17</td><td><b>Account</b></td><td><span class="route">/provider/account</span></td><td>Approved, and not-yet-submitted</td><td><span class="pill done">Redesigned</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <b>Where the redesign effort actually is.</b> Nine of the seventeen rows are done. The six
+      application screens are one coherent funnel and can be redesigned as a set. The two that are
+      neither — <b>the offer</b> and <b>the job</b> — carry the most states and the most weight, and
+      the job screen alone is eleven screenshots. Start there.
+    </div>
+  </section>
+
+</div>

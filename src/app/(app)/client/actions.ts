@@ -161,6 +161,74 @@ export async function startDraftAction(
 }
 
 // ---------------------------------------------------------------------------
+// Changing the trade on a draft
+// ---------------------------------------------------------------------------
+
+const switchCategorySchema = z.object({ jobId: uuid, categoryId: uuid });
+
+/**
+ * Re-point an unfinished draft at a different trade.
+ *
+ * The posting screen carries the trade as a row of chips with the chosen one
+ * filled (reference `@1-main`), so changing your mind is one tap rather than a
+ * trip back to the picker and a new draft. Everything already attached — the
+ * description, the photographs, the voice note, the pin — belongs to the *job*
+ * and survives the change, which is the point: the trade was a guess made
+ * before you had described the problem.
+ *
+ * Writes immediately rather than staging until Continue, for the same reason
+ * the photo uploader does: a change that only lands on submit is lost by anyone
+ * who switches and then closes the app.
+ *
+ * `draft` only. A posted job's category is part of what an artisan was offered
+ * and what they quoted against; changing it underneath them would silently
+ * rewrite the deal. RLS scopes the update to the caller's own rows, and the
+ * status guard is repeated in the `eq` rather than checked first so there is no
+ * window between the read and the write.
+ */
+export async function switchDraftCategoryAction(
+  _prev: JobActionState | null,
+  formData: FormData,
+): Promise<JobActionState> {
+  const parsed = switchCategorySchema.safeParse({
+    jobId: formData.get("jobId"),
+    categoryId: formData.get("categoryId"),
+  });
+
+  if (!parsed.success) {
+    return state({ ok: false, error: "Choose a service to continue." });
+  }
+
+  const supabase = await createClient();
+
+  // Same check `startDraftAction` makes: a job pointing at a retired category
+  // is a job nobody will ever be offered.
+  const { data: category } = await supabase
+    .from("categories")
+    .select("id, is_active")
+    .eq("id", parsed.data.categoryId)
+    .maybeSingle();
+
+  if (!category?.is_active) {
+    return state({ ok: false, error: "That service is not available right now." });
+  }
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({ category_id: parsed.data.categoryId })
+    .eq("id", parsed.data.jobId)
+    .eq("status", "draft");
+
+  if (error) {
+    console.error("[jobs] switchDraftCategory failed", error);
+    return state({ ok: false, error: "Could not change the service. Try again." });
+  }
+
+  revalidatePath(`/client/post/${parsed.data.jobId}`, "layout");
+  return state({ ok: true });
+}
+
+// ---------------------------------------------------------------------------
 // Step 2 — describe the job
 // ---------------------------------------------------------------------------
 
@@ -220,11 +288,72 @@ export async function saveDescriptionAction(
   }
 
   revalidatePath(`/client/post/${jobId}`, "layout");
+  redirect(`/client/post/${jobId}/schedule`);
+}
+
+// ---------------------------------------------------------------------------
+// Step 3 — when the client would like the artisan
+// ---------------------------------------------------------------------------
+
+const scheduleSchema = z.object({
+  jobId: uuid,
+  preferredDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a day from the list.")
+    .nullable(),
+  preferredWindow: z.enum(["morning", "afternoon", "evening"]).nullable(),
+});
+
+/**
+ * Save the client's preferred day and window, then move on to the location.
+ *
+ * Both fields are optional and "as soon as possible" is the default — see
+ * `src/lib/jobs/schedule.ts` and migration 0023 for why this is a preference
+ * rather than a booking.
+ *
+ * An empty string from the form means "not chosen" and becomes null, which is
+ * also what clears a previously-saved preference when someone goes back and
+ * picks "As soon as possible" instead. A window with no date is rejected by a
+ * database constraint; it is normalised away here, because making the client
+ * fix that is making them fix our data model.
+ */
+export async function saveScheduleAction(
+  _prev: JobActionState | null,
+  formData: FormData,
+): Promise<JobActionState> {
+  const rawDate = formData.get("preferredDate");
+  const rawWindow = formData.get("preferredWindow");
+
+  const parsed = scheduleSchema.safeParse({
+    jobId: formData.get("jobId"),
+    preferredDate: rawDate === "" || rawDate === null ? null : rawDate,
+    preferredWindow: rawWindow === "" || rawWindow === null ? null : rawWindow,
+  });
+
+  if (!parsed.success) {
+    return state({ ok: false, error: "That day could not be read. Pick one from the list." });
+  }
+
+  const { jobId, preferredDate } = parsed.data;
+  const preferredWindow = preferredDate ? parsed.data.preferredWindow : null;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("jobs")
+    .update({ preferred_date: preferredDate, preferred_window: preferredWindow })
+    .eq("id", jobId)
+    .eq("status", "draft");
+
+  if (error) {
+    console.error("[jobs] saveSchedule failed", error);
+    return state({ ok: false, error: "Could not save that. Try again." });
+  }
+
   redirect(`/client/post/${jobId}/location`);
 }
 
 // ---------------------------------------------------------------------------
-// Step 3 — pin the location
+// Step 4 — pin the location
 // ---------------------------------------------------------------------------
 
 const locationSchema = z.object({
@@ -318,7 +447,7 @@ export async function saveLocationAction(
 }
 
 // ---------------------------------------------------------------------------
-// Step 4 — post it
+// Step 5 — post it
 // ---------------------------------------------------------------------------
 
 export async function postJobAction(
@@ -779,7 +908,37 @@ export async function rateJobAction(
     return state({ ok: false, error: error.message });
   }
 
+  /**
+   * Rating a job is what closes it.
+   *
+   * Migration 0015 states the rule plainly — *"A paid job closes when the
+   * client rates it, or automatically after seven days"* — and then notes
+   * *"Ratings are Phase 6; the auto-close half works now"*. Phase 6 shipped
+   * `rate_job`, which writes the rating and recomputes the artisan's score, and
+   * nobody connected the other half. So a rated, fully-paid, finished job sat
+   * at `paid` until the seven-day sweep caught it.
+   *
+   * That is not a cosmetic delay. `paid` is in the **active** status group, so
+   * for a week the client's "In progress" tab and the artisan's "On now" filter
+   * both carried a job that everybody involved considered over.
+   *
+   * **A failure here does not fail the rating.** The rating is the thing the
+   * client asked for and it is already committed; `auto_close_paid_jobs` is
+   * still the backstop it always was. The right long-term home for this is
+   * inside `rate_job` itself, so a rating from anywhere closes the job — that
+   * is a migration, and this is the fix that does not need one deployed.
+   */
+  const { error: closeError } = await supabase.rpc("close_job", { p_job_id: jobId });
+
+  if (closeError) {
+    // Expected and harmless when the job is already `closed` — re-rating an
+    // old job comes straight back here.
+    console.info("[client] close_job after rating did not apply", closeError.message);
+  }
+
   revalidatePath(`/client/jobs/${jobId}`);
+  revalidatePath("/client/jobs");
+  revalidatePath("/client");
   return state({ ok: true });
 }
 

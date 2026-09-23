@@ -5,13 +5,13 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const base = [
-  "w-full min-h-11 rounded-field border bg-ink-0 px-3.5 py-2.5",
-  "text-ink-900 placeholder:text-ink-400",
-  "border-ink-300 shadow-xs",
+  "w-full min-h-11 rounded-field border bg-white px-3.5 py-2.5",
+  "text-navy-900 placeholder:text-copy-muted",
+  "border-hairline shadow-xs",
   "transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong",
-  "hover:border-ink-400",
-  "focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-600/12",
-  "disabled:cursor-not-allowed disabled:bg-ink-100 disabled:text-ink-500",
+  "hover:border-copy-muted",
+  "focus:border-navy-800 focus:outline-none focus:ring-4 focus:ring-navy-800/12",
+  "disabled:cursor-not-allowed disabled:bg-azure-50 disabled:text-copy-muted",
   "aria-[invalid=true]:border-danger-500 aria-[invalid=true]:focus:ring-danger-500/12",
 ].join(" ");
 
@@ -32,20 +32,20 @@ export function Input({ className, leading, ...props }: InputProps) {
   return (
     <div
       className={cn(
-        "group relative flex items-center rounded-field border border-ink-300 bg-ink-0 shadow-xs",
+        "group relative flex items-center rounded-field border border-hairline bg-white shadow-xs",
         "transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong",
-        "hover:border-ink-400",
-        "focus-within:border-brand-600 focus-within:ring-4 focus-within:ring-brand-600/12",
+        "hover:border-copy-muted",
+        "focus-within:border-navy-800 focus-within:ring-4 focus-within:ring-navy-800/12",
         "has-[input[aria-invalid=true]]:border-danger-500",
         className,
       )}
     >
-      <span className="flex select-none items-center pl-3.5 pr-2 text-ink-500">{leading}</span>
+      <span className="flex select-none items-center pl-3.5 pr-2 text-copy-muted">{leading}</span>
       <input
         className={cn(
           "min-h-11 w-full rounded-r-field bg-transparent py-2.5 pr-3.5",
-          "text-ink-900 placeholder:text-ink-400 focus:outline-none",
-          "disabled:cursor-not-allowed disabled:text-ink-500",
+          "text-navy-900 placeholder:text-copy-muted focus:outline-none",
+          "disabled:cursor-not-allowed disabled:text-copy-muted",
         )}
         {...props}
       />
@@ -86,14 +86,14 @@ export function Field({
 }) {
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label htmlFor={htmlFor} className="block text-sm font-medium text-ink-800">
+      <label htmlFor={htmlFor} className="block text-sm font-medium text-navy-900">
         {label}
         {required ? (
           <span className="ml-0.5 text-danger-600" aria-hidden>
             *
           </span>
         ) : (
-          <span className="ml-1.5 text-xs font-normal text-ink-400">optional</span>
+          <span className="ml-1.5 text-xs font-normal text-copy-muted">optional</span>
         )}
       </label>
 
@@ -108,7 +108,7 @@ export function Field({
           {error}
         </p>
       ) : hint ? (
-        <p id={`${htmlFor}-hint`} className="text-sm text-ink-500">
+        <p id={`${htmlFor}-hint`} className="text-sm text-copy-muted">
           {hint}
         </p>
       ) : null}

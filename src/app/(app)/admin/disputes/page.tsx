@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, ImageOff, ShieldAlert } from "lucide-react";
+import { ImageOff, ShieldAlert } from "lucide-react";
 
 import { DisputeDecision } from "./_components/dispute-decision";
 import { Badge } from "@/components/ui/badge";
@@ -36,17 +36,10 @@ export default async function DisputesPage() {
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/admin"
-        className="inline-flex items-center gap-1.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        Admin
-      </Link>
 
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-ink-900">Disputes</h1>
-        <p className="text-[0.9375rem] text-ink-600">
+        <h1 className="text-2xl font-semibold text-navy-900">Disputes</h1>
+        <p className="text-[0.9375rem] text-copy-muted">
           {live.length === 0
             ? "Nothing outstanding."
             : `${live.length} waiting on a decision.`}
@@ -56,9 +49,9 @@ export default async function DisputesPage() {
       {disputes.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center">
-            <ShieldAlert className="mx-auto size-6 text-ink-300" aria-hidden />
-            <p className="mt-2 text-sm font-medium text-ink-800">No disputes raised</p>
-            <p className="mx-auto mt-1 max-w-sm text-sm text-ink-500">
+            <ShieldAlert className="mx-auto size-6 text-hairline" aria-hidden />
+            <p className="mt-2 text-sm font-medium text-navy-900">No disputes raised</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-copy-muted">
               Clients and artisans can both report a problem on a finished job.
             </p>
           </CardContent>
@@ -72,18 +65,18 @@ export default async function DisputesPage() {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-[0.9375rem] font-medium text-ink-900">
+                        <h2 className="text-[0.9375rem] font-medium text-navy-900">
                           {dispute.reason}
                         </h2>
                         <Badge tone={TONE[dispute.status]}>{dispute.status}</Badge>
                       </div>
-                      <p className="tabular font-mono text-sm text-ink-500">
+                      <p className="tabular font-mono text-sm text-copy-muted">
                         {dispute.job?.reference ?? "job removed"} · raised {timeAgo(dispute.created_at)}
                       </p>
                       {dispute.raiser && (
-                        <p className="text-sm text-ink-600">
+                        <p className="text-sm text-copy-muted">
                           {dispute.raiser.full_name}{" "}
-                          <span className="text-ink-400">({dispute.raiser.role})</span> ·{" "}
+                          <span className="text-copy-muted">({dispute.raiser.role})</span> ·{" "}
                           <span className="tabular font-mono">
                             {formatPhoneForDisplay(dispute.raiser.phone)}
                           </span>
@@ -94,7 +87,7 @@ export default async function DisputesPage() {
                     {dispute.job && (
                       <Link
                         href={`/client/jobs/${dispute.job.id}`}
-                        className="shrink-0 text-sm text-ink-500 underline-offset-4 transition-colors hover:text-ink-900 hover:underline"
+                        className="shrink-0 text-sm text-copy-muted underline-offset-4 transition-colors hover:text-navy-900 hover:underline"
                       >
                         View job
                       </Link>
@@ -102,14 +95,14 @@ export default async function DisputesPage() {
                   </div>
 
                   {dispute.detail && (
-                    <p className="rounded-field bg-ink-25 px-3 py-2 text-sm text-ink-700">
+                    <p className="rounded-field bg-canvas px-3 py-2 text-sm text-copy">
                       {dispute.detail}
                     </p>
                   )}
 
                   {dispute.evidence.length > 0 && (
                     <div className="space-y-1.5">
-                      <p className="font-mono text-[0.6875rem] font-semibold tracking-[0.08em] text-ink-500 uppercase">
+                      <p className="font-mono text-[0.6875rem] font-semibold tracking-[0.08em] text-copy-muted uppercase">
                         Evidence
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -120,14 +113,14 @@ export default async function DisputesPage() {
                               href={url}
                               target="_blank"
                               rel="noreferrer"
-                              className="relative size-20 overflow-hidden rounded-field border border-ink-200 transition-colors hover:border-ink-400"
+                              className="relative size-20 overflow-hidden rounded-field border border-hairline transition-colors hover:border-copy-muted"
                             >
                               <Image src={url} alt="" fill sizes="80px" className="object-cover" />
                             </a>
                           ) : (
                             <span
                               key={path}
-                              className="img-slot grid size-20 place-items-center rounded-field text-[0.625rem] text-ink-400"
+                              className="img-slot grid size-20 place-items-center rounded-field text-[0.625rem] text-copy-muted"
                             >
                               <ImageOff className="size-4" aria-hidden />
                             </span>
@@ -138,11 +131,11 @@ export default async function DisputesPage() {
                   )}
 
                   {dispute.resolution ? (
-                    <div className="border-t border-ink-200 pt-3">
-                      <p className="font-mono text-[0.6875rem] font-semibold tracking-[0.08em] text-ink-500 uppercase">
+                    <div className="border-t border-hairline pt-3">
+                      <p className="font-mono text-[0.6875rem] font-semibold tracking-[0.08em] text-copy-muted uppercase">
                         Decision
                       </p>
-                      <p className="mt-0.5 text-sm text-ink-700">{dispute.resolution}</p>
+                      <p className="mt-0.5 text-sm text-copy">{dispute.resolution}</p>
                     </div>
                   ) : (
                     <DisputeDecision disputeId={dispute.id} />

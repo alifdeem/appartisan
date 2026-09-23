@@ -40,7 +40,7 @@ export function DocumentViewer({ documents }: { documents: SignedDocument[] }) {
 
   if (documents.length === 0) {
     return (
-      <p className="rounded-card border border-dashed border-ink-300 bg-ink-50 px-5 py-10 text-center text-sm text-ink-500">
+      <p className="rounded-card border border-dashed border-hairline bg-canvas px-5 py-10 text-center text-sm text-copy-muted">
         No documents uploaded.
       </p>
     );
@@ -51,16 +51,16 @@ export function DocumentViewer({ documents }: { documents: SignedDocument[] }) {
       <ul className="space-y-4">
         {documents.map((doc) => (
           <li key={doc.id} className="space-y-1.5">
-            <p className="text-sm font-medium text-ink-800">{docLabel(doc.doc_type)}</p>
+            <p className="text-sm font-medium text-navy-900">{docLabel(doc.doc_type)}</p>
 
             {doc.url ? (
               <button
                 type="button"
                 onClick={() => setOpen(doc)}
                 className={cn(
-                  "group relative block w-full overflow-hidden rounded-card border border-ink-200 bg-ink-100",
+                  "group relative block w-full overflow-hidden rounded-card border border-hairline bg-azure-50",
                   "transition-[border-color,transform] duration-[var(--duration-fast)] ease-out-strong",
-                  "hover:border-ink-400 active:scale-[0.995]",
+                  "hover:border-copy-muted active:scale-[0.995]",
                 )}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -74,7 +74,7 @@ export function DocumentViewer({ documents }: { documents: SignedDocument[] }) {
                 <span
                   className={cn(
                     "absolute right-2.5 bottom-2.5 inline-flex items-center gap-1.5 rounded-full",
-                    "bg-ink-950/70 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm",
+                    "bg-navy-950/70 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm",
                     "transition-opacity duration-[var(--duration-fast)]",
                     "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-visible:opacity-100",
                   )}
@@ -102,7 +102,7 @@ export function DocumentViewer({ documents }: { documents: SignedDocument[] }) {
           if (event.target === dialogRef.current) setOpen(null);
         }}
         className={cn(
-          "m-auto max-h-[92dvh] max-w-[95vw] bg-transparent p-0 backdrop:bg-ink-950/80",
+          "m-auto max-h-[92dvh] max-w-[95vw] bg-transparent p-0 backdrop:bg-navy-950/80",
           "backdrop:backdrop-blur-sm open:animate-fade-in",
         )}
       >
@@ -118,7 +118,7 @@ export function DocumentViewer({ documents }: { documents: SignedDocument[] }) {
             <button
               type="button"
               onClick={() => setOpen(null)}
-              className="absolute top-3 right-3 grid size-10 place-items-center rounded-full bg-ink-950/70 text-white backdrop-blur-sm transition-transform duration-[var(--duration-instant)] hover:bg-ink-950/85 active:scale-90"
+              className="absolute top-3 right-3 grid size-10 place-items-center rounded-full bg-navy-950/70 text-white backdrop-blur-sm transition-transform duration-[var(--duration-instant)] hover:bg-navy-950/85 active:scale-90"
             >
               <X className="size-5" aria-hidden />
               <span className="sr-only">Close</span>

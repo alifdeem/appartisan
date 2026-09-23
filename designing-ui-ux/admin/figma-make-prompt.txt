@@ -1,0 +1,42 @@
+Design an admin operations console for ArtisanGH, a verified home-services marketplace in Accra, Ghana. Operators run it on laptops and iPads to keep jobs moving and money flowing. Desktop-first at 1440px, plus tablet and mobile layouts.
+
+Brand: navy #0A2E73, deep navy #081F4D, azure #2F80ED, pale azure #EAF3FF, canvas #F8FBFF, hairline #DCE8F7, muted text #64748B. Space Grotesk headings, Inter body, IBM Plex Mono for every number. Currency GHS.
+
+Invent the sections, hierarchy and layout yourself. Make it feel like a premium operations product, not a stock dashboard template.
+
+Data it must carry:
+
+WAITING ON A HUMAN
+Artisans awaiting ID verification: 3
+Disputes open: 1
+Jobs no artisan accepted: 2
+Payouts that failed to reach an artisan: 1, GHS 340.00
+
+LIVE JOB PIPELINE (stage, count, who holds it up)
+Finding an artisan, 4, us
+Waiting on a price, 2, artisan
+Waiting on a deposit, 3, client
+On the way or on site, 6, artisan
+Waiting on sign-off, 1, client
+Waiting on the balance, 2, client
+
+ARTISAN SUPPLY
+Free now 12, On a job 6, Offline 9
+Offers sent and unanswered: 5
+Applications not yet approved: 4
+
+MONEY (settled only, no projections)
+Collected GHS 84,210.00
+Paid to artisans GHS 71,480.00
+Service fees kept GHS 9,105.00 (12% commission)
+Queued to send GHS 1,240.00
+
+VOLUME, LAST 14 DAYS
+Posted per day: 6,9,4,11,7,5,12,8,10,6,13,9,7,11
+Completed per day: 4,7,3,9,6,4,10,7,8,5,11,7,6,9
+
+TOTALS: 31 artisans (22 verified), 148 clients, 26 trades
+
+Navigation: Overview, Verification, Disputes, Matching, Trades, Transport bands, Platform settings.
+
+Include empty states, a loading state, and hover states.

@@ -238,7 +238,7 @@ export function VoiceRecorder({
 
   if (!supported && !hasRecording) {
     return (
-      <p className="rounded-card border border-dashed border-ink-300 bg-ink-50 px-3.5 py-3 text-sm text-ink-600">
+      <p className="rounded-[1.25rem] border border-dashed border-hairline bg-azure-50/60 px-4 py-3 text-note text-copy-muted">
         This browser cannot record audio — describe the job in writing above instead.
       </p>
     );
@@ -246,13 +246,13 @@ export function VoiceRecorder({
 
   if (hasRecording && phase === "idle") {
     return (
-      <div className="flex flex-wrap items-center gap-3 rounded-card border border-ink-200 bg-ink-50 p-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-[1.25rem] border border-hairline bg-azure-50/60 p-3">
         {existingUrl ? (
           // Native controls on purpose: a hand-built scrubber is one more thing
           // to get wrong on a phone, and every browser already ships a good one.
           <audio src={existingUrl} controls preload="none" className="h-10 min-w-0 flex-1" />
         ) : (
-          <p className="min-w-0 flex-1 text-sm text-ink-600">Voice note attached.</p>
+          <p className="min-w-0 flex-1 text-note text-copy-muted">Voice note attached.</p>
         )}
 
         {!disabled && (
@@ -281,7 +281,7 @@ export function VoiceRecorder({
             type="button"
             onClick={stop}
             className={cn(
-              "inline-flex min-h-11 items-center gap-2.5 rounded-field px-4",
+              "inline-flex min-h-11 items-center gap-2.5 rounded-full px-5",
               "bg-danger-600 text-white shadow-sm transition-transform duration-[var(--duration-instant)] active:scale-[0.98]",
             )}
           >
@@ -294,10 +294,10 @@ export function VoiceRecorder({
               <span className="absolute inline-flex size-full animate-pulse-ring rounded-full bg-danger-500" />
               <span className="relative inline-flex size-2.5 rounded-full bg-danger-500" />
             </span>
-            <span className="tabular font-mono text-sm font-medium text-ink-800">
+            <span className="tabular font-mono text-sm font-medium text-navy-900">
               {formatDuration(seconds)}
             </span>
-            <span className="text-xs text-ink-500">
+            <span className="text-2xs text-copy-muted">
               / {formatDuration(MAX_VOICE_SECONDS)}
             </span>
           </div>
@@ -305,7 +305,8 @@ export function VoiceRecorder({
       ) : (
         <Button
           type="button"
-          variant="secondary"
+          variant="navyOutline"
+          shape="pill"
           onClick={() => void start()}
           disabled={phase === "uploading"}
         >

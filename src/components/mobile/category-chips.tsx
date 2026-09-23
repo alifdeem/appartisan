@@ -1,46 +1,85 @@
-import Link from "next/link";
+"use client";
+
+import { Loader2 } from "lucide-react";
 
 import { CategoryIcon } from "@/components/marketplace/category-icon";
+import { TradeTile, useStartDraft } from "@/components/mobile/start-draft";
+import { cn } from "@/lib/utils";
 import type { CategoryRow } from "@/lib/supabase/types";
 
 /**
- * Browse by category.
+ * Browse by category — the reference's premium chip row.
  *
- * **Icons, not photographs.** The reference fills each card with a stock photo
- * of somebody at work. There are 26 trades here and four photographs in
- * `public/img/` — so matching the reference would mean either sourcing 26
- * stock images the client has not paid for, or repeating four across twenty-six
- * tiles, which reads as a bug. The icons are already in the database
- * (`categories.icon`), already admin-editable, and weigh nothing on a metered
- * Ghanaian connection.
+ * A pill per trade: a circular icon tile on the left, the name beside it,
+ * horizontally scrolled with `snap-x` so a flick lands on a chip rather than
+ * between two.
  *
- * Horizontally scrolled, as in the reference, because a 26-item grid on a phone
- * is a wall. `snap-x` so a flick lands on a tile rather than between two.
+ * **Tapping one starts the job.** The chip submits `startDraftAction` and the
+ * next screen is the description form with that trade already chosen — see
+ * `start-draft.tsx` for why these are buttons rather than links. Before this
+ * they were links into the picker, which meant choosing a trade on the home
+ * screen and then being asked to choose a trade.
  *
- * No "Available · at your area" badge. The reference shows one on every card,
- * where it is decoration; here it would be a claim about supply we cannot make
- * until a job is actually posted and the matcher has run.
+ * **Why none of them is "active".** The reference paints one chip navy and the
+ * rest white, which reads as a selected filter. Nothing is selected here — the
+ * chips are twenty-six ways out of this screen, not a control with a value. So
+ * the navy fill is the **press** state instead: the reference's visual language
+ * kept exactly, moved to the moment where it means something.
+ *
+ * **Icons, not photographs.** There are 26 trades. Photographs are reserved for
+ * the six featured cards below, where there is room for them to be worth their
+ * bytes; at chip size a photograph is a 40px thumbnail nobody can read.
  */
 export function CategoryChips({ categories }: { categories: CategoryRow[] }) {
   return (
-    <div className="-mx-5 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <ul className="flex snap-x snap-mandatory gap-3">
+    <div className="-mx-5 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul className="flex snap-x gap-2.5">
         {categories.map((category) => (
           <li key={category.id} className="snap-start">
-            <Link
-              href={`/client/post?category=${category.slug}`}
-              className="flex h-full w-[7.5rem] flex-col gap-2.5 rounded-card border border-ink-200 bg-white p-3.5 transition-colors hover:border-ink-300"
-            >
-              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-700">
-                <CategoryIcon name={category.icon ?? "wrench"} className="size-5" />
-              </span>
-              <span className="text-sm leading-snug font-medium text-balance text-ink-900">
-                {category.name}
-              </span>
-            </Link>
+            <Chip category={category} />
           </li>
         ))}
       </ul>
     </div>
+  );
+}
+
+function Chip({ category }: { category: CategoryRow }) {
+  const { pending, chosenId } = useStartDraft();
+  const busy = pending && chosenId === category.id;
+
+  return (
+    <TradeTile
+      categoryId={category.id}
+      className={cn(
+        "group flex min-h-13 items-center gap-2.5 rounded-full border border-hairline bg-white py-2 pr-5 pl-2 whitespace-nowrap shadow-[var(--shadow-float)]",
+        "transition-[background-color,border-color,color,transform] duration-[var(--duration-fast)] ease-out-strong",
+        "hover:border-navy-800 hover:bg-navy-800 active:scale-[0.97]",
+        busy && "border-navy-800 bg-navy-800",
+      )}
+    >
+      <span
+        className={cn(
+          "grid size-9 shrink-0 place-items-center rounded-full transition-colors duration-[var(--duration-fast)]",
+          busy ? "bg-white/15 text-white" : "bg-azure-50 text-navy-800",
+          "group-hover:bg-white/15 group-hover:text-white",
+        )}
+      >
+        {busy ? (
+          <Loader2 className="size-[1.125rem] animate-spin" aria-hidden />
+        ) : (
+          <CategoryIcon name={category.icon ?? "wrench"} className="size-[1.125rem]" />
+        )}
+      </span>
+
+      <span
+        className={cn(
+          "text-note font-semibold transition-colors duration-[var(--duration-fast)] group-hover:text-white",
+          busy ? "text-white" : "text-navy-900",
+        )}
+      >
+        {category.name}
+      </span>
+    </TradeTile>
   );
 }

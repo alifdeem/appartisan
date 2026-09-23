@@ -197,16 +197,10 @@ export class PaystackPaymentProvider implements PaymentProvider {
         }),
       });
 
-      const supabase = createAdminClient();
-      await supabase.from("payouts").insert({
-        job_id: input.jobId,
-        provider_id: input.providerId,
-        amount: input.amountGhs,
-        status: data.status === "success" ? "paid" : "processing",
-        transfer_reference: data.transfer_code,
-        is_simulated: false,
-      });
-
+      // No `payouts` write here. `settle_payment` already queued the row this
+      // transfer is against, and the caller records the outcome on it — an
+      // adapter that inserts its own produces two rows for one job. See the
+      // note on the mock adapter's `transfer`.
       return {
         ok: true,
         transferReference: data.transfer_code,

@@ -8,26 +8,30 @@ const badgeVariants = cva(
   {
     variants: {
       tone: {
-        neutral: "bg-ink-100 text-ink-700",
-        brand: "bg-brand-50 text-brand-800",
-        money: "bg-accent-50 text-accent-800",
+        // The sweep from the old palette mapped three of these onto the same
+        // azure tint, which made neutral, brand and info identical. Pulled
+        // apart again: neutral is quiet, brand is the filled primary marker,
+        // money is navy because navy is money everywhere in this system.
+        neutral: "bg-azure-50 text-copy-muted",
+        brand: "bg-navy-800 text-white",
+        money: "bg-navy-50 text-navy-900",
         success: "bg-success-50 text-success-700",
         warning: "bg-warning-50 text-warning-700",
         danger: "bg-danger-50 text-danger-700",
-        info: "bg-info-50 text-info-700",
+        info: "bg-azure-100 text-azure-700",
       },
       outline: {
         true: "bg-transparent ring-1 ring-inset",
       },
     },
     compoundVariants: [
-      { tone: "neutral", outline: true, class: "ring-ink-300 text-ink-700" },
-      { tone: "brand", outline: true, class: "ring-brand-300 text-brand-800" },
-      { tone: "money", outline: true, class: "ring-accent-300 text-accent-800" },
+      { tone: "neutral", outline: true, class: "ring-hairline text-copy-muted" },
+      { tone: "brand", outline: true, class: "ring-navy-300 text-navy-900" },
+      { tone: "money", outline: true, class: "ring-navy-200 text-navy-800" },
       { tone: "success", outline: true, class: "ring-success-500/40 text-success-700" },
       { tone: "warning", outline: true, class: "ring-warning-500/40 text-warning-700" },
       { tone: "danger", outline: true, class: "ring-danger-500/40 text-danger-700" },
-      { tone: "info", outline: true, class: "ring-info-500/40 text-info-700" },
+      { tone: "info", outline: true, class: "ring-azure-500/40 text-azure-700" },
     ],
     defaultVariants: { tone: "neutral" },
   },

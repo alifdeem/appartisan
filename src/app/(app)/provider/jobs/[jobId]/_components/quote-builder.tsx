@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { Hammer, Package, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { callAction } from "@/lib/action-call";
+
 import { saveQuoteAction, sendQuoteAction } from "@/app/(app)/provider/actions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input, Textarea } from "@/components/ui/input";
+import { FieldLabel } from "@/components/mobile/field-label";
 import { QuoteSummary } from "@/components/marketplace/quote-summary";
 import { formatAmount } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -42,7 +43,30 @@ import type { QuoteContext } from "@/lib/jobs/matching";
  *  • **Saving is not a separate step the artisan has to remember.** Sending
  *    saves first, in one tap, and a draft is only persisted when they ask for
  *    one. A "save then send" pair is two chances to leave a quote unsent.
+ *
+ * ---
+ *
+ * **On the controls.** The redesign's note about `ui/input.tsx` is that it
+ * stays for dense grids where a boxed control is correct, and this is the
+ * canonical dense grid — three fields to a line, several lines, all being
+ * compared. That judgement still holds, so these are boxed rather than the
+ * airy `PanelInput` used on one-question screens.
+ *
+ * What did not survive is the *warm* version of boxed. `Input` fills with
+ * `ink-0` and focuses to a **green** ring, and a green ring is the loudest
+ * possible wrong note on a navy screen. The skin below is the same control in
+ * the cool palette, kept local because the quote builder is the only dense form
+ * in the redesign — `ui/input.tsx` is left exactly as the admin console needs
+ * it rather than being forked for one caller.
  */
+
+const lineControl = [
+  "w-full min-h-11 rounded-[0.75rem] border border-hairline bg-white px-3 py-2.5",
+  "text-ui text-navy-900 placeholder:text-copy-muted/60",
+  "transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong",
+  "hover:border-azure-300",
+  "focus:border-azure-500 focus:ring-4 focus:ring-azure-500/15 focus:outline-none",
+].join(" ");
 
 type Kind = "labour" | "material";
 
@@ -109,23 +133,26 @@ export function QuoteBuilder({
     setError(null);
 
     startTransition(async () => {
-      const saved = await saveQuoteAction({
-        jobId,
-        items: complete.map((line) => ({
-          kind: line.kind,
-          description: line.description.trim(),
-          quantity: num(line.quantity) || 1,
-          unitPrice: num(line.unitPrice),
-        })),
-        notes: notes.trim() || undefined,
-      });
+      const saved = await callAction(() =>
+        saveQuoteAction({
+          jobId,
+          items: complete.map((line) => ({
+            kind: line.kind,
+            description: line.description.trim(),
+            quantity: num(line.quantity) || 1,
+            unitPrice: num(line.unitPrice),
+          })),
+          notes: notes.trim() || undefined,
+        }),
+      );
 
-      if (!saved.ok || !saved.quoteId) {
+      const quoteId = "quoteId" in saved ? saved.quoteId : undefined;
+      if (!saved.ok || !quoteId) {
         setError(saved.error ?? "Could not save the quote.");
         return;
       }
 
-      const sent = await sendQuoteAction(saved.quoteId);
+      const sent = await callAction(() => sendQuoteAction(quoteId));
 
       if (!sent.ok) {
         // The draft survived, so nothing the artisan typed is lost — say so,
@@ -141,169 +168,201 @@ export function QuoteBuilder({
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-5">
-        <div className="space-y-1">
-          <h2 className="text-base font-semibold text-ink-900">Build your price</h2>
-          <p className="max-w-prose text-sm leading-relaxed text-ink-600">
-            Break it down the way you would explain it. Clients approve itemised prices far more
-            often than a single figure, and they cannot haggle a line they understand.
-          </p>
-        </div>
+    <section className="space-y-5 rounded-[1.5rem] border border-hairline bg-white p-5 shadow-[var(--shadow-float)]">
+      <div className="space-y-1.5">
+        <h2 className="font-space text-lede font-bold text-navy-900">Build your price</h2>
+        <p className="text-note leading-relaxed text-copy-muted">
+          Break it down the way you would explain it. Clients approve itemised prices far more
+          often than a single figure, and they cannot haggle a line they understand.
+        </p>
+      </div>
 
-        <ul className="space-y-2.5">
-          {lines.map((line, index) => (
-            <li
-              key={line.key}
-              className="rounded-card border border-ink-200 bg-ink-25 p-3 shadow-xs"
-            >
-              <div className="flex items-center justify-between gap-2 pb-2.5">
-                {/* Two options, so a segmented control rather than a select —
-                    one tap instead of tap, scroll, tap. */}
-                <div
-                  className="inline-flex rounded-field border border-ink-300 bg-ink-0 p-0.5"
-                  role="group"
-                  aria-label="Line type"
-                >
-                  {(["labour", "material"] as const).map((kind) => (
-                    <button
-                      key={kind}
-                      type="button"
-                      onClick={() => update(line.key, { kind })}
-                      aria-pressed={line.kind === kind}
-                      className={cn(
-                        "inline-flex min-h-8 items-center gap-1.5 rounded-[0.4rem] px-2.5 text-xs font-medium",
-                        "transition-colors duration-[var(--duration-instant)] ease-out-strong",
-                        line.kind === kind
-                          ? "bg-brand-700 text-white"
-                          : "text-ink-600 hover:text-ink-900",
-                      )}
-                    >
-                      {kind === "labour" ? (
-                        <Hammer className="size-3.5" aria-hidden />
-                      ) : (
-                        <Package className="size-3.5" aria-hidden />
-                      )}
-                      {kind === "labour" ? "Labour" : "Materials"}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="tabular font-mono text-sm font-medium text-ink-900">
-                    {formatAmount(num(line.quantity) * num(line.unitPrice))}
-                  </span>
-                  {lines.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => remove(line.key)}
-                      title="Remove line"
-                      className="grid size-8 place-items-center rounded-field text-ink-400 transition-colors hover:bg-danger-50 hover:text-danger-600"
-                    >
-                      <Trash2 className="size-4" aria-hidden />
-                      <span className="sr-only">Remove line {index + 1}</span>
-                    </button>
-                  )}
-                </div>
+      <ul className="space-y-2.5">
+        {lines.map((line, index) => (
+          <li key={line.key} className="rounded-[1.25rem] bg-canvas p-3">
+            <div className="flex items-center justify-between gap-2 pb-2.5">
+              {/* Two options, so a segmented control rather than a select —
+                  one tap instead of tap, scroll, tap. */}
+              <div
+                className="inline-flex rounded-full border border-hairline bg-white p-0.5"
+                role="group"
+                aria-label="Line type"
+              >
+                {(["labour", "material"] as const).map((kind) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    onClick={() => update(line.key, { kind })}
+                    aria-pressed={line.kind === kind}
+                    className={cn(
+                      "inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-2xs font-semibold",
+                      "transition-colors duration-[var(--duration-instant)] ease-out-strong",
+                      line.kind === kind
+                        ? "bg-navy-800 text-white"
+                        : "text-copy-muted hover:text-navy-900",
+                    )}
+                  >
+                    {kind === "labour" ? (
+                      <Hammer className="size-3.5" aria-hidden />
+                    ) : (
+                      <Package className="size-3.5" aria-hidden />
+                    )}
+                    {kind === "labour" ? "Labour" : "Materials"}
+                  </button>
+                ))}
               </div>
 
-              <div className="space-y-2">
-                <Input
-                  value={line.description}
-                  onChange={(event) => update(line.key, { description: event.target.value })}
-                  maxLength={200}
-                  placeholder={
-                    line.kind === "labour"
-                      ? "Trace fault and replace two socket outlets"
-                      : "Double socket outlet"
-                  }
-                  aria-label={`Line ${index + 1} description`}
+              <div className="flex items-center gap-1.5">
+                <span className="tabular font-mono text-note font-bold text-navy-900">
+                  {formatAmount(num(line.quantity) * num(line.unitPrice))}
+                </span>
+                {lines.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => remove(line.key)}
+                    title="Remove line"
+                    className="grid size-9 place-items-center rounded-full text-copy-muted transition-colors hover:bg-danger-50 hover:text-danger-600"
+                  >
+                    <Trash2 className="size-4" aria-hidden />
+                    <span className="sr-only">Remove line {index + 1}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <input
+                value={line.description}
+                onChange={(event) => update(line.key, { description: event.target.value })}
+                maxLength={200}
+                placeholder={
+                  line.kind === "labour"
+                    ? "Trace fault and replace two socket outlets"
+                    : "Double socket outlet"
+                }
+                aria-label={`Line ${index + 1} description`}
+                className={lineControl}
+              />
+
+              <div className="grid grid-cols-[4.5rem_1fr] gap-2">
+                <input
+                  value={line.quantity}
+                  onChange={(event) => update(line.key, { quantity: event.target.value })}
+                  inputMode="decimal"
+                  placeholder="1"
+                  aria-label={`Line ${index + 1} quantity`}
+                  className={cn(lineControl, "tabular text-center font-mono")}
                 />
 
-                <div className="grid grid-cols-[5.5rem_1fr] gap-2">
-                  <Input
-                    value={line.quantity}
-                    onChange={(event) => update(line.key, { quantity: event.target.value })}
-                    inputMode="decimal"
-                    placeholder="1"
-                    className="tabular text-center font-mono"
-                    aria-label={`Line ${index + 1} quantity`}
-                  />
-                  <Input
+                {/* The currency sits inside the field rather than beside it, so
+                    the digits start where the eye already is. */}
+                <div
+                  className={cn(
+                    "flex items-center rounded-[0.75rem] border border-hairline bg-white",
+                    "transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong",
+                    "hover:border-azure-300",
+                    "focus-within:border-azure-500 focus-within:ring-4 focus-within:ring-azure-500/15",
+                  )}
+                >
+                  <span className="pl-3 font-mono text-2xs font-semibold text-copy-muted select-none">
+                    GHS
+                  </span>
+                  <input
                     value={line.unitPrice}
                     onChange={(event) => update(line.key, { unitPrice: event.target.value })}
                     inputMode="decimal"
                     placeholder="0.00"
-                    className="tabular font-mono"
                     aria-label={`Line ${index + 1} unit price`}
-                    leading={<span className="text-xs font-medium">GHS</span>}
+                    className="tabular min-h-11 w-full min-w-0 rounded-r-[0.75rem] bg-transparent px-2.5 font-mono text-ui text-navy-900 placeholder:text-copy-muted/60 focus:outline-none"
                   />
                 </div>
               </div>
-            </li>
-          ))}
-        </ul>
+            </div>
+          </li>
+        ))}
+      </ul>
 
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" size="sm" onClick={() => setLines((c) => [...c, blank("labour")])}>
-            <Plus />
-            Labour
-          </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={() => setLines((c) => [...c, blank("material")])}>
-            <Plus />
-            Materials
-          </Button>
-        </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="navyOutline"
+          size="sm"
+          shape="pill"
+          onClick={() => setLines((c) => [...c, blank("labour")])}
+        >
+          <Plus />
+          Labour
+        </Button>
+        <Button
+          type="button"
+          variant="navyOutline"
+          size="sm"
+          shape="pill"
+          onClick={() => setLines((c) => [...c, blank("material")])}
+        >
+          <Plus />
+          Materials
+        </Button>
+      </div>
 
-        <div className="space-y-1.5">
-          <label htmlFor="quoteNotes" className="block text-sm font-medium text-ink-800">
-            Anything the client should know
-            <span className="ml-1.5 text-xs font-normal text-ink-400">optional</span>
-          </label>
-          <Textarea
-            id="quoteNotes"
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            rows={2}
-            maxLength={1000}
-            placeholder="Price includes testing the whole kitchen ring. I can come Thursday morning."
-          />
-        </div>
+      <div className="space-y-2">
+        <FieldLabel as="label" htmlFor="quoteNotes">
+          Anything the client should know
+          <span className="ml-1.5 tracking-normal normal-case opacity-70">optional</span>
+        </FieldLabel>
+        <textarea
+          id="quoteNotes"
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          rows={2}
+          maxLength={1000}
+          placeholder="Price includes testing the whole kitchen ring. I can come Thursday morning."
+          className={cn(lineControl, "resize-none")}
+        />
+      </div>
 
-        {/* The two numbers, live. This is the part of the screen PLAN.md §4
-            actually asks for. */}
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-ink-800">What this means</h3>
-          <QuoteSummary
-            subtotal={subtotal}
-            transportFee={context.transportFee}
-            commissionPct={context.commissionPct}
-          />
-          {context.distanceKm !== null && (
-            <p className="text-xs text-ink-500">
-              Transport is set by distance band —{" "}
-              <span className="tabular font-mono">{context.distanceKm.toFixed(1)} km</span> puts
-              this job at {formatAmount(context.transportFee)}, and it is paid to you in full.
-            </p>
-          )}
-        </div>
-
-        {error && (
-          <p role="alert" className="animate-fade-in text-sm text-danger-600">
-            {error}
+      {/* The two numbers, live. This is the part of the screen PLAN.md §4
+          actually asks for. */}
+      <div className="space-y-2">
+        <FieldLabel>What this means</FieldLabel>
+        <QuoteSummary
+          subtotal={subtotal}
+          transportFee={context.transportFee}
+          commissionPct={context.commissionPct}
+        />
+        {context.distanceKm !== null && (
+          <p className="text-2xs leading-relaxed text-copy-muted">
+            Transport is set by distance band —{" "}
+            <span className="tabular font-mono">{context.distanceKm.toFixed(1)} km</span> puts this
+            job at {formatAmount(context.transportFee)}, and it is paid to you in full.
           </p>
         )}
+      </div>
 
-        <Button type="button" size="lg" block loading={pending} disabled={!ready} onClick={send}>
-          <Send />
-          Send this price to the client
-        </Button>
-
-        <p className="text-center text-xs leading-relaxed text-ink-500">
-          They approve it before you travel. If they decline, the job goes back out and you keep
-          your place in the queue for the next one.
+      {error && (
+        <p role="alert" className="animate-fade-in text-note text-danger-600">
+          {error}
         </p>
-      </CardContent>
-    </Card>
+      )}
+
+      <Button
+        type="button"
+        variant="navy"
+        size="lg"
+        shape="pill"
+        block
+        loading={pending}
+        disabled={!ready}
+        onClick={send}
+      >
+        <Send />
+        Send this price to the client
+      </Button>
+
+      <p className="text-center text-2xs leading-relaxed text-copy-muted">
+        They approve it before you travel. If they decline, the job goes back out and you keep your
+        place in the queue for the next one.
+      </p>
+    </section>
   );
 }

@@ -29,6 +29,54 @@
   --color-brand-900: oklch(0.305 0.064 155);
   --color-brand-950: oklch(0.201 0.045 155);
 
+  /* ---- Navy: the 2026 brand ---------------------------------------------- */
+  /* The new reference (designing-ui-ux/) replaces the deep green with a navy +
+     azure system. It is defined as its own ramp rather than by overwriting
+     `brand-*` because the app migrates screen by screen: auth first, then the
+     pages that follow. Overwriting `brand-*` would have repainted twenty-six
+     screens that have not been redesigned yet, in a single commit, with nobody
+     looking at them.
+
+     Anchors from the brief: navy-800 is #0A2E73 (primary) and navy-900 is
+     #081F4D (deep). The rest of the ramp is interpolated in oklch so the
+     lightness steps are perceptually even — a hand-picked hex ramp is where
+     "almost right" hover states come from. */
+  --color-navy-50: oklch(0.971 0.014 258);
+  --color-navy-100: oklch(0.936 0.031 258);
+  --color-navy-200: oklch(0.876 0.059 259);
+  --color-navy-300: oklch(0.789 0.095 260);
+  --color-navy-400: oklch(0.676 0.134 261);
+  --color-navy-500: oklch(0.558 0.152 262);
+  --color-navy-600: oklch(0.455 0.143 263);
+  --color-navy-700: oklch(0.386 0.126 264);
+  --color-navy-800: oklch(0.322 0.108 264); /* #0A2E73 — primary            */
+  --color-navy-900: oklch(0.251 0.087 265); /* #081F4D — deep               */
+  --color-navy-950: oklch(0.187 0.065 265);
+
+  /* ---- Azure: the interactive accent -------------------------------------- */
+  /* #2F80ED is the brief's accent blue, #EAF3FF its soft tint. This is what
+     carries focus rings, selection, links and the check marks — navy is the
+     weight, azure is the signal. */
+  --color-azure-50: oklch(0.972 0.014 252); /* #EAF3FF — soft               */
+  --color-azure-100: oklch(0.941 0.030 252);
+  --color-azure-200: oklch(0.884 0.060 252);
+  --color-azure-300: oklch(0.805 0.098 252);
+  --color-azure-400: oklch(0.716 0.137 252);
+  --color-azure-500: oklch(0.628 0.168 254); /* #2F80ED — accent            */
+  --color-azure-600: oklch(0.552 0.176 257);
+  --color-azure-700: oklch(0.470 0.156 258);
+
+  /* ---- The cool surface set ---------------------------------------------- */
+  /* The `ink-*` ramp above is warm on purpose, and it stays warm for the
+     screens still built on it. These four are the cool equivalents the new
+     reference needs, named for their job rather than their position in a ramp
+     so a call site reads as intent: `bg-canvas`, `border-hairline`,
+     `text-copy`, `text-copy-muted`. */
+  --color-canvas: oklch(0.987 0.007 250); /* #F8FBFF — app ground           */
+  --color-hairline: oklch(0.915 0.021 249); /* #DCE8F7 — borders, rules     */
+  --color-copy: oklch(0.212 0.024 265); /* #111827 — body                   */
+  --color-copy-muted: oklch(0.554 0.034 257); /* #64748B — secondary        */
+
   /* ---- Accent: amber. Money only. -------------------------------------- */
   /* Earnings, payouts, deposit due, primary CTAs. If it is not about money or
      not the single most important action on the screen, it is not amber. */
@@ -136,6 +184,30 @@
 
   --radius-field: 0.625rem;
   --radius-card: 1rem;
+  /* The new reference's floating card. 32px is large enough that the corner
+     reads as a deliberate shape rather than as "rounded corners", which is the
+     whole reason the mockup's login card feels like an object sitting on the
+     screen instead of a div. */
+  --radius-sheet: 2rem;
+
+  /* ---- Elevation, cool set ----------------------------------------------- */
+  /* The warm shadows above turn grey on the cool navy ground. These are tinted
+     with the navy itself, which is what makes the floating card read as lifted
+     off #F8FBFF rather than as outlined.
+
+     `glow-navy` is the "subtle glow" the brief asks for under the primary
+     button: a tight contact shadow plus a wider, very faint navy bloom. It is
+     the colour of the button, never black — a black shadow under a saturated
+     button is the single commonest tell of an undesigned CTA. */
+  --shadow-sheet:
+    0 1px 2px 0 oklch(0.251 0.087 265 / 0.04), 0 12px 32px -8px oklch(0.251 0.087 265 / 0.10),
+    0 32px 64px -24px oklch(0.251 0.087 265 / 0.12);
+  --shadow-float:
+    0 1px 2px 0 oklch(0.251 0.087 265 / 0.05), 0 6px 16px -6px oklch(0.251 0.087 265 / 0.10);
+  --shadow-glow-navy:
+    0 1px 2px 0 oklch(0.251 0.087 265 / 0.20), 0 8px 20px -6px oklch(0.322 0.108 264 / 0.38);
+  --shadow-glow-navy-lg:
+    0 2px 4px 0 oklch(0.251 0.087 265 / 0.22), 0 14px 30px -8px oklch(0.322 0.108 264 / 0.46);
 
   /* ---- Type ------------------------------------------------------------- */
   /* Three faces, three jobs. Geist was the scaffold default and is now the most
@@ -151,6 +223,16 @@
      mono    — IBM Plex Mono. Quote line items, receipts, reference numbers, the
        OTP. This is what makes a quote look like a document instead of a div. */
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  /* space — Space Grotesk. The new reference's heading face, and the reason
+     "Get trusted professionals" in the mockup reads as engineered rather than
+     editorial: it is a grotesque with mono-derived letterforms, so it sets
+     tight and geometric where Bricolage sets warm and wide.
+
+     Scoped to the redesigned screens rather than swapped into `--font-display`,
+     for the same reason navy is its own ramp: `h1,h2,h3` inherit the display
+     face app-wide, so overwriting it would re-typeset every screen in the app
+     including the ones nobody has looked at since Phase 2. */
+  --font-space: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
@@ -196,9 +278,21 @@
      nothing read as cartoonish. 0.98 is enough to suggest arrival. */
   --animate-fade-up: fade-up var(--duration-base) var(--ease-out-strong) both;
   --animate-fade-in: fade-in var(--duration-fast) var(--ease-out-strong) both;
+  /* The trade sheet. `--ease-drawer` exists for exactly this: a panel that
+     arrives from an edge decelerates harder than a fade does, or it reads as
+     sliding to a stop rather than settling. */
+  --animate-sheet-in: sheet-in var(--duration-base) var(--ease-drawer) both;
   --animate-pulse-ring: pulse-ring 2s var(--ease-out-strong) infinite;
   --animate-shimmer: shimmer 1.6s linear infinite;
   --animate-caret-blink: caret-blink 1.05s steps(1) infinite;
+  /* The selection card's check. Starts at 0.4 rather than 0 — a mark that grows
+     from nothing reads as cartoonish (see the note on fade-up) — and overshoots
+     once on the spring curve so the choice feels *answered*, not merely
+     recorded. 
+     The stroke is drawn rather than faded in: `stroke-dashoffset` from the
+     path's own length to 0, which is what makes it look written. */
+  --animate-check-pop: check-pop var(--duration-base) var(--ease-spring) both;
+  --animate-check-draw: check-draw var(--duration-base) var(--ease-out-strong) 60ms both;
   --animate-indeterminate: indeterminate 900ms cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
 
   /* The splash loader.
@@ -226,6 +320,30 @@
     }
     to {
       transform: translateX(200%);
+    }
+  }
+
+  @keyframes check-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes check-draw {
+    from {
+      /* The tick path's own length, measured not guessed: a 6.4-unit stroke
+         down-right then a 13.4-unit stroke up-right. Anything shorter leaves
+         the mark partly drawn at rest; anything longer delays its start. If
+         the path in `option-card.tsx` changes, so does this. */
+      stroke-dashoffset: 20;
+    }
+    to {
+      stroke-dashoffset: 0;
     }
   }
 
@@ -257,6 +375,22 @@
       opacity: 0;
     }
     to {
+      opacity: 1;
+    }
+  }
+
+  /* Translate only — no scale. A sheet that grows into place reads as a modal
+     appearing from nowhere; one that rises reads as a drawer being pulled up,
+     which is what it is. The blanket reduced-motion rule below collapses this
+     to its end frame, which is the correct resting state, so it needs no
+     branch of its own (unlike the loops above). */
+  @keyframes sheet-in {
+    from {
+      transform: translateY(12%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
       opacity: 1;
     }
   }

@@ -1,49 +1,78 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
-
-import { CategoryIcon } from "@/components/marketplace/category-icon";
-import { cn } from "@/lib/utils";
+import {
+  ArrowUpRight,
+  Banknote,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardList,
+  Clock,
+  MapPin,
+  TrendingUp,
+  User,
+} from "lucide-react";
 
 import { AvailabilityToggle } from "@/components/provider/availability-toggle";
-import { Badge } from "@/components/ui/badge";
+import { CategoryIcon } from "@/components/marketplace/category-icon";
+import { FieldLabel } from "@/components/mobile/field-label";
 import { IncomingOffer } from "@/components/provider/incoming-offer";
-import { getLiveOffer, listProviderJobs } from "@/lib/jobs/matching";
-import { jobStatus } from "@/lib/jobs/status";
-import { Card, CardContent } from "@/components/ui/card";
-import { RoadmapPanel } from "@/components/app/roadmap-panel";
-import { Stat } from "@/components/app/stat";
-import { ReliabilityPanel } from "@/components/provider/reliability-panel";
+import { JobStatusBadge } from "@/components/jobs/job-status-badge";
+import { LiveJobCard } from "@/components/jobs/live-job-card";
+import { PerformancePanel } from "@/components/provider/performance-panel";
+import { ProviderHero } from "@/components/provider/provider-hero";
 import { VerificationPanel } from "@/components/provider/verification-panel";
 import { formatCedis } from "@/lib/money";
+import { getLiveOffer, listProviderJobs } from "@/lib/jobs/matching";
+import { isLiveJob, jobStatus } from "@/lib/jobs/status";
+import { photos } from "@/lib/images";
 import {
   getMyProvider,
   getMyReliability,
+  listMyPayouts,
   listProviderCategories,
   listProviderDocuments,
   listVerificationReviews,
+  summarisePayouts,
 } from "@/lib/providers/queries";
 import { getCurrentProfile } from "@/lib/supabase/server";
+import { cn, timeAgo } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "My work" };
+export const metadata: Metadata = { title: "Today" };
 
 /**
- * The artisan's home.
+ * The artisan's dashboard, built to `designing-ui-ux/artisan/artisan dasboard.png`.
  *
- * Ordered by what the person came here to do. For an approved artisan that is
- * one thing — go online — so the toggle is the first object on the screen and
- * verification drops to a quiet confirmation below it. For everybody else the
- * toggle is inert, so verification comes first and the toggle sits underneath
- * as the thing being worked towards.
+ * **The order changes with state rather than being one compromise.** An offer
+ * outranks everything — it is the only object in the app with a clock on it. An
+ * approved artisan came to go online, so the toggle is the hero and
+ * verification drops to a footnote. An unverified one cannot go online at all,
+ * so verification leads and the toggle sits underneath as the thing being
+ * worked towards. The two audiences never overlap, so a fork is cheaper than a
+ * compromise.
  *
- * The same two components in a different order, decided by state. It is worth
- * doing because the two audiences never overlap: an artisan is unverified once
- * and approved for the rest of their time on the platform.
+ * **Three things the reference draws that are not here, and why:**
+ *
+ *  • **"My Wallet — withdraw earnings".** Not a design decision. PLAN.md §137
+ *    and §141: Bank of Ghana treats creating and managing a wallet as E-Money
+ *    Issuer activity, which carries a **GHS 25m minimum capital requirement**,
+ *    and the plan's rule is explicit — *never show a user-facing wallet
+ *    balance, no stored credit, no top-ups*. ArtisanGH sits in the PSP lane:
+ *    money moves per job, straight to the artisan's own Mobile Money, and there
+ *    is nothing to withdraw because nothing is ever held. The card is
+ *    **Earnings** instead, which is the same destination told truthfully.
+ *  • **A "Messages" tab with an unread dot.** §14 — there is no in-app
+ *    messaging.
+ *  • **A "Discover" tab.** An artisan discovers nothing; work is offered to
+ *    them by the matcher. Two tabs that open nothing are worse than four that
+ *    do, so the bar carries Today, Jobs, Earnings and Account.
+ *
+ * **The three quick cards carry live numbers**, unlike the reference's, where
+ * they are pure navigation duplicating its own tab bar. A card that says
+ * "2 on now" or "GHS 460 on the way" is a status row that happens to be
+ * tappable, which earns the space twice over.
  */
-export default async function ProviderDashboard({
-  searchParams,
-}: PageProps<"/provider">) {
+export default async function ProviderDashboard({ searchParams }: PageProps<"/provider">) {
   const [profile, provider, params] = await Promise.all([
     getCurrentProfile(),
     getMyProvider(),
@@ -56,21 +85,28 @@ export default async function ProviderDashboard({
   // normally prevents this; a Server Component must never assume it ran.
   if (!provider) redirect("/");
 
-  const [trades, documents, reviews, liveOffer, jobs, reliability] = await Promise.all([
+  const [trades, documents, reviews, liveOffer, jobs, reliability, payouts] = await Promise.all([
     listProviderCategories(provider.profile_id),
     listProviderDocuments(provider.profile_id),
     listVerificationReviews(provider.profile_id),
     getLiveOffer(),
     listProviderJobs(),
     getMyReliability(),
+    listMyPayouts(),
   ]);
 
   const status = provider.verification_status;
   const approved = status === "approved";
+  const earnings = summarisePayouts(payouts);
 
-  // Work in hand, newest first. Everything past `paid` is history and belongs
-  // in an earnings screen rather than on top of today's job.
   const activeJobs = jobs.filter((job) => jobStatus(job.status).group === "active");
+
+  /**
+   * The job to lead with. `listProviderJobs` orders by `updated_at`, so this is
+   * whatever moved most recently — which for work in hand is the one that needs
+   * them next.
+   */
+  const liveJob = activeJobs.find((job) => isLiveJob(job.status)) ?? null;
   const firstName = profile.full_name.split(" ")[0];
   const justSubmitted = params.submitted === "1" && status === "pending";
 
@@ -98,40 +134,32 @@ export default async function ProviderDashboard({
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-ink-900">Hello, {firstName}</h1>
-          <p className="text-[0.9375rem] text-ink-600">
-            {approved
-              ? provider.availability === "online"
-                ? "You're visible to clients near you."
-                : "You're not receiving jobs right now."
-              : "Your work, your earnings, and your verification."}
-          </p>
-        </div>
-
-        {trades.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {trades.slice(0, 3).map((trade) => (
-              <Badge key={trade.id} tone="neutral">
-                {trade.name}
-              </Badge>
-            ))}
-            {trades.length > 3 && <Badge tone="neutral">+{trades.length - 3}</Badge>}
-          </div>
-        )}
-      </div>
+    <div className="space-y-5 pb-28">
+      <ProviderHero
+        greeting={greetingFor(new Date())}
+        name={firstName}
+        blurb={
+          approved
+            ? "Keep up the good work. Here is where you stand today."
+            : "Finish getting verified and jobs near you start coming through."
+        }
+        city={provider.base_city}
+        radiusKm={provider.service_radius_km}
+        activeCount={activeJobs.length}
+        heroSrc={photos.providerHero}
+      >
+        {availability}
+      </ProviderHero>
 
       {/* Shown once, on the redirect that follows submitting. Not a toast: the
           artisan has just navigated, and a message that disappears after four
           seconds is the wrong medium for "we have your application". */}
       {justSubmitted && (
-        <div className="animate-fade-up flex items-start gap-3 rounded-card border border-success-500/35 bg-success-50 px-4 py-3.5">
+        <div className="animate-fade-up flex items-start gap-3 rounded-[1.25rem] border border-success-500/35 bg-success-50 px-4 py-3.5">
           <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success-700" aria-hidden />
           <div className="space-y-0.5">
-            <p className="text-sm font-semibold text-success-700">Application sent</p>
-            <p className="text-sm leading-relaxed text-ink-700">
+            <p className="text-note font-semibold text-success-700">Application sent</p>
+            <p className="text-note leading-relaxed text-navy-900/80">
               Our team will review your documents and call you on{" "}
               <span className="tabular font-mono">{profile.phone}</span>. You will see the result
               on this screen.
@@ -149,8 +177,7 @@ export default async function ProviderDashboard({
                 id: liveOffer.id,
                 expiresAt: liveOffer.expires_at,
                 sentAt: liveOffer.sent_at,
-                distanceKm:
-                  liveOffer.distance_km === null ? null : Number(liveOffer.distance_km),
+                distanceKm: liveOffer.distance_km === null ? null : Number(liveOffer.distance_km),
                 categoryName: liveOffer.job.category?.name ?? "Job",
                 categoryIcon: liveOffer.job.category?.icon ?? "wrench",
                 landmark: liveOffer.job.landmark,
@@ -160,63 +187,141 @@ export default async function ProviderDashboard({
         listening={approved && provider.availability === "online"}
       />
 
-      {approved ? (
+      {!approved && verification}
+
+      {approved && (
         <>
-          {availability}
-          {verification}
-        </>
-      ) : (
-        <>
-          {verification}
-          {availability}
+          {/**
+           * Work in hand outranks money earned.
+           *
+           * An artisan standing outside somebody's gate does not need this
+           * week's total; they need the job and the next button on it. When
+           * nothing is live the question flips — *was switching on worth it* —
+           * and the earnings banner is the answer. The two never both matter
+           * most, so they share the slot rather than stacking.
+           *
+           * Earnings is not lost either way: the quick-card row below carries
+           * it, with the amount on its way.
+           */}
+          {liveJob ? (
+            <LiveJobCard
+              href={`/provider/jobs/${liveJob.id}`}
+              eyebrow={jobStatus(liveJob.status).label}
+              title={liveJob.category?.name ?? "Your job"}
+              subtitle={liveJob.landmark}
+              status={liveJob.status}
+              // No person: the artisan already knows whose house it is, and the
+              // client's name is not what they need at a glance. What they need
+              // is the next thing to do.
+              action={jobStatus(liveJob.status).providerBlurb}
+            />
+          ) : (
+            <EarningsBanner week={earnings.thisWeek} />
+          )}
+
+          <div className="grid grid-cols-3 items-stretch gap-2.5">
+            <QuickCard
+              href="/provider/jobs"
+              icon={<ClipboardList />}
+              title="My jobs"
+              detail={activeJobs.length > 0 ? `${activeJobs.length} on now` : "Nothing on"}
+            />
+            <QuickCard
+              href="/provider/earnings"
+              icon={<Banknote />}
+              title="Earnings"
+              detail={
+                earnings.onTheWay > 0 ? `${formatCedis(earnings.onTheWay)} coming` : "View payouts"
+              }
+            />
+            <QuickCard
+              href="/provider/account"
+              icon={<User />}
+              title="Profile"
+              detail={
+                trades.length > 0
+                  ? `${trades.length} trade${trades.length === 1 ? "" : "s"}`
+                  : "No trades yet"
+              }
+            />
+          </div>
         </>
       )}
 
-      {/* Only once they are approved: an artisan still waiting on their Ghana
-          Card review has no offers to have a reliability record about, and a
-          panel full of dashes reads as a problem with them. */}
-      {approved && reliability && <ReliabilityPanel stats={reliability} />}
-
       {activeJobs.length > 0 && (
-        <section className="space-y-2.5">
-          <h2 className="text-sm font-semibold text-ink-800">Your work</h2>
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="font-space text-title-sm font-bold text-navy-900">Today&rsquo;s jobs</h2>
+            <Link
+              href="/provider/jobs"
+              className="tap text-note font-semibold text-azure-600 underline-offset-4 hover:underline"
+            >
+              View all
+            </Link>
+          </div>
+
           <ul className="space-y-2.5">
-            {activeJobs.map((job) => {
+            {activeJobs.slice(0, 3).map((job) => {
               const presentation = jobStatus(job.status);
-              const needsPrice = job.status === "quote_pending";
 
               return (
                 <li key={job.id}>
                   <Link
                     href={`/provider/jobs/${job.id}`}
                     className={cn(
-                      "group flex items-center gap-3.5 rounded-card border bg-ink-0 px-4 py-3.5 shadow-sm",
-                      "transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out-strong",
-                      // The one that needs something from the artisan right now
-                      // is marked. The rest are simply in flight.
-                      needsPrice
-                        ? "border-warning-500/40 hover:border-warning-500/60"
-                        : "border-ink-200 hover:border-ink-300",
-                      "hover:shadow-md",
+                      // Soft shadow only, and room to breathe — the brief's
+                      // rule 6. The old card was bordered and compressed.
+                      "group block rounded-[1.25rem] bg-white p-5",
+                      "shadow-[var(--shadow-float)]",
+                      "transition-[box-shadow,border-color,transform] duration-[var(--duration-fast)] ease-out-strong",
+                      "hover:-translate-y-0.5 hover:shadow-[var(--shadow-sheet)] active:translate-y-0",
                     )}
                   >
-                    <span className="grid size-10 shrink-0 place-items-center rounded-field bg-ink-100 text-ink-600">
-                      <CategoryIcon name={job.category?.icon ?? "wrench"} className="size-5" />
-                    </span>
-
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[0.9375rem] font-medium text-ink-900">
-                        {job.category?.name ?? "Job"}
+                    <div className="flex items-start gap-3.5">
+                      <span className="grid size-14 shrink-0 place-items-center rounded-[1.125rem] bg-azure-50 text-navy-800 [&_svg]:size-7">
+                        <CategoryIcon name={job.category?.icon ?? "wrench"} />
                       </span>
-                      <span className="block truncate text-sm text-ink-600">
-                        {needsPrice ? "Send your price" : presentation.label}
-                        {job.landmark && <span className="text-ink-400"> · {job.landmark}</span>}
-                      </span>
-                    </span>
 
-                    <Badge tone={needsPrice ? "warning" : presentation.tone}>
-                      {presentation.label}
-                    </Badge>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <h3 className="truncate font-space text-note font-bold text-navy-900">
+                            {job.category?.name ?? "Job"}
+                          </h3>
+                          <JobStatusBadge status={job.status} />
+                        </div>
+
+                        <p className="mt-1.5 line-clamp-2 text-ui leading-relaxed text-copy-muted">
+                          {presentation.providerBlurb ?? presentation.label}
+                        </p>
+
+                        {/* The landmark gets the full width; the pill sits
+                            beside the *time* only. Sharing one row with the
+                            pill truncated "Blue gate opposite the pharmacy" to
+                            "Blue gate oppos…", and the landmark is the line an
+                            artisan navigates by. */}
+                        {job.landmark && (
+                          <p className="mt-2.5 flex items-center gap-1.5 text-note text-copy-muted">
+                            <MapPin className="size-3.5 shrink-0" aria-hidden />
+                            <span className="truncate">{job.landmark}</span>
+                          </p>
+                        )}
+
+                        <div className="mt-1.5 flex items-center justify-between gap-3">
+                          <p className="flex shrink-0 items-center gap-1.5 text-note text-copy-muted">
+                            <Clock className="size-3.5 shrink-0" aria-hidden />
+                            {timeAgo(job.updated_at)}
+                          </p>
+
+                          {/* Not a nested link — the whole card already
+                              navigates, and an anchor inside an anchor is
+                              invalid markup that swallows the card's target. */}
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-azure-50 px-3.5 py-2 text-note font-semibold text-azure-700 transition-colors duration-[var(--duration-fast)] group-hover:bg-azure-100">
+                            View details
+                            <ChevronRight className="size-3.5" aria-hidden />
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </Link>
                 </li>
               );
@@ -225,62 +330,184 @@ export default async function ProviderDashboard({
         </section>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Jobs completed" value={String(provider.jobs_completed)} />
-        <Stat
-          label="Rating"
-          value={provider.rating_count > 0 ? Number(provider.rating_avg).toFixed(1) : "—"}
-          note={provider.rating_count ? `${provider.rating_count} ratings` : "No ratings yet"}
-        />
-        <Stat label="Paid out" value={formatCedis(0)} note="Lifetime earnings" />
-      </div>
-
-      {/* The full history, not just the latest. An artisan who was rejected,
-          fixed it and was approved should be able to see that sequence — it is
-          the only record of what they were asked to change. */}
-      {reviews.length > 1 && (
-        <Card>
-          <CardContent className="space-y-3">
-            <h2 className="text-sm font-semibold text-ink-800">Your verification history</h2>
-            <ol className="space-y-2.5">
-              {reviews.map((review) => (
-                <li key={review.id} className="flex items-baseline gap-3 text-sm">
-                  <Badge
-                    tone={
-                      review.decision === "approved"
-                        ? "success"
-                        : review.decision === "suspended"
-                          ? "danger"
-                          : "warning"
-                    }
-                  >
-                    {review.decision}
-                  </Badge>
-                  <span className="min-w-0 flex-1 text-ink-700">
-                    {review.call_notes ?? <span className="text-ink-400">No notes recorded.</span>}
-                  </span>
-                  <time className="shrink-0 text-xs text-ink-500">
-                    {new Date(review.reviewed_at).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </time>
-                </li>
-              ))}
-            </ol>
-          </CardContent>
-        </Card>
+      {/* Only once approved: an artisan still waiting on their Ghana Card review
+          has no record to have a performance panel about, and a row of dashes
+          reads as a problem with them. */}
+      {approved && (
+        <section className="space-y-3">
+          <h2 className="font-space text-title-sm font-bold text-navy-900">Your performance</h2>
+          <PerformancePanel
+            ratingAvg={provider.rating_avg}
+            ratingCount={provider.rating_count}
+            jobsCompleted={provider.jobs_completed}
+            verification={status}
+            reliability={reliability}
+          />
+        </section>
       )}
 
-      <RoadmapPanel
-        title="What's still to come"
-        description="Offers, quoting, travel, sign-off and your reliability score all work. What is left is the money leaving our account for yours."
-        items={[
-          { label: "Real payouts to your mobile money wallet", phase: "Phase 8" },
-          { label: "Earnings history across all your jobs", phase: "Phase 7" },
-          { label: "An Android app that tracks with the screen off", phase: "Later" },
-        ]}
-      />
+      {/**
+       * The reference's "grow your business" panel, shown only when it is true.
+       *
+       * Its copy — *get discovered by more customers* — describes a marketplace
+       * this is not: clients never browse artisans, the matcher assigns them.
+       * What genuinely decides how much work reaches someone is how many trades
+       * they cover, because that is the filter the matcher runs. So the card
+       * says that, and appears only while it is actionable. A permanent promo
+       * panel is furniture.
+       */}
+      {approved && trades.length > 0 && trades.length <= 2 && (
+        <Link
+          href="/provider/apply/trades"
+          className="relative isolate block overflow-hidden rounded-[1.75rem] bg-linear-to-r from-navy-900 via-navy-800 to-azure-600 p-6 shadow-[var(--shadow-glow-navy-lg)] transition-transform duration-[var(--duration-fast)] ease-out-strong hover:-translate-y-0.5 active:translate-y-0"
+        >
+          {/* The lighter wash the reference puts behind its illustration. It
+              stays whether or not a 3D render ever lands, so the right-hand
+              side is never dead space. */}
+          <span
+            aria-hidden
+            className="absolute -top-8 -right-12 -z-10 size-44 rounded-full bg-azure-300/45 blur-2xl"
+          />
+
+          <FieldLabel className="text-white/65">Grow your business</FieldLabel>
+          {/* `pr-28` holds the right third clear for the illustration the
+              reference puts there. The wash below fills it until a render
+              exists, so the card never reads as half-empty. */}
+          <p className="mt-2 pr-24 font-space text-title-sm leading-tight font-bold text-balance text-white">
+            Cover more trades
+          </p>
+          <p className="mt-1.5 max-w-[15rem] pr-20 text-note leading-snug text-white/80">
+            Jobs only reach artisans who cover the trade.
+          </p>
+          <span className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white px-5 text-note font-bold text-navy-900">
+            Add trades
+            <ArrowUpRight className="size-4" aria-hidden />
+          </span>
+        </Link>
+      )}
+
+      {/* Approved artisans get verification as a quiet footnote rather than a
+          panel — it is settled, and repeating it above the fold every day
+          suggests it might not be. */}
+      {approved && <div className="opacity-90">{verification}</div>}
     </div>
+  );
+}
+
+/**
+ * Good morning / afternoon / evening, in **Accra time**.
+ *
+ * Ghana is UTC+0 year round with no DST, so the server's UTC hour *is* the
+ * artisan's local hour. Written out rather than left implicit because it is
+ * only true for this market, and a deploy region change would not make it
+ * false — but a second market would.
+ */
+function greetingFor(now: Date): string {
+  const hour = now.getUTCHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+/** This week's money, as the reference's navy banner. */
+function EarningsBanner({ week }: { week: number }) {
+  return (
+    <Link
+      href="/provider/earnings"
+      className={cn(
+        // `flex` is load-bearing, not decoration: `Link` renders an `<a>`,
+        // which is `display: inline` by default. A rewrite of this class list
+        // once dropped it, and an inline box paints its background only behind
+        // its text fragments — the gradient was set the whole time and the
+        // banner rendered as three navy smears with the content stacked.
+        "flex items-center gap-4",
+        // 26px and a lit surface, per the brief: a flat navy fill reads as a
+        // block of colour, so a soft highlight sits over the gradient at the
+        // top-left and falls away — the "internal lighting" the reference has.
+        "relative isolate overflow-hidden rounded-[1.625rem] p-5",
+        "bg-linear-to-br from-navy-700 via-navy-800 to-navy-900",
+        "shadow-[var(--shadow-glow-navy-lg)]",
+        "transition-transform duration-[var(--duration-fast)] ease-out-strong",
+        "hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]",
+      )}
+    >
+      <span
+        aria-hidden
+        className="absolute -top-16 -left-10 -z-10 size-48 rounded-full bg-azure-400/25 blur-3xl"
+      />
+
+      <span
+        aria-hidden
+        className="grid size-11 shrink-0 place-items-center rounded-full bg-white/12 text-white"
+      >
+        <TrendingUp className="size-5" />
+      </span>
+
+      {/* `min-w-0` plus nowrap on both lines: at 360px the middle column is
+          about 150px, and without these the eyebrow broke across two lines and
+          "GHS 1,320.00" wrapped mid-figure. The number is the point of this
+          banner — it is the one thing here allowed to push the pill. */}
+      <span className="min-w-0 flex-1">
+        <FieldLabel className="whitespace-nowrap text-white/60">Earnings this week</FieldLabel>
+        <span className="tabular mt-1 block truncate font-mono text-title-sm leading-none font-bold text-white">
+          {formatCedis(week)}
+        </span>
+      </span>
+
+      <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/15 px-3 py-2 text-2xs font-semibold whitespace-nowrap text-white">
+        Details
+        <ChevronRight className="size-3.5" aria-hidden />
+      </span>
+    </Link>
+  );
+}
+
+function QuickCard({
+  href,
+  icon,
+  title,
+  detail,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        // No border. The brief is explicit that outlining every surface is what
+        // made the first build read flat — these are lifted by shadow instead.
+        "flex h-full flex-col gap-2.5 rounded-[1.375rem] bg-white p-4",
+        "shadow-[var(--shadow-float)]",
+        "transition-[box-shadow,transform] duration-[var(--duration-fast)] ease-out-strong",
+        "hover:-translate-y-0.5 hover:shadow-[var(--shadow-sheet)]",
+        "active:translate-y-0 active:scale-[0.97]",
+      )}
+    >
+      <span className="flex items-start justify-between gap-1">
+        <span
+          aria-hidden
+          className="grid size-11 place-items-center rounded-full bg-linear-to-b from-navy-800 to-navy-900 text-white [&_svg]:size-5"
+        >
+          {icon}
+        </span>
+        {/* Opposite the icon rather than beside the text: at a third of a
+            360px screen there is no room for a chevron next to "GHS 1,320.00
+            coming" without squeezing the figure. */}
+        <ChevronRight className="mt-1 size-4 shrink-0 text-azure-400" aria-hidden />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-note font-bold text-navy-900">{title}</span>
+        {/* Wraps rather than truncates. At a third of a 360px screen
+            "GHS 1,320.00 coming" does not fit on one line, and truncating it
+            to "GHS 1,320.0…" turns the only number on the card into a
+            half-read figure — worse than two lines. */}
+        <span className="mt-0.5 block line-clamp-2 text-2xs leading-tight text-copy-muted">
+          {detail}
+        </span>
+      </span>
+    </Link>
   );
 }

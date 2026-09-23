@@ -18,9 +18,9 @@ export function Stat({ label, value, note }: { label: string; value: string; not
   return (
     <Card>
       <CardContent className="space-y-0.5">
-        <p className="text-xs font-medium tracking-wide text-ink-500 uppercase">{label}</p>
-        <p className="font-mono tabular text-2xl font-semibold text-ink-900">{value}</p>
-        {note && <p className="text-xs text-ink-400">{note}</p>}
+        <p className="text-xs font-medium tracking-wide text-copy-muted uppercase">{label}</p>
+        <p className="font-mono tabular text-2xl font-semibold text-navy-900">{value}</p>
+        {note && <p className="text-xs text-copy-muted">{note}</p>}
       </CardContent>
     </Card>
   );

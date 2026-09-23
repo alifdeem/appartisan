@@ -124,35 +124,23 @@ export class MockPaymentProvider implements PaymentProvider {
     };
   }
 
+  /**
+   * Send the money out.
+   *
+   * **This no longer writes to `payouts`.** It used to insert its own row,
+   * which was wrong twice over: `settle_payment` (migration 0015) already
+   * creates the payout the moment the balance lands — *"Queued, not paid.
+   * `transfer` is the adapter's job; this row is what makes a failed transfer
+   * recoverable rather than invisible"* — so an adapter that inserts produces
+   * two rows for one job, and the artisan's earnings double-count.
+   *
+   * An adapter's job is to talk to the payment provider and report what it
+   * said. Which row that answer belongs to is the caller's business, and the
+   * caller is `/api/cron/payouts`.
+   */
   async transfer(input: TransferInput): Promise<TransferResult> {
     const transferReference = `mock_trf_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
-    const supabase = createAdminClient();
-
-    const { error } = await supabase.from("payouts").insert({
-      job_id: input.jobId,
-      provider_id: input.providerId,
-      amount: input.amountGhs,
-      status: "paid",
-      transfer_reference: transferReference,
-      is_simulated: true,
-      settled_at: new Date().toISOString(),
-      raw_payload: {
-        momo_number: input.momoNumber,
-        momo_network: input.momoNetwork,
-        reason: input.reason ?? null,
-      },
-    });
-
-    if (error) {
-      return {
-        ok: false,
-        transferReference,
-        status: "failed",
-        simulated: true,
-        error: error.message,
-      };
-    }
-
+    void input;
     return { ok: true, transferReference, status: "paid", simulated: true };
   }
 

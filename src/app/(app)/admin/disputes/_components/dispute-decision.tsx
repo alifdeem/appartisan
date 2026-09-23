@@ -4,6 +4,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { callAction } from "@/lib/action-call";
+
 import { resolveDisputeAction, type AdminActionState } from "@/app/(app)/admin/actions";
 import { Button } from "@/components/ui/button";
 
@@ -32,7 +34,7 @@ export function DisputeDecision({ disputeId }: { disputeId: string }) {
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const next = await resolveDisputeAction(null, formData);
+      const next = await callAction(() => resolveDisputeAction(null, formData));
       setState(next);
 
       if (next.ok) {
@@ -48,7 +50,7 @@ export function DisputeDecision({ disputeId }: { disputeId: string }) {
   const needsNote = decision !== "investigating";
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3 border-t border-ink-200 pt-3">
+    <form onSubmit={onSubmit} className="space-y-3 border-t border-hairline pt-3">
       <input type="hidden" name="disputeId" value={disputeId} />
       <input type="hidden" name="status" value={decision} />
 
@@ -61,8 +63,8 @@ export function DisputeDecision({ disputeId }: { disputeId: string }) {
             onClick={() => setDecision(option)}
             className={
               decision === option
-                ? "min-h-9 rounded-full border border-ink-900 bg-ink-900 px-3 text-sm capitalize text-ink-0"
-                : "min-h-9 rounded-full border border-ink-200 bg-ink-0 px-3 text-sm capitalize text-ink-700 transition-colors hover:border-ink-300"
+                ? "min-h-9 rounded-full border border-navy-900 bg-navy-900 px-3 text-sm capitalize text-white"
+                : "min-h-9 rounded-full border border-hairline bg-white px-3 text-sm capitalize text-copy transition-colors hover:border-hairline"
             }
           >
             {option}
@@ -81,7 +83,7 @@ export function DisputeDecision({ disputeId }: { disputeId: string }) {
             : "Any note for the record (optional)"
         }
         maxLength={2000}
-        className="w-full rounded-field border border-ink-200 bg-ink-25 px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-ink-400 focus:outline-none"
+        className="w-full rounded-field border border-hairline bg-canvas px-3 py-2 text-sm text-navy-900 placeholder:text-copy-muted focus:border-copy-muted focus:outline-none"
       />
 
       {state?.fieldErrors?.resolution && (

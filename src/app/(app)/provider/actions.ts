@@ -706,6 +706,34 @@ export async function advanceJobAction(
   });
 
   if (error) {
+    /**
+     * The retry case, and why it is handled here rather than reported.
+     *
+     * A tap that reaches the database and whose *response* is lost on the way
+     * back leaves the artisan looking at a button that appears not to have
+     * worked. They press it again — which is exactly the right instinct — and
+     * `advance_job_execution` refuses, because the job has already moved and
+     * `arrived → arrived` is not a legal edge. The artisan is then told "A job
+     * cannot go from arrived to arrived", which reads as a broken app at the
+     * precise moment they are standing in somebody's kitchen.
+     *
+     * So: if the job is already where the tap was trying to put it, the tap
+     * succeeded. Re-read and say so. This makes the step idempotent from the
+     * caller's side without loosening the state machine, which still refuses
+     * the transition — the difference is only in how the refusal is read.
+     */
+    const { data: current } = await supabase
+      .from("jobs")
+      .select("status")
+      .eq("id", parsed.data.jobId)
+      .maybeSingle();
+
+    if (current?.status === parsed.data.to) {
+      revalidatePath(`/provider/jobs/${parsed.data.jobId}`);
+      revalidatePath("/provider");
+      return state({ ok: true });
+    }
+
     console.error("[provider] advance_job_execution failed", error.message);
     return state({ ok: false, error: error.message });
   }

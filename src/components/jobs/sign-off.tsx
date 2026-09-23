@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { PenLine } from "lucide-react";
 import { toast } from "sonner";
 
+import { callAction } from "@/lib/action-call";
+
 import { signOffJobAction } from "@/app/(app)/client/actions";
 import type { JobActionState } from "@/app/(app)/client/actions";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Textarea } from "@/components/ui/input";
+import { PanelField, PanelInput, panelControlClasses } from "@/components/mobile/panel-field";
 
 /**
  * Signing the work off.
@@ -23,6 +25,10 @@ import { Field, Input, Textarea } from "@/components/ui/input";
  * cannot be charged without the customer approving a fresh prompt, so the
  * sequence has to be sign first, then pay while the artisan is still on site.
  * Bundling them would imply the money moves on signing, which it cannot.
+ *
+ * The azure ground is deliberate and it is the only form in the app that gets
+ * it. This is the moment a client accepts that a job is finished and a payment
+ * becomes due, and it should not look like the notes field it sits next to.
  */
 export function SignOff({ jobId }: { jobId: string }) {
   const router = useRouter();
@@ -36,7 +42,7 @@ export function SignOff({ jobId }: { jobId: string }) {
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const next = await signOffJobAction(null, formData);
+      const next = await callAction(() => signOffJobAction(null, formData));
       setState(next);
 
       if (next.ok) {
@@ -51,37 +57,49 @@ export function SignOff({ jobId }: { jobId: string }) {
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-4 rounded-card border border-ink-200 bg-ink-0 p-4 shadow-sm"
+      className="animate-fade-up space-y-4 rounded-[1.5rem] border border-azure-200 bg-linear-to-b from-azure-50 to-white p-5 shadow-[var(--shadow-float)]"
     >
       <input type="hidden" name="jobId" value={jobId} />
 
       <div>
-        <h2 className="text-sm font-semibold text-ink-900">Happy with the work?</h2>
-        <p className="mt-0.5 text-sm text-ink-600">
+        <h2 className="font-space text-lede font-bold text-navy-900">Happy with the work?</h2>
+        <p className="mt-1 text-note leading-relaxed text-copy-muted">
           Check it over before you sign. Once you sign, the balance is due and the artisan is paid.
         </p>
       </div>
 
-      <Field
+      <PanelField
         label="Type your name to sign"
         htmlFor="signature"
-        required
         error={state?.fieldErrors?.signature}
       >
-        <Input id="signature" name="signature" autoComplete="name" maxLength={80} required />
-      </Field>
+        <PanelInput
+          id="signature"
+          name="signature"
+          autoComplete="name"
+          maxLength={80}
+          required
+          invalid={Boolean(state?.fieldErrors?.signature)}
+        />
+      </PanelField>
 
-      <Field label="Anything to note" htmlFor="signoff-notes" error={state?.fieldErrors?.notes}>
-        <Textarea
+      <PanelField
+        label="Anything to note"
+        htmlFor="signoff-notes"
+        optional
+        error={state?.fieldErrors?.notes}
+      >
+        <textarea
           id="signoff-notes"
           name="notes"
           rows={2}
           maxLength={1000}
-          placeholder="Optional — anything you want on the record."
+          placeholder="Anything you want on the record."
+          className={panelControlClasses(Boolean(state?.fieldErrors?.notes), "resize-none")}
         />
-      </Field>
+      </PanelField>
 
-      <Button type="submit" disabled={pending} block>
+      <Button type="submit" variant="navy" size="lg" shape="pill" block loading={pending}>
         <PenLine />
         {pending ? "Signing…" : "Sign off the work"}
       </Button>

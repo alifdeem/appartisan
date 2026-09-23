@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, Clock } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { formatPhoneForDisplay } from "@/lib/phone";
@@ -56,17 +56,10 @@ export default async function VerificationQueuePage({
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <Link
-          href="/admin"
-          className="inline-flex items-center gap-1.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          Admin
-        </Link>
 
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-ink-900">Verification</h1>
-          <p className="text-[0.9375rem] text-ink-600">
+          <h1 className="text-2xl font-semibold text-navy-900">Verification</h1>
+          <p className="text-[0.9375rem] text-copy-muted">
             {(counts.pending ?? 0) === 0
               ? "Nobody is waiting for review."
               : `${counts.pending} artisan${counts.pending === 1 ? "" : "s"} waiting for review.`}
@@ -88,15 +81,15 @@ export default async function VerificationQueuePage({
                 "inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium",
                 "transition-colors duration-[var(--duration-fast)] ease-out-strong",
                 selected
-                  ? "bg-ink-900 text-ink-0"
-                  : "border border-ink-300 bg-ink-0 text-ink-700 hover:bg-ink-50",
+                  ? "bg-navy-900 text-white"
+                  : "border border-hairline bg-white text-copy hover:bg-canvas",
               )}
             >
               {tab.label}
               <span
                 className={cn(
                   "tabular font-mono text-xs",
-                  selected ? "text-ink-0/70" : "text-ink-400",
+                  selected ? "text-white/70" : "text-copy-muted",
                 )}
               >
                 {count}
@@ -107,18 +100,18 @@ export default async function VerificationQueuePage({
       </nav>
 
       {providers.length === 0 ? (
-        <div className="rounded-card border border-dashed border-ink-300 bg-ink-50 px-5 py-14 text-center">
-          <p className="text-sm font-medium text-ink-800">
+        <div className="rounded-card border border-dashed border-hairline bg-canvas px-5 py-14 text-center">
+          <p className="text-sm font-medium text-navy-900">
             {status === "pending" ? "Queue is clear" : "Nobody here"}
           </p>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-ink-500">
+          <p className="mx-auto mt-1 max-w-sm text-sm text-copy-muted">
             {status === "pending"
               ? "Every application has been reviewed. New ones appear here as they come in."
               : "No artisans have this status right now."}
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-ink-200 overflow-hidden rounded-card border border-ink-200 bg-ink-0 shadow-sm">
+        <ul className="divide-y divide-hairline overflow-hidden rounded-card border border-hairline bg-white shadow-sm">
           {providers.map((provider) => (
             <li key={provider.profile_id}>
               <QueueRow provider={provider} status={status} />
@@ -150,23 +143,23 @@ function QueueRow({
   return (
     <Link
       href={`/admin/verification/${provider.profile_id}`}
-      className="group flex items-center gap-3.5 px-4 py-3.5 transition-colors duration-[var(--duration-instant)] hover:bg-ink-50"
+      className="group flex items-center gap-3.5 px-4 py-3.5 transition-colors duration-[var(--duration-instant)] hover:bg-canvas"
     >
-      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-ink-100 text-sm font-semibold text-ink-600">
+      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-azure-50 text-sm font-semibold text-copy-muted">
         {initials || "?"}
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[0.9375rem] font-medium text-ink-900">{name}</span>
-        <span className="tabular block truncate font-mono text-xs text-ink-500">
-          {provider.profile?.phone ? formatPhoneForDisplay(provider.profile.phone) : "—"}
+        <span className="block truncate text-[0.9375rem] font-medium text-navy-900">{name}</span>
+        <span className="tabular block truncate font-mono text-xs text-copy-muted">
+          {provider.profile?.phone ? formatPhoneForDisplay(provider.profile.phone) : "-"}
           {provider.base_city && <span className="font-sans"> · {provider.base_city}</span>}
         </span>
       </span>
 
       {status === "pending" && waitingSince ? (
-        <span className="hidden shrink-0 items-center gap-1.5 text-sm text-ink-600 sm:flex">
-          <Clock className="size-3.5 text-ink-400" aria-hidden />
+        <span className="hidden shrink-0 items-center gap-1.5 text-sm text-copy-muted sm:flex">
+          <Clock className="size-3.5 text-copy-muted" aria-hidden />
           <span className="tabular font-mono">{timeAgo(waitingSince)}</span>
         </span>
       ) : (
@@ -188,7 +181,7 @@ function QueueRow({
       )}
 
       <ArrowRight
-        className="size-4 shrink-0 text-ink-300 transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5 group-hover:text-ink-500"
+        className="size-4 shrink-0 text-hairline transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5 group-hover:text-copy-muted"
         aria-hidden
       />
     </Link>

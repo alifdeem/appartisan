@@ -86,7 +86,7 @@ export function VerificationPanel({
   const started = progress > 0;
 
   return (
-    <section className={cn("overflow-hidden rounded-card border shadow-sm", tone.ring, tone.wash)}>
+    <section className={cn("overflow-hidden rounded-[1.25rem] border", tone.ring, tone.wash)}>
       <div className="flex flex-wrap items-start gap-4 p-5">
         <span className={cn("grid size-11 shrink-0 place-items-center rounded-full", tone.mark)}>
           <Icon className="size-5" aria-hidden />
@@ -94,7 +94,7 @@ export function VerificationPanel({
 
         <div className="min-w-[15rem] flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-semibold text-ink-900">
+            <h2 className="font-space text-note font-bold text-navy-900">
               {status === "approved"
                 ? "You're verified"
                 : status === "pending"
@@ -122,7 +122,7 @@ export function VerificationPanel({
             </Badge>
           </div>
 
-          <p className="max-w-prose text-sm leading-relaxed text-ink-600">
+          <p className="text-note leading-relaxed text-copy-muted">
             {status === "approved" &&
               "Clients can see your Ghana Card and phone are verified. Go online to start receiving jobs."}
             {status === "pending" && (
@@ -145,9 +145,9 @@ export function VerificationPanel({
 
           {/* The reason, in the admin's own words. See the note above. */}
           {(status === "rejected" || status === "suspended") && latestReview?.call_notes && (
-            <blockquote className="mt-2.5 rounded-field border-l-2 border-danger-500/50 bg-ink-0/70 py-2 pl-3 text-sm leading-relaxed text-ink-800">
+            <blockquote className="mt-2.5 rounded-[0.75rem] border-l-2 border-danger-500/50 bg-white/80 py-2 pl-3 text-note leading-relaxed text-navy-900">
               {latestReview.call_notes}
-              <footer className="mt-1 text-xs text-ink-500">
+              <footer className="mt-1 text-2xs text-copy-muted">
                 ArtisanGH verification team · {timeAgo(latestReview.reviewed_at)}
               </footer>
             </blockquote>
@@ -157,7 +157,7 @@ export function VerificationPanel({
         {(status === "unsubmitted" || status === "rejected") && (
           <Link
             href="/provider/apply"
-            className={cn(buttonVariants({ size: "md" }), "shrink-0")}
+            className={cn(buttonVariants({ variant: "navy", size: "md", shape: "pill" }), "shrink-0")}
           >
             {status === "rejected" ? (
               <>
@@ -176,15 +176,15 @@ export function VerificationPanel({
       {/* Only where it means something: progress through work still to do. A
           bar under "Verified" would be a bar at 100% forever. */}
       {status === "unsubmitted" && started && (
-        <div className="border-t border-ink-200/70 px-5 py-3">
+        <div className="border-t border-hairline px-5 py-3">
           <div className="flex items-center gap-3">
-            <div className="h-1 flex-1 overflow-hidden rounded-full bg-ink-200">
+            <div className="h-1 flex-1 overflow-hidden rounded-full bg-hairline">
               <div
-                className="h-full rounded-full bg-brand-600 transition-[width] duration-[var(--duration-slow)] ease-out-strong"
+                className="h-full rounded-full bg-navy-800 transition-[width] duration-[var(--duration-slow)] ease-out-strong"
                 style={{ width: `${progress * 100}%` }}
               />
             </div>
-            <p className="tabular font-mono text-xs text-ink-500">
+            <p className="tabular font-mono text-2xs text-copy-muted">
               {Math.round(progress * 100)}%
             </p>
           </div>

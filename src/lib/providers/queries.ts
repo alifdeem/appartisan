@@ -7,6 +7,7 @@ import type {
   ProfileRow,
   ProviderDocumentRow,
   ProviderRow,
+  PayoutRow,
   ReliabilityStats,
   VerificationReviewRow,
 } from "@/lib/supabase/types";
@@ -307,4 +308,105 @@ export async function getMyReliability(): Promise<ReliabilityStats | null> {
   }
 
   return data as ReliabilityStats;
+}
+
+/* -------------------------------------------------------------------------
+ * Earnings
+ * ---------------------------------------------------------------------- */
+
+export type PayoutWithJob = PayoutRow & {
+  job: { id: string; reference: string; category: { name: string; icon: string } | null } | null;
+};
+
+export interface EarningsSummary {
+  /** Settled money, this calendar week (Monday–Sunday, Ghana time). */
+  thisWeek: number;
+  /** Settled money, all time. */
+  allTime: number;
+  /** Raised but not yet settled — `pending` and `processing`. */
+  onTheWay: number;
+  /** Payouts the provider needs to know went wrong. */
+  failed: number;
+  settledCount: number;
+}
+
+/**
+ * Every payout belonging to the signed-in artisan, newest first.
+ *
+ * RLS (`payouts: provider reads own`, migration 0003) scopes this, so there is
+ * no `provider_id` filter — adding one would imply the policy is not trusted.
+ *
+ * **Payouts are read-only to artisans and this is the only reader.** Rows are
+ * written by the payment adapter and by nothing in the UI, which is what lets
+ * this screen be an account of money that moved rather than a view a user can
+ * argue with.
+ */
+export async function listMyPayouts(limit = 50): Promise<PayoutWithJob[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("payouts")
+    .select(
+      "id, job_id, provider_id, amount, currency, status, transfer_reference, is_simulated, " +
+        "failure_reason, initiated_at, settled_at, " +
+        "job:jobs (id, reference, category:categories (name, icon))",
+    )
+    .order("initiated_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[providers] listMyPayouts failed", error);
+    return [];
+  }
+
+  return (data ?? []) as unknown as PayoutWithJob[];
+}
+
+/**
+ * The four numbers the earnings screen leads with.
+ *
+ * Derived from the rows already fetched rather than from four `count` queries:
+ * an artisan's payout history is tens of rows, not thousands, and one pass over
+ * an array beats four round trips to Accra.
+ *
+ * **Only `paid` counts as earned.** A `pending` or `processing` payout is money
+ * the platform has raised but the network has not settled, and putting it in
+ * the headline figure would mean the number drops when a transfer fails — the
+ * single worst thing an earnings screen can do to someone's trust. It is shown,
+ * separately and honestly, as "on the way".
+ */
+export function summarisePayouts(payouts: PayoutWithJob[]): EarningsSummary {
+  // Monday 00:00 of the current week. Ghana is UTC+0 with no DST, so the
+  // calendar day never disagrees with the UTC day.
+  const now = new Date();
+  const monday = new Date(now);
+  const weekday = (now.getUTCDay() + 6) % 7; // Monday = 0
+  monday.setUTCDate(now.getUTCDate() - weekday);
+  monday.setUTCHours(0, 0, 0, 0);
+
+  let thisWeek = 0;
+  let allTime = 0;
+  let onTheWay = 0;
+  let failed = 0;
+  let settledCount = 0;
+
+  for (const payout of payouts) {
+    const amount = Number(payout.amount);
+
+    if (payout.status === "paid") {
+      allTime += amount;
+      settledCount += 1;
+      // `settled_at` is when the money actually landed; `initiated_at` is when
+      // we asked. A payout raised on Sunday and settled on Monday belongs to
+      // the week it arrived in, which is the week the artisan felt it.
+      const settled = payout.settled_at ? new Date(payout.settled_at) : null;
+      if (settled && settled >= monday) thisWeek += amount;
+    } else if (payout.status === "pending" || payout.status === "processing") {
+      onTheWay += amount;
+    } else if (payout.status === "failed") {
+      failed += amount;
+    }
+  }
+
+  return { thisWeek, allTime, onTheWay, failed, settledCount };
 }

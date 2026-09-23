@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Check, Phone } from "lucide-react";
 import { toast } from "sonner";
 
+import { callAction } from "@/lib/action-call";
+
 import { assignJobAction } from "@/app/(app)/admin/actions";
 import { Button } from "@/components/ui/button";
 import { formatPhoneForDisplay } from "@/lib/phone";
@@ -39,7 +41,7 @@ export function AssignJob({
     if (!selected || pending) return;
 
     startTransition(async () => {
-      const result = await assignJobAction(jobId, selected);
+      const result = await callAction(() => assignJobAction(jobId, selected));
 
       if (!result.ok) {
         toast.error(result.error ?? "Could not assign that job.");
@@ -54,17 +56,17 @@ export function AssignJob({
 
   if (candidates.length === 0) {
     return (
-      <p className="rounded-field border border-dashed border-ink-300 bg-ink-50 px-4 py-6 text-center text-sm text-ink-500">
+      <p className="rounded-field border border-dashed border-hairline bg-canvas px-4 py-6 text-center text-sm text-copy-muted">
         No approved artisans in this trade yet. This one needs supply before it needs an admin.
       </p>
     );
   }
 
   return (
-    <div className="space-y-3 border-t border-ink-100 pt-4">
-      <h3 className="text-sm font-semibold text-ink-800">
+    <div className="space-y-3 border-t border-azure-50 pt-4">
+      <h3 className="text-sm font-semibold text-navy-900">
         Approved artisans in this trade
-        <span className="tabular ml-1.5 font-mono text-xs font-normal text-ink-400">
+        <span className="tabular ml-1.5 font-mono text-xs font-normal text-copy-muted">
           {candidates.length}
         </span>
       </h3>
@@ -81,7 +83,7 @@ export function AssignJob({
                 className={cn(
                   "flex items-center gap-3 rounded-field border p-2.5",
                   "transition-[border-color,background-color] duration-[var(--duration-fast)] ease-out-strong",
-                  on ? "border-brand-600 bg-brand-50 ring-1 ring-brand-600" : "border-ink-200 bg-ink-0",
+                  on ? "border-navy-800 bg-azure-50 ring-1 ring-navy-800" : "border-hairline bg-white",
                 )}
               >
                 <button
@@ -94,7 +96,7 @@ export function AssignJob({
                   <span
                     className={cn(
                       "grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold",
-                      on ? "bg-brand-600 text-white" : "bg-ink-100 text-ink-600",
+                      on ? "bg-navy-800 text-white" : "bg-azure-50 text-copy-muted",
                     )}
                   >
                     {on ? (
@@ -110,10 +112,10 @@ export function AssignJob({
                   </span>
 
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-ink-900">
+                    <span className="block truncate text-sm font-medium text-navy-900">
                       {candidate.profile?.full_name ?? "Artisan"}
                     </span>
-                    <span className="block truncate text-xs text-ink-500">
+                    <span className="block truncate text-xs text-copy-muted">
                       {busy ? "On a job" : online ? "Online" : "Offline"}
                       {candidate.base_city && ` · ${candidate.base_city}`}
                       {candidate.jobs_completed > 0 && ` · ${candidate.jobs_completed} jobs`}
@@ -125,7 +127,7 @@ export function AssignJob({
                   <a
                     href={`tel:${candidate.profile.phone}`}
                     title={`Call ${candidate.profile.full_name}`}
-                    className="grid size-9 shrink-0 place-items-center rounded-field border border-ink-300 bg-ink-0 text-ink-600 transition-colors hover:bg-ink-50 hover:text-ink-900"
+                    className="grid size-9 shrink-0 place-items-center rounded-field border border-hairline bg-white text-copy-muted transition-colors hover:bg-canvas hover:text-navy-900"
                   >
                     <Phone className="size-4" aria-hidden />
                     <span className="sr-only">

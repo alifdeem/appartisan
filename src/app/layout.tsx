@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, IBM_Plex_Mono, Inter } from "next/font/google";
+import { Bricolage_Grotesque, IBM_Plex_Mono, Inter, Space_Grotesk } from "next/font/google";
 
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
@@ -19,6 +19,19 @@ const bricolage = Bricolage_Grotesque({
   display: "swap",
   // Headlines only — no need to ship the light end of the range.
   weight: ["500", "600", "700", "800"],
+});
+
+/**
+ * Space Grotesk — the heading face of the 2026 auth reference. Loaded here
+ * beside the other three because `next/font` must be called at module scope in
+ * a layout to be self-hosted; it is *applied* only on redesigned screens, via
+ * the `font-space` utility. See the type note in globals.css.
+ */
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["500", "600", "700"],
 });
 
 const inter = Inter({
@@ -55,7 +68,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2a5d3f",
+  // Navy, matching the 2026 brand. This paints the browser and OS chrome
+  // around the page on Android and iOS, and the auth screens are the first
+  // thing anyone sees — green chrome above a navy screen is the one place the
+  // in-progress migration would be visible to a user rather than to us.
+  themeColor: "#0A2E73",
   // No maximum-scale: pinch-zoom is an accessibility feature, not a nuisance.
   width: "device-width",
   initialScale: 1,
@@ -66,7 +83,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en-GH"
-      className={`${bricolage.variable} ${inter.variable} ${plexMono.variable} h-full antialiased`}
+      className={`${bricolage.variable} ${spaceGrotesk.variable} ${inter.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
         {children}

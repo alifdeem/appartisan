@@ -114,6 +114,38 @@ export type ProviderRow = Timestamps & {
   updated_at: string;
 }
 
+/** The client's sign-off on finished work (migration 0001). */
+export type SignoffRow = {
+  job_id: string;
+  signature_data: string;
+  client_notes: string | null;
+  signed_at: string;
+};
+
+/** One row of the `rating_public` view (migration 0022). */
+export type RatingPublicRow = {
+  provider_id: string;
+  stars: number;
+  comment: string | null;
+  tags: string[] | null;
+  created_at: string;
+};
+
+/** One row of the `provider_public` view (migration 0020). */
+export type ProviderPublicRow = {
+  profile_id: string;
+  full_name: string;
+  avatar_url: string | null;
+  spoken_languages: string[] | null;
+  bio: string | null;
+  years_experience: number | null;
+  base_city: string | null;
+  availability: ProviderAvailability;
+  rating_avg: number;
+  rating_count: number;
+  jobs_completed: number;
+};
+
 export type CategoryRow = Timestamps & {
   id: string;
   name: string;
@@ -137,6 +169,14 @@ export type JobRow = Timestamps & {
   address_text: string | null;
   ghanapost_code: string | null;
   landmark: string | null;
+  /**
+   * When the client would like the artisan (migration 0023). A *preference*
+   * shown to the artisan, not a booking — a posted job is dispatched
+   * immediately either way. Null date means as soon as possible; a date with a
+   * null window means any time that day. See `src/lib/jobs/schedule.ts`.
+   */
+  preferred_date: string | null;
+  preferred_window: string | null;
   matching_radius_km: number;
   matching_pass: number;
   quote_rejections: number;
@@ -461,6 +501,9 @@ export interface Database {
         | "address_text"
         | "ghanapost_code"
         | "landmark"
+        // Optional scheduling preference (0023); a draft is created without it.
+        | "preferred_date"
+        | "preferred_window"
         | "matching_radius_km"
         | "matching_pass"
         | "quote_rejections"
@@ -514,12 +557,36 @@ export interface Database {
       transport_zones: Table<TransportZoneRow, "id" | "created_at" | "provider_share_pct" | "is_active">;
       settings: Table<SettingRow, "description" | "updated_at" | "updated_by">;
       ratings: Table<RatingRow, "comment" | "tags" | "created_at">;
+      signoffs: Table<SignoffRow, "client_notes" | "signed_at">;
       disputes: Table<
         DisputeRow,
         "id" | "detail" | "evidence_paths" | "status" | "resolution" | "admin_id" | "created_at" | "resolved_at"
       >;
     };
-    Views: Record<string, never>;
+    /**
+     * Read-only views.
+     *
+     * Shaped with the same `Table<>` helper the tables use rather than a bare
+     * `{ Row }`: `@supabase/supabase-js` infers `Insert`, `Update` and
+     * `Relationships` across the whole `Database` type, and a view entry
+     * missing them collapses inference for every other table too — the first
+     * attempt at this produced "not assignable to parameter of type
+     * 'undefined'" errors in the admin actions, nowhere near the change.
+     *
+     * Every column is marked optional-on-insert, which is meaningless for a
+     * view and is simply what satisfies the helper. Nothing writes here: the
+     * view has no `INSTEAD OF` trigger, so Postgres would refuse anyway.
+     */
+    Views: {
+      /**
+       * The safe projection of `providers` (migration 0020): approved,
+       * unsuspended artisans, without the Ghana Card number, the Mobile Money
+       * details or the payout recipient code the base table carries.
+       */
+      provider_public: Table<ProviderPublicRow, keyof ProviderPublicRow>;
+      /** Ratings without the client who wrote them (migration 0022). */
+      rating_public: Table<RatingPublicRow, keyof RatingPublicRow>;
+    };
     Functions: {
       current_user_role: { Args: Record<string, never>; Returns: UserRole };
       is_admin: { Args: Record<string, never>; Returns: boolean };

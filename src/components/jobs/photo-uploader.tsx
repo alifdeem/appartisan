@@ -187,7 +187,7 @@ export function PhotoUploader({
         {photos.map((photo) => (
           <figure
             key={photo.id}
-            className="group relative aspect-square overflow-hidden rounded-card border border-ink-200 bg-ink-100"
+            className="group relative aspect-square overflow-hidden rounded-[1.25rem] border border-hairline bg-azure-50"
           >
             {photo.url ? (
               <Image
@@ -199,7 +199,7 @@ export function PhotoUploader({
                 unoptimized /* signed URL, expires — no point caching a derivative */
               />
             ) : (
-              <div className="grid size-full place-items-center text-ink-400">
+              <div className="grid size-full place-items-center text-navy-800/35">
                 <ImageOff className="size-5" aria-hidden />
               </div>
             )}
@@ -232,7 +232,7 @@ export function PhotoUploader({
         {visiblePending.map((item) => (
           <div
             key={item.key}
-            className="relative aspect-square overflow-hidden rounded-card border border-ink-200 bg-ink-100"
+            className="relative aspect-square overflow-hidden rounded-[1.25rem] border border-hairline bg-azure-50"
           >
             {/* Not next/image: this is a blob: URL for a file that may be HEIC,
                 which the optimiser cannot process and Safari may not decode. */}
@@ -257,10 +257,10 @@ export function PhotoUploader({
             type="button"
             onClick={() => inputRef.current?.click()}
             className={cn(
-              "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-card",
-              "border border-dashed border-ink-300 bg-ink-50 text-ink-500",
+              "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-[1.25rem]",
+              "border border-dashed border-hairline bg-azure-50/60 text-navy-800",
               "transition-colors duration-[var(--duration-fast)] ease-out-strong",
-              "hover:border-brand-600 hover:bg-brand-50 hover:text-brand-700 active:scale-[0.98]",
+              "hover:border-azure-500 hover:bg-azure-50 active:scale-[0.98]",
             )}
           >
             {total === 0 ? (
@@ -268,7 +268,7 @@ export function PhotoUploader({
             ) : (
               <Plus className="size-5" aria-hidden />
             )}
-            <span className="text-xs font-medium">{total === 0 ? "Add photos" : "Add"}</span>
+            <span className="text-2xs font-semibold">{total === 0 ? "Add photos" : "Add"}</span>
           </button>
         )}
       </div>
@@ -281,12 +281,13 @@ export function PhotoUploader({
         // Offers the camera directly on Android and iOS, rather than making the
         // user go through the gallery to photograph something in front of them.
         capture="environment"
+        aria-label="Add photos of the problem"
         onChange={onPick}
         className="sr-only"
         tabIndex={-1}
       />
 
-      <p className="text-xs text-ink-500">
+      <p className="text-note text-copy-muted">
         {total === 0
           ? "A photo of the problem gets you a far more accurate price."
           : `${total} of ${MAX_JOB_PHOTOS} photos.`}

@@ -25,18 +25,35 @@ import { cn } from "@/lib/utils";
 export function MobileScreen({
   children,
   footer,
+  ground = "white",
   className,
 }: {
   children: React.ReactNode;
   /** Bottom-pinned actions. */
   footer?: React.ReactNode;
+  /**
+   * The page ground.
+   *
+   * `white` is the default and what every screen built before the 2026 auth
+   * reference uses. `canvas` is that reference's pale blue (#F8FBFF), and it
+   * exists as a prop rather than a `className` override because the ground has
+   * to be set on *both* wrappers: the outer one paints the gutters either side
+   * of the column on a wide screen, and a column on canvas inside gutters on
+   * white draws two visible seams down the page.
+   */
+  ground?: "white" | "canvas";
   className?: string;
 }) {
+  const bg = ground === "canvas" ? "bg-canvas" : "bg-white";
+
   return (
-    <div className="flex min-h-dvh justify-center bg-white">
+    <div className={cn("flex min-h-dvh justify-center", bg)}>
       <div
         className={cn(
-          "flex w-full max-w-[25rem] flex-col bg-white",
+          // `relative` so a screen can hang a decorative backdrop inside the
+          // column — the shapes belong to the phone, not to the desktop gutters.
+          "relative flex w-full max-w-[25rem] flex-col",
+          bg,
           // Only from lg — below that the column *is* the viewport and a border
           // would draw a line down the edge of the screen.
           "lg:border-x lg:border-ink-100",

@@ -272,6 +272,9 @@ async function main() {
 
     const adminUser = await sessionCookieFor("+233243333333");
     await render("admin dashboard", "/admin", adminUser.cookie);
+    await render("all jobs", "/admin/jobs", adminUser.cookie);
+    await render("all jobs, running", "/admin/jobs?filter=live", adminUser.cookie);
+    await render("transactions", "/admin/transactions", adminUser.cookie);
     await render("verification queue", "/admin/verification", adminUser.cookie);
     await render("stalled jobs", "/admin/matching", adminUser.cookie);
     await render("transport bands", "/admin/zones", adminUser.cookie);
@@ -294,7 +297,7 @@ async function main() {
      */
     console.log("\n  Cron routes reachable\n");
 
-    for (const path of ["/api/cron/matching", "/api/cron/payments", "/api/cron/reliability"]) {
+    for (const path of ["/api/cron/matching", "/api/cron/payments", "/api/cron/payouts", "/api/cron/reliability"]) {
       const response = await fetch(`${origin}${path}`, { redirect: "manual" });
       check(
         `${path} is not intercepted by the proxy`,

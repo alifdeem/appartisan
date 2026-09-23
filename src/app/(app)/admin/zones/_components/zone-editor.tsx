@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Archive, Check, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { callAction } from "@/lib/action-call";
+
 import { retireTransportZoneAction, saveTransportZoneAction } from "@/app/(app)/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,7 +72,7 @@ export function ZoneEditor({ zones }: { zones: TransportZoneRow[] }) {
     if (draft.isActive) formData.set("isActive", "on");
 
     startTransition(async () => {
-      const result = await saveTransportZoneAction(null, formData);
+      const result = await callAction(() => saveTransportZoneAction(null, formData));
 
       if (!result.ok) {
         setError(result.error ?? Object.values(result.fieldErrors ?? {})[0] ?? "Could not save.");
@@ -85,7 +87,7 @@ export function ZoneEditor({ zones }: { zones: TransportZoneRow[] }) {
 
   function retire(zoneId: string) {
     startTransition(async () => {
-      const result = await retireTransportZoneAction(zoneId);
+      const result = await callAction(() => retireTransportZoneAction(zoneId));
       if (!result.ok) {
         toast.error(result.error ?? "Could not retire that band.");
         return;
@@ -97,10 +99,10 @@ export function ZoneEditor({ zones }: { zones: TransportZoneRow[] }) {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-card border border-ink-200 bg-ink-0 shadow-sm">
+      <div className="overflow-hidden rounded-card border border-hairline bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-ink-200 bg-ink-25 text-left">
+            <tr className="border-b border-hairline bg-canvas text-left">
               <Th>City</Th>
               <Th className="text-right">From</Th>
               <Th className="text-right">To</Th>
@@ -109,10 +111,10 @@ export function ZoneEditor({ zones }: { zones: TransportZoneRow[] }) {
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-ink-100">
+          <tbody className="divide-y divide-azure-50">
             {zones.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-sm text-ink-500">
+                <td colSpan={5} className="px-4 py-10 text-center text-sm text-copy-muted">
                   No bands yet. Add the first one below.
                 </td>
               </tr>
@@ -135,23 +137,23 @@ export function ZoneEditor({ zones }: { zones: TransportZoneRow[] }) {
                 <tr
                   key={zone.id}
                   className={cn(
-                    "transition-colors duration-[var(--duration-instant)] hover:bg-ink-50",
+                    "transition-colors duration-[var(--duration-instant)] hover:bg-canvas",
                     !zone.is_active && "opacity-50",
                   )}
                 >
                   <Td>
                     {zone.city === "*" ? (
-                      <span className="text-ink-600">Everywhere</span>
+                      <span className="text-copy-muted">Everywhere</span>
                     ) : (
                       zone.city
                     )}
                     {!zone.is_active && (
-                      <span className="ml-2 text-xs text-ink-400">retired</span>
+                      <span className="ml-2 text-xs text-copy-muted">retired</span>
                     )}
                   </Td>
                   <Td className="tabular text-right font-mono">{Number(zone.min_km)} km</Td>
                   <Td className="tabular text-right font-mono">{Number(zone.max_km)} km</Td>
-                  <Td className="tabular text-right font-mono font-medium text-accent-900">
+                  <Td className="tabular text-right font-mono font-medium text-navy-900">
                     {formatAmount(Number(zone.fee))}
                   </Td>
                   <Td>
@@ -159,7 +161,7 @@ export function ZoneEditor({ zones }: { zones: TransportZoneRow[] }) {
                       <button
                         type="button"
                         onClick={() => setEditing(toDraft(zone))}
-                        className="rounded-field px-2.5 py-1 text-sm font-medium text-brand-700 transition-colors hover:bg-brand-50"
+                        className="rounded-field px-2.5 py-1 text-sm font-medium text-navy-800 transition-colors hover:bg-azure-50"
                       >
                         Edit
                       </button>
@@ -168,7 +170,7 @@ export function ZoneEditor({ zones }: { zones: TransportZoneRow[] }) {
                           type="button"
                           onClick={() => retire(zone.id)}
                           title="Retire this band"
-                          className="grid size-8 place-items-center rounded-field text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
+                          className="grid size-8 place-items-center rounded-field text-copy-muted transition-colors hover:bg-azure-50 hover:text-copy"
                         >
                           <Archive className="size-4" aria-hidden />
                           <span className="sr-only">Retire</span>
@@ -226,7 +228,7 @@ function EditRow({
   pending: boolean;
 }) {
   return (
-    <tr className="bg-brand-50/50">
+    <tr className="bg-azure-50/50">
       <Td>
         <Input
           value={draft.city}
@@ -273,7 +275,7 @@ function EditRow({
             onClick={onSave}
             disabled={pending}
             title="Save"
-            className="grid size-8 place-items-center rounded-field bg-brand-700 text-white transition-transform duration-[var(--duration-instant)] hover:bg-brand-800 active:scale-90 disabled:opacity-50"
+            className="grid size-8 place-items-center rounded-field bg-navy-800 text-white transition-transform duration-[var(--duration-instant)] hover:bg-navy-900 active:scale-90 disabled:opacity-50"
           >
             <Check className="size-4" strokeWidth={3} aria-hidden />
             <span className="sr-only">Save</span>
@@ -283,7 +285,7 @@ function EditRow({
             onClick={onCancel}
             disabled={pending}
             title="Cancel"
-            className="grid size-8 place-items-center rounded-field text-ink-500 transition-colors hover:bg-ink-100"
+            className="grid size-8 place-items-center rounded-field text-copy-muted transition-colors hover:bg-azure-50"
           >
             <X className="size-4" aria-hidden />
             <span className="sr-only">Cancel</span>
@@ -299,7 +301,7 @@ function Th({ children, className }: { children?: React.ReactNode; className?: s
     <th
       scope="col"
       className={cn(
-        "px-4 py-2.5 text-xs font-semibold tracking-wide text-ink-500 uppercase",
+        "px-4 py-2.5 text-xs font-semibold tracking-wide text-copy-muted uppercase",
         className,
       )}
     >
@@ -309,5 +311,5 @@ function Th({ children, className }: { children?: React.ReactNode; className?: s
 }
 
 function Td({ children, className }: { children?: React.ReactNode; className?: string }) {
-  return <td className={cn("px-4 py-2.5 text-ink-800", className)}>{children}</td>;
+  return <td className={cn("px-4 py-2.5 text-navy-900", className)}>{children}</td>;
 }

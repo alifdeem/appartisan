@@ -6,6 +6,8 @@ import { Send } from "lucide-react";
 import { submitApplicationAction } from "@/app/(app)/provider/actions";
 import { Button } from "@/components/ui/button";
 
+import { callAction } from "@/lib/action-call";
+
 /**
  * The button that puts an artisan in the queue.
  *
@@ -30,7 +32,7 @@ export function SubmitApplication({ ready }: { ready: boolean }) {
     setError(null);
     startTransition(async () => {
       // Only ever returns on failure — success redirects out of this tree.
-      const result = await submitApplicationAction();
+      const result = await callAction(() => submitApplicationAction());
       if (!result.ok) setError(result.error ?? "Could not send your application. Try again.");
     });
   }

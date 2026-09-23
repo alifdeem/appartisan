@@ -39,11 +39,11 @@ export function RoadmapPanel({
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <ul className="divide-y divide-ink-100">
+        <ul className="divide-y divide-azure-50">
           {items.map((item) => (
             <li key={item.label} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-              <Circle className="size-3.5 shrink-0 text-ink-300" />
-              <span className="text-sm text-ink-700">{item.label}</span>
+              <Circle className="size-3.5 shrink-0 text-hairline" />
+              <span className="text-sm text-copy">{item.label}</span>
               <Badge tone="neutral" className="ml-auto shrink-0">
                 {item.phase}
               </Badge>

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 import { cancelJobAction } from "@/app/(app)/client/actions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { panelControlClasses } from "@/components/mobile/panel-field";
 
 /**
  * Cancelling a posted job.
@@ -50,8 +50,9 @@ export function CancelJob({ jobId }: { jobId: string }) {
         type="button"
         variant="ghost"
         size="sm"
+        shape="pill"
         onClick={() => setOpen(true)}
-        className="text-ink-500 hover:text-danger-700"
+        className="text-copy-muted hover:bg-danger-50 hover:text-danger-700"
       >
         <XCircle />
         Cancel this job
@@ -60,31 +61,33 @@ export function CancelJob({ jobId }: { jobId: string }) {
   }
 
   return (
-    <form action={formAction} className="space-y-3 rounded-card border border-ink-200 bg-ink-50 p-3.5">
+    <form action={formAction} className="space-y-3 rounded-[1.25rem] border border-hairline bg-canvas p-3.5">
       <input type="hidden" name="jobId" value={jobId} />
 
       <div className="space-y-1">
-        <p className="text-sm font-medium text-ink-900">Cancel this job?</p>
-        <p className="text-sm text-ink-600">
+        <p className="font-space text-note font-bold text-navy-900">Cancel this job?</p>
+        <p className="text-note text-copy-muted">
           Nothing has been charged, so there is nothing to refund. You can post it again any time.
         </p>
       </div>
 
-      <Input
+      <input
         name="reason"
         maxLength={300}
         placeholder="Why? (optional — helps us improve)"
         aria-label="Reason for cancelling"
+        className={panelControlClasses(false, "py-2.5 text-ui")}
       />
 
       <div className="flex gap-2">
-        <Button type="submit" variant="danger" size="sm" loading={pending}>
+        <Button type="submit" variant="danger" size="sm" shape="pill" loading={pending}>
           Cancel job
         </Button>
         <Button
           type="button"
           variant="ghost"
           size="sm"
+          shape="pill"
           onClick={() => setOpen(false)}
           disabled={pending}
         >

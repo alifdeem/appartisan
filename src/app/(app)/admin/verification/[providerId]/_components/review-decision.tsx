@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { BadgeCheck, PauseCircle, ShieldX } from "lucide-react";
 import { toast } from "sonner";
 
+import { callAction } from "@/lib/action-call";
+
 import { reviewProviderAction, type AdminActionState } from "@/app/(app)/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
@@ -60,7 +62,7 @@ export function ReviewDecision({
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const next = await reviewProviderAction(null, formData);
+      const next = await callAction(() => reviewProviderAction(null, formData));
       setResult(next);
 
       if (next.ok) {
@@ -108,7 +110,7 @@ export function ReviewDecision({
       <input type="hidden" name="decision" value={decision ?? ""} />
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-semibold text-ink-800">Decision</legend>
+        <legend className="text-sm font-semibold text-navy-900">Decision</legend>
 
         <div className="grid gap-2 sm:grid-cols-3">
           {options.map((option) => {
@@ -127,7 +129,7 @@ export function ReviewDecision({
                   "active:scale-[0.98]",
                   on && !destructive && "border-success-600 bg-success-50 ring-1 ring-success-600",
                   on && destructive && "border-danger-600 bg-danger-50 ring-1 ring-danger-600",
-                  !on && "border-ink-300 bg-ink-0 hover:border-ink-400",
+                  !on && "border-hairline bg-white hover:border-copy-muted",
                 )}
               >
                 <span
@@ -135,13 +137,13 @@ export function ReviewDecision({
                     "flex items-center gap-1.5 text-sm font-medium",
                     on && !destructive && "text-success-700",
                     on && destructive && "text-danger-700",
-                    !on && "text-ink-800",
+                    !on && "text-navy-900",
                   )}
                 >
                   <option.icon className="size-4" aria-hidden />
                   {option.label}
                 </span>
-                <span className="text-xs leading-snug text-ink-500">{option.hint}</span>
+                <span className="text-xs leading-snug text-copy-muted">{option.hint}</span>
               </button>
             );
           })}
@@ -149,14 +151,14 @@ export function ReviewDecision({
       </fieldset>
 
       <div className="space-y-1.5">
-        <label htmlFor="callNotes" className="block text-sm font-medium text-ink-800">
+        <label htmlFor="callNotes" className="block text-sm font-medium text-navy-900">
           Call notes
           {notesRequired ? (
             <span className="ml-0.5 text-danger-600" aria-hidden>
               *
             </span>
           ) : (
-            <span className="ml-1.5 text-xs font-normal text-ink-400">optional</span>
+            <span className="ml-1.5 text-xs font-normal text-copy-muted">optional</span>
           )}
         </label>
 
@@ -171,7 +173,7 @@ export function ReviewDecision({
           placeholder={
             notesRequired
               ? "What went wrong, in words the artisan can act on. They will read this."
-              : "What you confirmed on the call — who answered, what they said about their work, anything worth remembering."
+              : "What you confirmed on the call: who answered, what they said about their work, anything worth remembering."
           }
           aria-invalid={Boolean(result?.fieldErrors?.callNotes)}
           aria-describedby="callNotes-note"
@@ -181,7 +183,7 @@ export function ReviewDecision({
           id="callNotes-note"
           className={cn(
             "text-sm",
-            result?.fieldErrors?.callNotes ? "text-danger-600" : "text-ink-500",
+            result?.fieldErrors?.callNotes ? "text-danger-600" : "text-copy-muted",
           )}
           role={result?.fieldErrors?.callNotes ? "alert" : undefined}
         >

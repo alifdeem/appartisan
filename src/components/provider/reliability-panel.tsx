@@ -30,18 +30,18 @@ function Figure({
 }) {
   return (
     <div className="space-y-0.5">
-      <p className="font-mono text-[0.6875rem] font-semibold tracking-[0.08em] text-ink-500 uppercase">
+      <p className="font-mono text-2xs font-semibold tracking-[0.08em] text-copy-muted uppercase">
         {label}
       </p>
       <p
         className={cn(
           "tabular font-mono text-xl font-semibold",
-          warn ? "text-danger-700" : "text-ink-900",
+          warn ? "text-danger-700" : "text-navy-900",
         )}
       >
         {value}
       </p>
-      {detail && <p className="text-[0.75rem] text-ink-500">{detail}</p>}
+      {detail && <p className="text-2xs text-copy-muted">{detail}</p>}
     </div>
   );
 }
@@ -49,12 +49,12 @@ function Figure({
 export function ReliabilityPanel({ stats }: { stats: ReliabilityStats }) {
   if (!stats.scored) {
     return (
-      <section className="rounded-card border border-ink-200 bg-ink-0 p-4 shadow-sm">
+      <section className="rounded-[1.25rem] border border-hairline bg-white p-4">
         <div className="flex items-start gap-2.5">
-          <Activity className="mt-0.5 size-4 shrink-0 text-ink-400" aria-hidden />
+          <Activity className="mt-0.5 size-4 shrink-0 text-azure-500" aria-hidden />
           <div>
-            <h2 className="text-sm font-semibold text-ink-900">Your reliability</h2>
-            <p className="mt-0.5 text-sm text-ink-600">
+            <h2 className="font-space text-note font-bold text-navy-900">Your reliability</h2>
+            <p className="mt-0.5 text-note leading-relaxed text-copy-muted">
               You have had {stats.offers} offer{stats.offers === 1 ? "" : "s"} in the last{" "}
               {stats.window_days} days. Scoring starts once you have had a few more, so an early
               quiet week never counts against you.
@@ -66,11 +66,11 @@ export function ReliabilityPanel({ stats }: { stats: ReliabilityStats }) {
   }
 
   return (
-    <section className="space-y-4 rounded-card border border-ink-200 bg-ink-0 p-4 shadow-sm">
+    <section className="space-y-4 rounded-[1.25rem] border border-hairline bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-ink-900">Your reliability</h2>
-          <p className="mt-0.5 text-sm text-ink-500">
+          <h2 className="font-space text-note font-bold text-navy-900">Your reliability</h2>
+          <p className="mt-0.5 text-sm text-copy-muted">
             Rolling {stats.window_days} days. These decide how often you are offered work.
           </p>
         </div>

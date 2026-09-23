@@ -121,7 +121,7 @@ never sees — and because the app should be settled before the shopfront is.
 | 1 — Foundations & auth | **in progress** — tokens, primitives, splash and the option screen done; form screens, verify step and success outstanding |
 | 2 — Home & bottom nav | done |
 | 3 — Browse categories | not started |
-| 4 — Post a job | not started |
+| 4 — Post a job | **done** — all six reference screens, including `@4-shedule-time` (migration 0023, as a preference not a booking) |
 | 5 — Account | not started |
 | 6 — Landing & hero | not started |
 | 7 — Validation & polish | not started |

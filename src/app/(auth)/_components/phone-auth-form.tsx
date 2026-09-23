@@ -2,16 +2,37 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Hammer, House, TriangleAlert } from "lucide-react";
+import { ArrowRight, Phone, TriangleAlert, User, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { UnderlineField, UnderlineInput } from "@/components/mobile/underline-field";
+import { IconField, IconFieldInput } from "@/components/mobile/icon-field";
 import { OtpField } from "@/components/ui/otp-input";
 import { SimulatedBadge } from "@/components/ui/badge";
 import { formatPhoneForDisplay } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 import { requestCodeAction, verifyCodeAction, type ActionState } from "../actions";
+
+/**
+ * The phone + code form, restyled for the 2026 reference.
+ *
+ * **What did not change: the wire.** Every `name`, every hidden input and every
+ * submitted value is byte-identical to what `requestCodeAction` and
+ * `verifyCodeAction` parsed before this file was touched — `mode`, `phone`,
+ * `fullName`, `role`, `spokenLanguages`, `code`. So is the two-step derivation
+ * and the token dance that drives it. Only the chrome is new.
+ *
+ * **There is no password field, and there cannot be one.** The mockup draws
+ * one, under a "Remember me / Forgot password?" row. ArtisanGH has no passwords
+ * at all: `verifyCodeAction` takes a six-digit OTP and there is no credential to
+ * forget or to remember. Drawing the field anyway would have been a control
+ * wired to nothing.
+ *
+ * The honest translation keeps the mockup's *shape* — two credentials, one
+ * card, one primary action — and splits it across the two steps the backend
+ * actually has. Step one asks for the number; step two puts the code where the
+ * password box was drawn. Same card, same rhythm, same single CTA.
+ */
 
 type Mode = "login" | "signup";
 
@@ -22,18 +43,35 @@ export function PhoneAuthForm({
   initialRole,
   title,
   subtitle,
+  titleAs: Heading = "h1",
 }: {
   mode: Mode;
   /**
-   * The screen's heading, rendered here rather than by the page.
+   * The card's heading, rendered here rather than by the page.
    *
-   * The page cannot own it: which step we are on is client state derived
-   * inside this component, and the verify step needs a heading of its own.
-   * Left in the page, "Create your account" sat above "Check your phone
-   * number" — two competing headings and an h2-then-h1 outline.
+   * The page cannot own it: which step we are on is client state derived inside
+   * this component, and the verify step needs a heading of its own. Left in the
+   * page, "Create your account" sat above "Check your phone number" — two
+   * competing headings and an h2-then-h1 outline.
    */
   title?: string;
   subtitle?: string;
+  /**
+   * The card title's heading level.
+   *
+   * It is `h1` by default because on `/signup?role=…` the card *is* the screen
+   * — there is nothing above it but a logo, so its title is the document
+   * heading. The login screen is the other case: it leads with a hero headline
+   * that is already the page's `h1`, and a second one inside the card makes the
+   * screen announce as two documents. That is the same two-`h1` fault the
+   * provider signup had before Phase 1 demoted `ScreenHeader`'s title, and it
+   * is invisible to both `tsc` and eslint — only reading the rendered outline
+   * catches it.
+   *
+   * It is a prop rather than something this component works out for itself
+   * because only the page knows what else is on the screen.
+   */
+  titleAs?: "h1" | "h2";
   /**
    * Set when the role was already chosen on the preceding screen
    * (`/signup?role=…`). When present the in-form role picker is hidden — asking
@@ -45,7 +83,7 @@ export function PhoneAuthForm({
 }) {
   const [phone, setPhone] = React.useState("");
   const [fullName, setFullName] = React.useState("");
-  const [role, setRole] = React.useState<"client" | "provider">(initialRole ?? "client");
+  const [role] = React.useState<"client" | "provider">(initialRole ?? "client");
   const [languages, setLanguages] = React.useState<string[]>(["English"]);
 
   const [requestState, requestAction, requesting] = React.useActionState<ActionState | null, FormData>(
@@ -106,108 +144,84 @@ export function PhoneAuthForm({
         state={verifyState}
         devCode={requestState?.devCode}
         simulated={requestState?.simulated ?? false}
+        titleAs={Heading}
         onBack={() => setDismissedToken(sentToken)}
       />
     );
   }
 
   return (
-    <form action={requestAction} className="space-y-5">
+    <form action={requestAction} className="animate-fade-up">
       {title && (
-        <div className="space-y-1.5">
-          <h1 className="text-title font-semibold text-ink-900">{title}</h1>
-          {subtitle && <p className="text-ui text-ink-600">{subtitle}</p>}
+        <div className="mb-6">
+          <Heading className="font-space text-title-sm font-bold text-navy-900">{title}</Heading>
+          {subtitle && <p className="mt-1.5 text-ui text-copy-muted">{subtitle}</p>}
         </div>
       )}
 
       <input type="hidden" name="mode" value={mode} />
+      <input type="hidden" name="role" value={role} />
 
-      {mode === "signup" && (
-        <>
-          {initialRole ? (
-            <input type="hidden" name="role" value={role} />
-          ) : (
-            <fieldset className="space-y-2">
-              <legend className="mb-2 block text-sm font-medium text-ink-800">
-                I want to
-                <span className="ml-0.5 text-danger-600" aria-hidden>
-                  *
-                </span>
-              </legend>
-              <div className="grid grid-cols-2 gap-3">
-                <RoleCard
-                  selected={role === "client"}
-                  onSelect={() => setRole("client")}
-                  icon={<House />}
-                  title="Book a service"
-                  subtitle="I need work done"
-                />
-                <RoleCard
-                  selected={role === "provider"}
-                  onSelect={() => setRole("provider")}
-                  icon={<Hammer />}
-                  title="Work as an artisan"
-                  subtitle="I offer a service"
-                />
-              </div>
-              <input type="hidden" name="role" value={role} />
-            </fieldset>
-          )}
+      <div className="space-y-3.5">
+        {mode === "signup" && (
+          <Field error={requestState?.fieldErrors?.fullName}>
+            <IconField icon={<User />} error={Boolean(requestState?.fieldErrors?.fullName)}>
+              <IconFieldInput
+                id="fullName"
+                name="fullName"
+                aria-label="Full name"
+                autoComplete="name"
+                placeholder="Full name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                aria-invalid={Boolean(requestState?.fieldErrors?.fullName)}
+                required
+              />
+            </IconField>
+          </Field>
+        )}
 
-          <UnderlineField
-            label="Your name"
-            htmlFor="fullName"
-            error={requestState?.fieldErrors?.fullName}
+        <Field
+          error={requestState?.fieldErrors?.phone}
+          hint="We'll text you a 6-digit code. Standard rates apply."
+        >
+          <IconField
+            icon={<Phone />}
+            error={Boolean(requestState?.fieldErrors?.phone)}
+            /* The flag is an indicator, not a picker. The mockup pairs it with a
+               chevron; every number on this platform is Ghanaian, so a control
+               offering one option would be offering a choice that has an
+               answer. It reads as read-only because it is. */
+            trailing={
+              <span className="tabular flex items-center gap-1.5 rounded-lg bg-azure-50 px-2.5 py-1.5 text-note font-medium text-navy-800">
+                <span aria-hidden>🇬🇭</span>
+                +233
+              </span>
+            }
           >
-            <UnderlineInput
-              id="fullName"
-              name="fullName"
-              autoComplete="name"
-              placeholder="Kwame Mensah"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              aria-invalid={Boolean(requestState?.fieldErrors?.fullName)}
+            <IconFieldInput
+              id="phone"
+              name="phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              aria-label="Phone number"
+              autoFocus={mode === "login"}
+              placeholder="024 123 4567"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              aria-invalid={Boolean(requestState?.fieldErrors?.phone)}
               required
             />
-          </UnderlineField>
-        </>
-      )}
-
-      <UnderlineField
-        label="Phone number"
-        htmlFor="phone"
-        error={requestState?.fieldErrors?.phone}
-        hint="We'll text you a 6-digit code. Standard rates apply."
-      >
-        {/* The dial code sits inside the rule as a sibling of the input, the
-            way the reference sets its flag and +1. It is not an input: every
-            number on this platform is Ghanaian, so offering a country picker
-            would be offering a choice that has one answer. */}
-        <span className="tabular flex shrink-0 items-center gap-1.5 text-base text-ink-700">
-          <span aria-hidden>🇬🇭</span>
-          +233
-        </span>
-
-        <UnderlineInput
-          id="phone"
-          name="phone"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          autoFocus={mode === "login"}
-          placeholder="024 123 4567"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          aria-invalid={Boolean(requestState?.fieldErrors?.phone)}
-          required
-        />
-      </UnderlineField>
+          </IconField>
+        </Field>
+      </div>
 
       {mode === "signup" && role === "provider" && (
-        <fieldset className="space-y-2">
-          <legend className="mb-2 block text-sm font-medium text-ink-800">
+        <fieldset className="mt-5">
+          <legend className="mb-2.5 text-note font-medium text-copy">
             Languages you speak
-            <span className="ml-1.5 text-xs font-normal text-ink-400">
+            <span className="ml-1.5 font-normal text-copy-muted">
               clients see these before booking
             </span>
           </legend>
@@ -227,12 +241,12 @@ export function PhoneAuthForm({
                     )
                   }
                   className={cn(
-                    "min-h-9 rounded-full px-3.5 text-sm font-medium",
+                    "min-h-10 rounded-full px-3.5 text-note font-medium",
                     "transition-[background-color,color,border-color,transform] duration-[var(--duration-instant)] ease-out-strong",
                     "active:scale-[0.97]",
                     active
-                      ? "border border-brand-600 bg-brand-50 text-brand-800"
-                      : "border border-ink-300 bg-ink-0 text-ink-600 hover:border-ink-400 hover:text-ink-800",
+                      ? "border border-azure-500 bg-azure-50 text-navy-800"
+                      : "border border-hairline bg-white text-copy-muted hover:border-azure-300 hover:text-copy",
                   )}
                 >
                   {language}
@@ -244,96 +258,102 @@ export function PhoneAuthForm({
         </fieldset>
       )}
 
-      {requestState?.error && (
-        <p role="alert" className="animate-fade-in flex items-start gap-2 text-sm text-danger-600">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-          {requestState.error}
-        </p>
-      )}
+      {requestState?.error && <FormError>{requestState.error}</FormError>}
 
-      <Button type="submit" size="lg" shape="pill" block loading={requesting}>
-        Send code
-        <ArrowUpRight />
+      <Button
+        type="submit"
+        variant="navy"
+        size="lg"
+        shape="pill"
+        block
+        loading={requesting}
+        className="mt-6"
+      >
+        {mode === "login" ? "Log in" : "Create account"}
+        <ArrowRight />
       </Button>
 
-      <p className="text-center text-sm text-ink-500">
-        {mode === "login" ? (
-          <>
-            New here?{" "}
-            {/* `.tap` grows the hit area on coarse pointers without disturbing
-                the layout of the line — an inline link is ~17px tall, which
-                fails the 44px rule this app holds itself to. */}
-            <Link href="/signup" className="tap font-medium text-brand-700 hover:underline">
-              Create an account
-            </Link>
-          </>
-        ) : (
-          <>
-            Already have an account?{" "}
-            <Link href="/login" className="tap font-medium text-brand-700 hover:underline">
-              Log in
-            </Link>
-          </>
-        )}
-      </p>
-
-      {mode === "signup" && (
-        <p className="text-center text-note leading-relaxed text-ink-500">
-          By continuing you agree to the ArtisanGH{" "}
-          <Link href="/legal/terms" className="tap font-medium text-brand-700 underline-offset-4 hover:underline">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/legal/privacy" className="tap font-medium text-brand-700 underline-offset-4 hover:underline">
-            Privacy Policy
+      {mode === "login" && (
+        <>
+          <Divider>or</Divider>
+          <Link
+            href="/signup"
+            className={cn(
+              "inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full",
+              "border border-hairline bg-white px-6 text-base font-semibold text-navy-800",
+              "transition-[background-color,border-color,transform] duration-[var(--duration-instant)] ease-out-strong",
+              "hover:border-azure-500 hover:bg-azure-50 active:scale-[0.98]",
+              "[&_svg]:size-5",
+            )}
+          >
+            <UserPlus />
+            Create an account
           </Link>
-          .
-        </p>
+        </>
       )}
     </form>
   );
 }
 
-function RoleCard({
-  selected,
-  onSelect,
-  icon,
-  title,
-  subtitle,
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Wraps a field with its error or hint line.
+ *
+ * The message sits *under* the box rather than above it, where the answer is
+ * and where the thumb is not covering it. There is no red asterisk anywhere on
+ * these screens: every field here is required, so marking them all marks none
+ * of them.
+ */
+function Field({
+  error,
+  hint,
+  children,
 }: {
-  selected: boolean;
-  onSelect: () => void;
-  icon: React.ReactNode;
-  title: string;
-  subtitle: string;
+  error?: string | null;
+  hint?: string;
+  children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className={cn(
-        "flex flex-col items-start gap-1.5 rounded-card border p-3.5 text-left",
-        "transition-[border-color,background-color,box-shadow,transform] duration-[var(--duration-fast)] ease-out-strong",
-        "active:scale-[0.98]",
-        selected
-          ? "border-brand-600 bg-brand-50 shadow-sm ring-1 ring-brand-600"
-          : "border-ink-200 bg-ink-0 hover:border-ink-300 hover:shadow-xs",
-      )}
-    >
-      <span
-        className={cn(
-          "grid size-9 place-items-center rounded-field [&_svg]:size-[1.125rem]",
-          selected ? "bg-brand-600 text-white" : "bg-ink-100 text-ink-600",
-        )}
-      >
-        {icon}
-      </span>
-      <span className="text-sm font-semibold text-ink-900">{title}</span>
-      <span className="text-xs text-ink-500">{subtitle}</span>
-    </button>
+    <div>
+      {children}
+      {error ? (
+        <p role="alert" className="animate-fade-in mt-2 px-1 text-note text-danger-600">
+          {error}
+        </p>
+      ) : hint ? (
+        <p className="mt-2 px-1 text-note text-copy-muted">{hint}</p>
+      ) : null}
+    </div>
   );
 }
+
+function FormError({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      role="alert"
+      className="animate-fade-in mt-5 flex items-start gap-2 rounded-xl bg-danger-50 p-3 text-note text-danger-700"
+    >
+      <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+      {children}
+    </p>
+  );
+}
+
+/** The reference's "OR" rule. A hairline either side, the word in the gap. */
+function Divider({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="my-5 flex items-center gap-4">
+      <span className="h-px flex-1 bg-hairline" />
+      <span className="text-2xs font-medium tracking-[0.08em] text-copy-muted uppercase">
+        {children}
+      </span>
+      <span className="h-px flex-1 bg-hairline" />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------- */
 
 function CodeStep({
   mode,
@@ -346,6 +366,7 @@ function CodeStep({
   state,
   devCode,
   simulated,
+  titleAs: Heading,
   onBack,
 }: {
   mode: Mode;
@@ -358,6 +379,8 @@ function CodeStep({
   state: ActionState | null;
   devCode?: string;
   simulated: boolean;
+  /** Matches the phone step's level — the step changes, the outline must not. */
+  titleAs: "h1" | "h2";
   onBack: () => void;
 }) {
   const [code, setCode] = React.useState("");
@@ -386,7 +409,7 @@ function CodeStep({
   }
 
   return (
-    <form ref={formRef} action={action} className="animate-fade-up space-y-6">
+    <form ref={formRef} action={action} className="animate-fade-up">
       <input type="hidden" name="mode" value={mode} />
       <input type="hidden" name="phone" value={phone} />
       <input type="hidden" name="fullName" value={fullName} />
@@ -394,19 +417,21 @@ function CodeStep({
       <input type="hidden" name="spokenLanguages" value={languages.join(",")} />
       <input type="hidden" name="code" value={shownCode} />
 
-      {/* Centred, the way the reference sets it: on a screen with one question
-          the title belongs over the answer, not up in the corner. */}
-      <div className="space-y-2 text-center">
-        <h1 className="text-title-sm text-ink-900">Check your phone number</h1>
-        <p className="text-ui text-ink-600">
-          A 6-digit code has been sent to{" "}
-          <span className="tabular font-medium whitespace-nowrap text-ink-900">
+      {/* Centred: on a screen with exactly one question the title belongs over
+          the answer, not up in the corner. */}
+      <div className="text-center">
+        <Heading className="font-space text-title-sm font-bold text-navy-900">
+          Check your phone
+        </Heading>
+        <p className="mt-1.5 text-ui text-copy-muted">
+          We sent a 6-digit code to{" "}
+          <span className="tabular font-semibold whitespace-nowrap text-navy-800">
             {formatPhoneForDisplay(phone)}
           </span>
         </p>
       </div>
 
-      <div className="flex justify-center py-1">
+      <div className="mt-6 flex justify-center">
         <OtpField
           value={shownCode}
           onChange={handleCodeChange}
@@ -418,21 +443,21 @@ function CodeStep({
       {/* The reference pairs "Didn't get the code?" with a resend. Ours changes
           the number instead: `issueOtp` enforces a 60-second cooldown and six
           sends an hour per number, so a resend control that is refused most of
-          the time it is pressed teaches people it is broken. Going back and
+          the times it is pressed teaches people it is broken. Going back and
           sending again costs one tap and goes through the same limits honestly. */}
-      <p className="text-center text-ui text-ink-600">
+      <p className="mt-5 text-center text-ui text-copy-muted">
         Wrong number?{" "}
         <button
           type="button"
           onClick={onBack}
-          className="tap font-medium text-brand-700 underline-offset-4 hover:underline"
+          className="tap font-semibold text-azure-600 underline-offset-4 hover:underline"
         >
           Change it
         </button>
       </p>
 
       {simulated && devCode && (
-        <div className="animate-fade-in rounded-card border border-dashed border-warning-500/50 bg-warning-50 p-3.5">
+        <div className="animate-fade-in mt-5 rounded-xl border border-dashed border-warning-500/50 bg-warning-50 p-3.5">
           <div className="flex items-center justify-between gap-3">
             <SimulatedBadge label="No SMS sent" />
             <code className="tabular text-lg font-semibold tracking-[0.2em] text-warning-700">
@@ -446,23 +471,20 @@ function CodeStep({
         </div>
       )}
 
-      {state?.error && (
-        <p role="alert" className="animate-fade-in flex items-start gap-2 text-sm text-danger-600">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-          {state.error}
-        </p>
-      )}
+      {state?.error && <FormError>{state.error}</FormError>}
 
       <Button
         type="submit"
+        variant="navy"
         size="lg"
         shape="pill"
         block
         loading={pending}
         disabled={shownCode.length !== 6}
+        className="mt-6"
       >
         {mode === "signup" ? "Create account" : "Log in"}
-        <ArrowUpRight />
+        <ArrowRight />
       </Button>
     </form>
   );

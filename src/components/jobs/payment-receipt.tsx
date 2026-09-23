@@ -8,7 +8,7 @@ import type { PaymentRow } from "@/lib/supabase/types";
 /**
  * What was actually paid.
  *
- * Set as a document rather than a status line, for the same reason the quote
+ * Set as a document rather than a status list, for the same reason the quote
  * docket is: mono with tabular figures and a real provider reference reads as
  * something that happened, which is what somebody wants when they are checking
  * whether their money arrived.
@@ -23,22 +23,30 @@ import type { PaymentRow } from "@/lib/supabase/types";
  * live we have to be able to tell a real transaction from a demo one forever
  * (PLAN.md §10), and a receipt that does not say which it is undermines that.
  */
-export function PaymentReceipt({ payments }: { payments: PaymentRow[] }) {
+export function PaymentReceipt({
+  payments,
+  headingLevel = 2,
+}: {
+  payments: PaymentRow[];
+  headingLevel?: 2 | 3;
+}) {
   if (payments.length === 0) return null;
+
+  const Heading = `h${headingLevel}` as const;
 
   return (
     <section
-      className="overflow-hidden rounded-card border border-ink-200 bg-ink-0 shadow-sm"
+      className="overflow-hidden rounded-[1.25rem] border border-hairline bg-white"
       aria-label="Payments"
     >
-      <header className="flex items-baseline justify-between gap-3 border-b border-ink-200 bg-ink-25 px-4 py-2.5">
-        <h2 className="font-mono text-[0.6875rem] font-semibold tracking-[0.08em] text-ink-700 uppercase">
+      <header className="flex items-baseline justify-between gap-3 border-b border-hairline bg-canvas px-4 py-2.5">
+        <Heading className="font-mono text-2xs font-semibold tracking-[0.08em] text-navy-900 uppercase">
           Payments
-        </h2>
-        <span className="font-mono text-[0.6875rem] tracking-wide text-ink-500 uppercase">GHS</span>
+        </Heading>
+        <span className="font-mono text-2xs tracking-wide text-copy-muted uppercase">GHS</span>
       </header>
 
-      <ul className="divide-y divide-ink-100">
+      <ul className="divide-y divide-hairline">
         {payments.map((payment) => {
           const succeeded = payment.status === "succeeded";
           const refunded = payment.status === "refunded";
@@ -49,8 +57,8 @@ export function PaymentReceipt({ payments }: { payments: PaymentRow[] }) {
                 className={cn(
                   "mt-0.5 grid size-7 shrink-0 place-items-center rounded-full",
                   succeeded && "bg-success-50 text-success-700",
-                  refunded && "bg-info-50 text-info-700",
-                  !succeeded && !refunded && "bg-ink-100 text-ink-400",
+                  refunded && "bg-azure-50 text-azure-700",
+                  !succeeded && !refunded && "bg-canvas text-copy-muted",
                 )}
               >
                 {succeeded ? (
@@ -63,28 +71,32 @@ export function PaymentReceipt({ payments }: { payments: PaymentRow[] }) {
               </span>
 
               <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-baseline gap-x-2 text-[0.8125rem]">
-                  <span className="font-medium text-ink-900 capitalize">{payment.leg}</span>
+                <p className="flex flex-wrap items-baseline gap-x-2 text-note">
+                  <span className="font-semibold text-navy-900 capitalize">{payment.leg}</span>
                   <span
                     className={cn(
-                      "text-xs",
-                      succeeded ? "text-success-700" : refunded ? "text-info-700" : "text-ink-500",
+                      "text-2xs",
+                      succeeded
+                        ? "text-success-700"
+                        : refunded
+                          ? "text-azure-700"
+                          : "text-copy-muted",
                     )}
                   >
                     {refunded ? "refunded" : payment.status}
                   </span>
                   {payment.is_simulated && (
-                    <span className="text-xs text-warning-700">simulated</span>
+                    <span className="text-2xs text-warning-700">simulated</span>
                   )}
                 </p>
 
-                <p className="tabular mt-0.5 truncate font-mono text-[0.6875rem] text-ink-400">
+                <p className="tabular mt-0.5 truncate font-mono text-2xs text-copy-muted">
                   {payment.provider_reference}
                   {payment.momo_network && ` · ${MOMO_NETWORK_LABELS[payment.momo_network]}`}
                 </p>
 
                 {payment.failure_reason && !refunded && (
-                  <p className="mt-1 text-xs leading-snug text-danger-600">
+                  <p className="mt-1 text-2xs leading-snug text-danger-600">
                     {payment.failure_reason}
                   </p>
                 )}
@@ -92,8 +104,10 @@ export function PaymentReceipt({ payments }: { payments: PaymentRow[] }) {
 
               <span
                 className={cn(
-                  "tabular shrink-0 font-mono text-[0.8125rem]",
-                  succeeded ? "font-semibold text-ink-900" : "text-ink-400 line-through",
+                  "tabular shrink-0 font-mono text-note",
+                  succeeded
+                    ? "font-bold text-navy-900"
+                    : "text-copy-muted line-through decoration-copy-muted/50",
                 )}
               >
                 {formatAmount(Number(payment.amount))}

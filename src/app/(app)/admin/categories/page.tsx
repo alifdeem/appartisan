@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 
 import { CategoryRow } from "./_components/category-row";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,17 +35,10 @@ export default async function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/admin"
-        className="inline-flex items-center gap-1.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        Admin
-      </Link>
 
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-ink-900">Trades</h1>
-        <p className="text-[0.9375rem] text-ink-600">
+        <h1 className="text-2xl font-semibold text-navy-900">Trades</h1>
+        <p className="text-[0.9375rem] text-copy-muted">
           {active} offered to clients
           {categories.length > active ? `, ${categories.length - active} retired` : ""}.
         </p>
@@ -62,7 +53,7 @@ export default async function CategoriesPage() {
       </Card>
 
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-ink-800">Add a trade</h2>
+        <h2 className="text-sm font-semibold text-navy-900">Add a trade</h2>
         <Card>
           <CardContent className="py-0">
             <CategoryRow category={null} />

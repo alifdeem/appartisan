@@ -5,8 +5,12 @@ import { useRouter } from "next/navigation";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
 
+import { callAction } from "@/lib/action-call";
+
 import { rateJobAction } from "@/app/(app)/client/actions";
 import { Button } from "@/components/ui/button";
+import { FieldLabel } from "@/components/mobile/field-label";
+import { panelControlClasses } from "@/components/mobile/panel-field";
 import type { JobActionState } from "@/app/(app)/client/actions";
 import type { RatingRow } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
@@ -23,23 +27,21 @@ import { cn } from "@/lib/utils";
  * rated three stars in a bad moment should be able to see that and change it —
  * `rate_job` upserts, so revising is a first-class path rather than a support
  * ticket.
+ *
+ * **The stars keep amber.** It is the one place in the redesign where the old
+ * money colour earns a second job, and it earns it because a five-pointed star
+ * is gold everywhere on earth — a navy star reads as a bug, not as a brand.
  */
 
 const TAGS = ["On time", "Tidy", "Fair price", "Explained the work", "Polite", "Would book again"];
 
-function Stars({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (next: number) => void;
-}) {
+function Stars({ value, onChange }: { value: number; onChange: (next: number) => void }) {
   const [hovered, setHovered] = React.useState(0);
   const shown = hovered || value;
 
   return (
     <div
-      className="flex items-center gap-1"
+      className="flex items-center gap-0.5"
       role="radiogroup"
       aria-label="Stars"
       onMouseLeave={() => setHovered(0)}
@@ -53,12 +55,16 @@ function Stars({
           aria-label={`${n} star${n === 1 ? "" : "s"}`}
           onClick={() => onChange(n)}
           onMouseEnter={() => setHovered(n)}
-          className="grid size-11 place-items-center rounded-field transition-colors hover:bg-ink-100"
+          className={cn(
+            "grid size-12 place-items-center rounded-full",
+            "transition-[background-color,transform] duration-[var(--duration-instant)] ease-out-strong",
+            "hover:bg-azure-50 active:scale-90",
+          )}
         >
           <Star
             className={cn(
-              "size-7 transition-colors",
-              n <= shown ? "fill-accent-400 text-accent-500" : "text-ink-300",
+              "size-8 transition-colors duration-[var(--duration-fast)]",
+              n <= shown ? "fill-accent-400 text-accent-500" : "text-hairline",
             )}
           />
         </button>
@@ -88,7 +94,7 @@ export function RateJob({ jobId, existing }: { jobId: string; existing: RatingRo
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const next = await rateJobAction(null, formData);
+      const next = await callAction(() => rateJobAction(null, formData));
       setState(next);
 
       if (next.ok) {
@@ -103,29 +109,37 @@ export function RateJob({ jobId, existing }: { jobId: string; existing: RatingRo
 
   if (existing && !open) {
     return (
-      <section className="rounded-card border border-ink-200 bg-ink-0 p-4 shadow-sm">
+      <section className="rounded-[1.25rem] border border-hairline bg-white p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-0.5" aria-label={`You rated ${existing.stars} of 5`}>
+          <div
+            className="flex items-center gap-0.5"
+            aria-label={`You rated ${existing.stars} of 5`}
+          >
             {[1, 2, 3, 4, 5].map((n) => (
               <Star
                 key={n}
                 className={cn(
                   "size-4",
-                  n <= existing.stars ? "fill-accent-400 text-accent-500" : "text-ink-300",
+                  n <= existing.stars ? "fill-accent-400 text-accent-500" : "text-hairline",
                 )}
+                aria-hidden
               />
             ))}
           </div>
-          <p className="text-sm text-ink-600">You rated this job.</p>
+          <p className="text-note text-copy-muted">You rated this job.</p>
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="ml-auto text-sm font-medium text-ink-500 underline-offset-4 transition-colors hover:text-ink-900 hover:underline"
+            className="tap ml-auto text-note font-semibold text-azure-600 underline-offset-4 hover:underline"
           >
             Change
           </button>
         </div>
-        {existing.comment && <p className="mt-2 text-sm text-ink-700 italic">“{existing.comment}”</p>}
+        {existing.comment && (
+          <p className="mt-2.5 text-note leading-relaxed text-navy-900 italic">
+            &ldquo;{existing.comment}&rdquo;
+          </p>
+        )}
       </section>
     );
   }
@@ -133,48 +147,60 @@ export function RateJob({ jobId, existing }: { jobId: string; existing: RatingRo
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-4 rounded-card border border-ink-200 bg-ink-0 p-4 shadow-sm"
+      className="animate-fade-up space-y-4 rounded-[1.5rem] border border-hairline bg-white p-5 shadow-[var(--shadow-float)]"
     >
       <input type="hidden" name="jobId" value={jobId} />
       <input type="hidden" name="stars" value={stars} />
       <input type="hidden" name="tags" value={tags.join(",")} />
 
       <div>
-        <h2 className="text-sm font-semibold text-ink-900">How did it go?</h2>
-        <p className="mt-0.5 text-sm text-ink-500">
+        <h2 className="font-space text-lede font-bold text-navy-900">How did it go?</h2>
+        <p className="mt-1 text-note leading-relaxed text-copy-muted">
           Your rating decides who gets offered work next.
         </p>
       </div>
 
-      <Stars value={stars} onChange={setStars} />
+      {/* Centred and oversized. This is the one control on the screen, and a
+          row of small stars tucked left reads as a setting rather than as the
+          question being asked. */}
+      <div className="flex justify-center">
+        <Stars value={stars} onChange={setStars} />
+      </div>
       {state?.fieldErrors?.stars && (
-        <p className="text-sm text-danger-700">{state.fieldErrors.stars}</p>
+        <p role="alert" className="text-center text-note text-danger-600">
+          {state.fieldErrors.stars}
+        </p>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        {TAGS.map((tag) => {
-          const active = tags.includes(tag);
-          return (
-            <button
-              key={tag}
-              type="button"
-              aria-pressed={active}
-              onClick={() =>
-                setTags((current) =>
-                  current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag],
-                )
-              }
-              className={cn(
-                "min-h-9 rounded-full border px-3 text-sm transition-colors",
-                active
-                  ? "border-ink-900 bg-ink-900 text-ink-0"
-                  : "border-ink-200 bg-ink-0 text-ink-700 hover:border-ink-300",
-              )}
-            >
-              {tag}
-            </button>
-          );
-        })}
+      <div className="space-y-2.5">
+        <FieldLabel>What stood out</FieldLabel>
+        <div className="flex flex-wrap gap-2">
+          {TAGS.map((tag) => {
+            const active = tags.includes(tag);
+            return (
+              <button
+                key={tag}
+                type="button"
+                aria-pressed={active}
+                onClick={() =>
+                  setTags((current) =>
+                    current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag],
+                  )
+                }
+                className={cn(
+                  "min-h-11 rounded-full px-4 text-note font-semibold",
+                  "transition-[background-color,border-color,color,transform] duration-[var(--duration-fast)] ease-out-strong",
+                  "active:scale-[0.97]",
+                  active
+                    ? "bg-linear-to-b from-navy-800 to-navy-900 text-white shadow-[var(--shadow-glow-navy)]"
+                    : "border border-hairline bg-white text-navy-900 hover:border-azure-300 hover:bg-azure-50",
+                )}
+              >
+                {tag}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <textarea
@@ -183,15 +209,29 @@ export function RateJob({ jobId, existing }: { jobId: string; existing: RatingRo
         defaultValue={existing?.comment ?? ""}
         placeholder="Anything else? (optional)"
         maxLength={1000}
-        className="w-full rounded-field border border-ink-200 bg-ink-25 px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 focus:border-ink-400 focus:outline-none"
+        aria-label="Your comment"
+        className={panelControlClasses(false, "resize-none")}
       />
 
       <div className="flex items-center gap-2">
-        <Button type="submit" disabled={pending || stars === 0}>
+        <Button
+          type="submit"
+          variant="navy"
+          size="lg"
+          shape="pill"
+          block={!existing}
+          disabled={pending || stars === 0}
+        >
           {pending ? "Sending…" : existing ? "Update rating" : "Submit rating"}
         </Button>
         {existing && (
-          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            shape="pill"
+            onClick={() => setOpen(false)}
+          >
             Cancel
           </Button>
         )}

@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, Power } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
+
+import { callAction } from "@/lib/action-call";
 
 import { setAvailabilityAction } from "@/app/(app)/provider/actions";
 import { cn } from "@/lib/utils";
@@ -73,7 +75,7 @@ export function AvailabilityToggle({
     setGuess({ from: availability, to: next });
 
     startTransition(async () => {
-      const result = await setAvailabilityAction(next);
+      const result = await callAction(() => setAvailabilityAction(next));
 
       if (!result.ok) {
         setGuess(null);
@@ -88,15 +90,23 @@ export function AvailabilityToggle({
   }
 
   return (
+    /**
+     * The reference's status card: **white, quiet, and green when live** — not
+     * the navy slab this was before.
+     *
+     * The earlier version made going online the loudest object on the screen,
+     * which was a reasonable instinct and the wrong one for this composition.
+     * The hero already carries the weight; a second full-bleed gradient beside
+     * the photograph fought it and flattened the band. Here the state is told
+     * by a dot and a colour, and the only chrome is one soft shadow.
+     *
+     * Three states, still read from colour before any word is: **green** live,
+     * **azure** locked on a job, **slate** off.
+     */
     <div
       className={cn(
-        "overflow-hidden rounded-card border shadow-sm",
+        "rounded-[1.125rem] bg-white p-3.5 shadow-[var(--shadow-float)]",
         "transition-colors duration-[var(--duration-base)] ease-out-strong",
-        onJob
-          ? "border-info-500/30 bg-info-50"
-          : isOnline
-            ? "border-success-500/35 bg-success-50"
-            : "border-ink-200 bg-ink-0",
       )}
     >
       <button
@@ -106,63 +116,65 @@ export function AvailabilityToggle({
         aria-pressed={isOnline}
         aria-label={isOnline ? "Go offline" : "Go online"}
         className={cn(
-          "flex w-full items-center gap-4 p-4 text-left",
+          "flex w-full items-center gap-3 text-left",
+          // 130ms, resolving before the finger lifts — anything slower reads as
+          // lag rather than as feedback.
           "transition-transform duration-[var(--duration-instant)] ease-out-strong",
           locked ? "cursor-default" : "active:scale-[0.99]",
         )}
       >
-        <span
-          className={cn(
-            "relative grid size-12 shrink-0 place-items-center rounded-full",
-            "transition-colors duration-[var(--duration-base)] ease-out-strong",
-            onJob
-              ? "bg-info-500/15 text-info-700"
-              : isOnline
-                ? "bg-success-500/15 text-success-700"
-                : "bg-ink-100 text-ink-500",
-          )}
-        >
-          {/* The only moving thing on the screen, and only while genuinely
-              live — so it reads as a status light rather than decoration. */}
-          {isOnline && !pending && (
-            <span className="absolute inline-flex size-12 animate-pulse-ring rounded-full bg-success-500/40" />
-          )}
+        <span className="relative grid size-6 shrink-0 place-items-center">
           {pending ? (
-            <Loader2 className="size-5 animate-spin" aria-hidden />
+            <Loader2 className="size-4 animate-spin text-copy-muted" aria-hidden />
           ) : onJob ? (
-            <Lock className="relative size-5" aria-hidden />
+            <Lock className="size-4 text-azure-600" aria-hidden />
           ) : (
-            <Power className="relative size-5" aria-hidden />
+            <>
+              {/* The only moving thing on the screen, and only while genuinely
+                  live — so it reads as a status light, not decoration. */}
+              {isOnline && (
+                <span className="absolute inline-flex size-5 animate-pulse-ring rounded-full bg-success-500/45" />
+              )}
+              <span
+                className={cn(
+                  "relative size-2.5 rounded-full",
+                  isOnline ? "bg-success-600" : "bg-ink-300",
+                )}
+              />
+            </>
           )}
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block text-[1.0625rem] leading-tight font-semibold text-ink-900">
-            {onJob ? "On a job" : isOnline ? "You're online" : "You're offline"}
+          <span
+            className={cn(
+              "block text-ui leading-tight font-semibold",
+              onJob ? "text-azure-700" : isOnline ? "text-success-700" : "text-navy-900",
+            )}
+          >
+            {onJob ? "On a job" : isOnline ? "You\u2019re online" : "You\u2019re offline"}
           </span>
-          <span className="mt-0.5 block text-sm leading-snug text-ink-600">
+          <span className="mt-0.5 block text-2xs leading-snug text-copy-muted">
             {onJob
-              ? "Finish the job you're on to change this."
+              ? "Finish the job you\u2019re on to change this."
               : isOnline
-                ? "Jobs near you will be offered to you."
-                : (blockedReason ?? "Go online to start receiving jobs.")}
+                ? "Jobs near you are being offered"
+                : (blockedReason ?? "Go online to start receiving jobs")}
           </span>
         </span>
 
         {!locked && (
-          /* A real switch, kept as the secondary affordance — the slab is the
-             target, this is what tells you the slab is a toggle at all. */
           <span
             aria-hidden
             className={cn(
-              "relative h-8 w-[3.25rem] shrink-0 rounded-full",
+              "relative h-7 w-[3rem] shrink-0 rounded-full",
               "transition-colors duration-[var(--duration-base)] ease-out-strong",
-              isOnline ? "bg-success-600" : "bg-ink-300",
+              isOnline ? "bg-azure-500" : "bg-ink-200",
             )}
           >
             <span
               className={cn(
-                "absolute top-1 left-1 size-6 rounded-full bg-white shadow-sm",
+                "absolute top-1 left-1 size-5 rounded-full bg-white shadow-sm",
                 // transform, not `left` — this runs on the GPU and cannot
                 // trigger layout on a phone that is already struggling.
                 "transition-transform duration-[var(--duration-base)] ease-out-strong",

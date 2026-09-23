@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeft, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
 
 import { AssignJob } from "@/app/(app)/admin/matching/_components/assign-job";
 import { Badge } from "@/components/ui/badge";
@@ -44,28 +43,21 @@ export default async function StalledJobsPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <Link
-          href="/admin"
-          className="inline-flex items-center gap-1.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          Admin
-        </Link>
 
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-ink-900">Stalled jobs</h1>
-          <p className="max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
+          <h1 className="text-2xl font-semibold text-navy-900">Stalled jobs</h1>
+          <p className="max-w-prose text-[0.9375rem] leading-relaxed text-copy-muted">
             Nobody nearby was free, or the client declined too many prices. Call an artisan who
-            can take it, then assign it here — the job carries on exactly as if they had accepted
+            can take it, then assign it here. The job carries on exactly as if they had accepted
             the offer themselves.
           </p>
         </div>
       </div>
 
       {withCandidates.length === 0 ? (
-        <div className="rounded-card border border-dashed border-ink-300 bg-ink-50 px-5 py-14 text-center">
-          <p className="text-sm font-medium text-ink-800">Nothing is stuck</p>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-ink-500">
+        <div className="rounded-card border border-dashed border-hairline bg-canvas px-5 py-14 text-center">
+          <p className="text-sm font-medium text-navy-900">Nothing is stuck</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-copy-muted">
             Every posted job either has an artisan or is still being matched.
           </p>
         </div>
@@ -76,13 +68,13 @@ export default async function StalledJobsPage() {
               <Card>
                 <CardContent className="space-y-4">
                   <div className="flex flex-wrap items-start gap-3.5">
-                    <span className="grid size-11 shrink-0 place-items-center rounded-field bg-ink-100 text-ink-600">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-field bg-azure-50 text-copy-muted">
                       <CategoryIcon name={job.category?.icon ?? "wrench"} className="size-5" />
                     </span>
 
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-base font-semibold text-ink-900">
+                        <h2 className="text-base font-semibold text-navy-900">
                           {job.category?.name ?? "Job"}
                         </h2>
                         <Badge tone="warning">
@@ -96,15 +88,15 @@ export default async function StalledJobsPage() {
                         )}
                       </div>
 
-                      <p className="tabular font-mono text-xs text-ink-500">
+                      <p className="tabular font-mono text-xs text-copy-muted">
                         {job.reference} · posted {timeAgo(job.created_at)}
                       </p>
 
                       {job.landmark && (
-                        <p className="text-sm text-ink-700">{job.landmark}</p>
+                        <p className="text-sm text-copy">{job.landmark}</p>
                       )}
                       {job.description && (
-                        <p className="max-w-prose text-sm leading-relaxed text-ink-600">
+                        <p className="max-w-prose text-sm leading-relaxed text-copy-muted">
                           {job.description}
                         </p>
                       )}
@@ -113,7 +105,7 @@ export default async function StalledJobsPage() {
                     {job.client?.phone && (
                       <a
                         href={`tel:${job.client.phone}`}
-                        className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-field border border-ink-300 bg-ink-0 px-3.5 text-sm font-medium text-ink-800 shadow-xs transition-[background-color,border-color,transform] duration-[var(--duration-instant)] ease-out-strong hover:border-ink-400 hover:bg-ink-50 active:scale-[0.98]"
+                        className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-field border border-hairline bg-white px-3.5 text-sm font-medium text-navy-900 shadow-xs transition-[background-color,border-color,transform] duration-[var(--duration-instant)] ease-out-strong hover:border-copy-muted hover:bg-canvas active:scale-[0.98]"
                       >
                         <Phone className="size-4" aria-hidden />
                         <span className="tabular font-mono">

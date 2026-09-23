@@ -5,7 +5,7 @@ import { Crosshair, Loader2, MapPin, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { reverseGeocodeAction, searchAddressAction } from "@/app/(app)/client/geocode-actions";
-import { Field, Input } from "@/components/ui/input";
+import { PanelField, PanelInput, panelControlClasses } from "@/components/mobile/panel-field";
 import { LocationMap } from "@/components/jobs/location-map";
 import { isValidGhanaPostCode, isWithinGhana, type LatLng } from "@/lib/integrations/maps/types";
 import { cn } from "@/lib/utils";
@@ -198,40 +198,45 @@ export function LocationPicker({
   const ghanaPostValid = ghanaPost.trim() === "" || isValidGhanaPostCode(ghanaPost);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* The form reads these; everything above is how they get filled in. */}
       <input type="hidden" name="lat" value={point?.lat ?? ""} />
       <input type="hidden" name="lng" value={point?.lng ?? ""} />
       <input type="hidden" name="addressText" value={address} />
 
       <div className="relative">
-        <Input
+        {searching ? (
+          <Loader2
+            className="pointer-events-none absolute top-1/2 left-4 size-4.5 -translate-y-1/2 animate-spin text-copy-muted"
+            aria-hidden
+          />
+        ) : (
+          <Search
+            className="pointer-events-none absolute top-1/2 left-4 size-4.5 -translate-y-1/2 text-copy-muted"
+            aria-hidden
+          />
+        )}
+        <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search for an area — Osu, Spintex, Tema Community 5…"
           aria-label="Search for an address"
           autoComplete="off"
-          leading={
-            searching ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-            ) : (
-              <Search className="size-4" aria-hidden />
-            )
-          }
+          className={panelControlClasses(false, "pl-11 [&::-webkit-search-cancel-button]:hidden")}
         />
 
         {visibleHits.length > 0 && (
-          <ul className="animate-fade-in absolute inset-x-0 top-full z-20 mt-1.5 max-h-64 overflow-y-auto rounded-card border border-ink-200 bg-ink-0 py-1 shadow-lg">
+          <ul className="animate-fade-in absolute inset-x-0 top-full z-20 mt-1.5 max-h-64 overflow-y-auto rounded-[1.25rem] border border-hairline bg-white py-1 shadow-[var(--shadow-sheet)]">
             {visibleHits.map((hit) => (
               <li key={`${hit.lat},${hit.lng}`}>
                 <button
                   type="button"
                   onClick={() => choose(hit)}
-                  className="flex w-full items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors duration-[var(--duration-instant)] hover:bg-ink-50"
+                  className="flex w-full items-start gap-2.5 px-4 py-2.5 text-left transition-colors duration-[var(--duration-instant)] hover:bg-azure-50"
                 >
-                  <MapPin className="mt-0.5 size-4 shrink-0 text-ink-400" aria-hidden />
-                  <span className="text-sm leading-snug text-ink-800">{hit.label}</span>
+                  <MapPin className="mt-0.5 size-4 shrink-0 text-azure-500" aria-hidden />
+                  <span className="text-note leading-snug text-navy-900">{hit.label}</span>
                 </button>
               </li>
             ))}
@@ -243,7 +248,7 @@ export function LocationPicker({
         <LocationMap
           value={point}
           onChange={setPoint}
-          className="h-72 w-full sm:h-80"
+          className="h-72 w-full overflow-hidden rounded-[1.25rem] sm:h-80"
         />
 
         <button
@@ -251,9 +256,9 @@ export function LocationPicker({
           onClick={locate}
           disabled={locating}
           className={cn(
-            "absolute bottom-3 left-3 z-10 inline-flex min-h-10 items-center gap-2 rounded-field",
-            "border border-ink-300 bg-ink-0/95 px-3 text-sm font-medium text-ink-800 shadow-sm backdrop-blur",
-            "transition-colors duration-[var(--duration-instant)] hover:bg-ink-50 active:scale-[0.98]",
+            "absolute bottom-3 left-3 z-10 inline-flex min-h-11 items-center gap-2 rounded-full",
+            "border border-white/80 bg-white/90 px-4 text-note font-semibold text-navy-900 shadow-[var(--shadow-float)] backdrop-blur",
+            "transition-colors duration-[var(--duration-instant)] hover:bg-white active:scale-[0.97]",
             "disabled:opacity-60",
           )}
         >
@@ -267,34 +272,34 @@ export function LocationPicker({
       </div>
 
       {fieldErrors?.pin && (
-        <p role="alert" className="animate-fade-in text-sm text-danger-600">
+        <p role="alert" className="animate-fade-in text-note text-danger-600">
           {fieldErrors.pin}
         </p>
       )}
 
       <div
         className={cn(
-          "flex items-start gap-2.5 rounded-card border border-ink-200 bg-ink-50 px-3.5 py-3",
+          "flex items-start gap-2.5 rounded-[1.25rem] border border-hairline bg-azure-50/60 px-4 py-3.5",
           !point && "border-dashed",
         )}
       >
-        <MapPin className="mt-0.5 size-4 shrink-0 text-ink-500" aria-hidden />
+        <MapPin className="mt-0.5 size-4 shrink-0 text-azure-500" aria-hidden />
         <div className="min-w-0 flex-1 space-y-0.5">
           {point ? (
             <>
-              <p className="text-sm leading-snug text-ink-800">
+              <p className="text-note leading-snug text-navy-900">
                 {resolving && !address ? (
-                  <span className="text-ink-500">Working out the address…</span>
+                  <span className="text-copy-muted">Working out the address…</span>
                 ) : (
-                  address || <span className="text-ink-500">Unnamed location</span>
+                  address || <span className="text-copy-muted">Unnamed location</span>
                 )}
               </p>
-              <p className="tabular font-mono text-xs text-ink-500">
+              <p className="tabular font-mono text-2xs text-copy-muted">
                 {point.lat.toFixed(5)}, {point.lng.toFixed(5)}
               </p>
             </>
           ) : (
-            <p className="text-sm text-ink-600">
+            <p className="text-note leading-relaxed text-copy-muted">
               Move the map so the pin sits on the building, then add a landmark below.
             </p>
           )}
@@ -304,7 +309,7 @@ export function LocationPicker({
             type="button"
             onClick={() => setAddress("")}
             title="Clear the address caption"
-            className="grid size-7 shrink-0 place-items-center rounded-field text-ink-400 transition-colors hover:bg-ink-200 hover:text-ink-700"
+            className="grid size-7 shrink-0 place-items-center rounded-full text-copy-muted transition-colors hover:bg-white hover:text-navy-900"
           >
             <X className="size-3.5" aria-hidden />
             <span className="sr-only">Clear address</span>
@@ -319,14 +324,13 @@ export function LocationPicker({
         road name is frequently four unmarked gates. The pin gets an artisan to
         the street; this gets them to the door.
       */}
-      <Field
+      <PanelField
         label="Landmark"
         htmlFor="landmark"
-        required
         hint="How you would describe it on the phone — “blue gate opposite Melcom, first house after the junction”."
         error={fieldErrors?.landmark}
       >
-        <Input
+        <PanelInput
           id="landmark"
           name="landmark"
           value={landmark}
@@ -335,20 +339,21 @@ export function LocationPicker({
           required
           aria-required
           placeholder="Blue gate opposite Melcom"
-          aria-invalid={Boolean(fieldErrors?.landmark)}
+          invalid={Boolean(fieldErrors?.landmark)}
         />
-      </Field>
+      </PanelField>
 
-      <Field
+      <PanelField
         label="GhanaPostGPS code"
         htmlFor="ghanapostCode"
+        optional
         hint="If you know it. Example: GA-543-0125."
         error={
           fieldErrors?.ghanapostCode ??
           (ghanaPostValid ? undefined : "Format is two letters, then 3–4 digits, then 4 digits.")
         }
       >
-        <Input
+        <PanelInput
           id="ghanapostCode"
           name="ghanapostCode"
           value={ghanaPost}
@@ -357,10 +362,10 @@ export function LocationPicker({
           placeholder="GA-543-0125"
           autoCapitalize="characters"
           spellCheck={false}
-          className="font-mono tabular"
-          aria-invalid={!ghanaPostValid || Boolean(fieldErrors?.ghanapostCode)}
+          className="tabular font-mono"
+          invalid={!ghanaPostValid || Boolean(fieldErrors?.ghanapostCode)}
         />
-      </Field>
+      </PanelField>
     </div>
   );
 }

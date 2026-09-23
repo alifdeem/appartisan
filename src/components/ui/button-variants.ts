@@ -33,22 +33,52 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         /** Default action. Green = the platform speaking. */
-        primary: "bg-brand-700 text-white shadow-sm hover:bg-brand-800",
+        primary: "bg-navy-800 text-white shadow-sm hover:bg-navy-900",
+        /**
+         * The 2026 reference's primary action: a navy gradient with a navy
+         * bloom under it, lifting 1px on hover before it presses back down.
+         *
+         * The gradient runs navy-800 → navy-900 top-to-bottom, which is only
+         * about 7% of lightness. That restraint is the point — a gradient you
+         * can *see* on a button reads as 2013. This one is only there so the
+         * top edge catches light and the shape looks moulded rather than
+         * filled.
+         *
+         * The lift is `-translate-y-px` on hover and nothing on active, so the
+         * press returns it to the resting plane. Combined with the 130ms
+         * instant curve the button feels like it has mass.
+         */
+        navy: [
+          "bg-linear-to-b from-navy-800 to-navy-900 text-white",
+          "shadow-[var(--shadow-glow-navy)]",
+          "hover:-translate-y-px hover:shadow-[var(--shadow-glow-navy-lg)]",
+          "active:translate-y-0 active:shadow-[var(--shadow-glow-navy)]",
+        ].join(" "),
+        /**
+         * Its outlined partner — "Create an account" under the OR rule. Azure
+         * border on white, filling with the soft tint on hover. No shadow: it
+         * must read as the quieter of the two at a glance, and two shadowed
+         * buttons stacked read as two primaries.
+         */
+        navyOutline: [
+          "bg-white text-navy-800 border border-hairline",
+          "hover:border-azure-500 hover:bg-azure-50",
+        ].join(" "),
         /** Money. Deposits, payouts, "Pay GHS 448.00". Use sparingly. */
-        money: "bg-accent-600 text-ink-950 shadow-sm hover:bg-accent-500",
+        money: "bg-navy-800 text-navy-950 shadow-sm hover:bg-navy-700",
         secondary:
-          "bg-ink-0 text-ink-800 border border-ink-300 shadow-xs hover:bg-ink-50 hover:border-ink-400",
+          "bg-white text-navy-900 border border-hairline shadow-xs hover:bg-canvas hover:border-copy-muted",
         /**
          * The new-reference secondary. Every screen in that redesign grounds on
-         * pure white, where `secondary`'s warm `ink-0` fill reads as a faint
+         * pure white, where `secondary`'s warm `white` fill reads as a faint
          * stain rather than as a surface. No shadow either — the reference's
          * outlined buttons are flat, and depth there comes from the border.
          */
         outline:
-          "bg-white text-ink-900 border border-ink-200 hover:bg-ink-50 hover:border-ink-300",
-        ghost: "text-ink-700 hover:bg-ink-100 hover:text-ink-900",
+          "bg-white text-navy-900 border border-hairline hover:bg-canvas hover:border-hairline",
+        ghost: "text-copy hover:bg-azure-50 hover:text-navy-900",
         danger: "bg-danger-600 text-white shadow-sm hover:bg-danger-700",
-        link: "text-brand-700 underline-offset-4 hover:underline active:scale-100 h-auto min-h-0 p-0",
+        link: "text-navy-800 underline-offset-4 hover:underline active:scale-100 h-auto min-h-0 p-0",
       },
       size: {
         sm: "min-h-9 px-3 text-sm [&_svg]:size-4",

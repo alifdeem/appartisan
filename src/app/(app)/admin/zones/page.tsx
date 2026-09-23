@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
 import { ZoneEditor } from "@/app/(app)/admin/zones/_components/zone-editor";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,13 +47,13 @@ export default async function TransportZonesPage() {
   for (const [city, cityZones] of byCity) {
     const sorted = [...cityZones].sort((a, b) => Number(a.min_km) - Number(b.min_km));
     if (Number(sorted[0].min_km) > 0) {
-      gaps.push(`${city}: nothing covers 0–${sorted[0].min_km}km`);
+      gaps.push(`${city}: nothing covers 0-${sorted[0].min_km}km`);
     }
     for (let i = 1; i < sorted.length; i++) {
       const previousMax = Number(sorted[i - 1].max_km);
       const currentMin = Number(sorted[i].min_km);
       if (currentMin > previousMax) {
-        gaps.push(`${city}: nothing covers ${previousMax}–${currentMin}km`);
+        gaps.push(`${city}: nothing covers ${previousMax}-${currentMin}km`);
       }
     }
   }
@@ -62,32 +61,25 @@ export default async function TransportZonesPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <Link
-          href="/admin"
-          className="inline-flex items-center gap-1.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          Admin
-        </Link>
 
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-ink-900">Transport bands</h1>
-          <p className="max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
+          <h1 className="text-2xl font-semibold text-navy-900">Transport bands</h1>
+          <p className="max-w-prose text-[0.9375rem] leading-relaxed text-copy-muted">
             What a client pays for travel, by how far the artisan has to come. Charged upfront
             with the deposit so nobody is out of pocket for a journey.
           </p>
         </div>
       </div>
 
-      <Card className="border-brand-200 bg-brand-50">
+      <Card className="border-azure-200 bg-azure-50">
         <CardContent className="space-y-1.5">
-          <h2 className="text-sm font-semibold text-brand-900">
+          <h2 className="text-sm font-semibold text-navy-900">
             This is reimbursement, not revenue
           </h2>
-          <p className="max-w-prose text-sm leading-relaxed text-brand-900/85">
+          <p className="max-w-prose text-sm leading-relaxed text-navy-900/85">
             Every cedi here goes to the artisan in full. Raising a band raises what the client
             pays and what the artisan receives, and leaves the platform&rsquo;s margin exactly
-            where it was — that comes only from the {12}% service fee.
+            where it was. That comes only from the {12}% service fee.
           </p>
         </CardContent>
       </Card>
@@ -101,12 +93,12 @@ export default async function TransportZonesPage() {
             <AlertTriangle className="size-4" aria-hidden />
             Gaps in the ladder
           </p>
-          <ul className="space-y-0.5 text-sm text-ink-700">
+          <ul className="space-y-0.5 text-sm text-copy">
             {gaps.map((gap) => (
               <li key={gap}>{gap}</li>
             ))}
           </ul>
-          <p className="text-xs leading-relaxed text-ink-600">
+          <p className="text-xs leading-relaxed text-copy-muted">
             A distance that falls in a gap gets no band at all, and a quote built on it charges
             nothing for travel.
           </p>
@@ -115,10 +107,10 @@ export default async function TransportZonesPage() {
 
       <ZoneEditor zones={rows} />
 
-      <p className="text-xs leading-relaxed text-ink-500">
+      <p className="text-xs leading-relaxed text-copy-muted">
         A worked example on the ladder as it stands: a job in the{" "}
-        {active[1] ? `${active[1].min_km}–${active[1].max_km}km` : "middle"} band adds{" "}
-        {active[1] ? formatCedis(Number(active[1].fee)) : "—"} to the deposit, all of which
+        {active[1] ? `${active[1].min_km}-${active[1].max_km}km` : "middle"} band adds{" "}
+        {active[1] ? formatCedis(Number(active[1].fee)) : "-"} to the deposit, all of which
         reaches the artisan.
       </p>
     </div>

@@ -37,20 +37,19 @@ export function JobCard({
     <Link
       href={href}
       className={cn(
-        // `bg-white`, not `ink-0`: these now sit on the client shell's pure
-        // white ground, where the warm fill reads as a smudge rather than as a
-        // raised surface. Same reason the `outline` button variant exists.
-        "group block rounded-card border bg-white shadow-sm",
+        // Recoloured for the 2026 reference: cool hairline, navy-tinted lift.
+        // Used by the home screen and the jobs list, so both move together.
+        "group block rounded-[1.25rem] border bg-white shadow-[var(--shadow-float)]",
         "transition-[box-shadow,border-color,transform] duration-[var(--duration-fast)] ease-out-strong",
-        "hover:-translate-y-px hover:border-ink-300 hover:shadow-md active:translate-y-0 active:shadow-sm",
-        isDraft ? "border-dashed border-ink-300" : "border-ink-200",
+        "hover:-translate-y-0.5 hover:border-azure-300 hover:shadow-[var(--shadow-sheet)] active:translate-y-0",
+        isDraft ? "border-dashed border-hairline" : "border-hairline",
       )}
     >
       <div className="flex items-start gap-3.5 p-4">
         <span
           className={cn(
-            "grid size-10 shrink-0 place-items-center rounded-field",
-            isDraft ? "bg-ink-100 text-ink-500" : "bg-brand-50 text-brand-700",
+            "grid size-11 shrink-0 place-items-center rounded-[0.875rem]",
+            isDraft ? "bg-azure-50 text-copy-muted" : "bg-azure-50 text-navy-800",
           )}
         >
           <CategoryIcon name={job.category?.icon ?? "wrench"} />
@@ -58,17 +57,17 @@ export function JobCard({
 
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h3 className="truncate text-[0.9375rem] font-semibold text-ink-900">
+            <h3 className="truncate font-space text-[0.9375rem] font-bold text-navy-900">
               {job.category?.name ?? "Service"}
             </h3>
             <JobStatusBadge status={job.status} />
           </div>
 
-          <p className="line-clamp-2 text-sm leading-snug text-ink-600">
+          <p className="line-clamp-2 text-sm leading-snug text-copy-muted">
             {job.description?.trim() || presentation.blurb}
           </p>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5 text-xs text-ink-500">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5 text-xs text-copy-muted">
             {!isDraft && <span className="tabular font-mono">{job.reference}</span>}
 
             {job.landmark && (
@@ -97,7 +96,7 @@ export function JobCard({
         </div>
 
         <ChevronRight
-          className="mt-2.5 size-4 shrink-0 text-ink-300 transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5 group-hover:text-ink-500"
+          className="mt-2.5 size-4 shrink-0 text-hairline transition-transform duration-[var(--duration-fast)] ease-out-strong group-hover:translate-x-0.5 group-hover:text-azure-500"
           aria-hidden
         />
       </div>
