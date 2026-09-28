@@ -133,8 +133,13 @@
   --color-info-500: oklch(0.623 0.153 253);
   --color-info-700: oklch(0.488 0.135 254);
 
-  --color-background: var(--color-ink-25);
-  --color-foreground: var(--color-ink-900);
+  /* Repointed at the redesign palette. These are read only by the root
+     layout's `<body>`, so every screen that does not set its own ground now
+     sits on the cool off-white the rest of the product uses rather than the
+     warm paper the pre-redesign system shipped. The app screens set theirs
+     explicitly and are unaffected. */
+  --color-background: var(--color-canvas);
+  --color-foreground: var(--color-copy);
 
   /* ---- Surfaces: the layering scale ------------------------------------- */
   /* "Paper & Depth". Four opaque tiers, each step lighter than the one below,
