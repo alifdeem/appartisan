@@ -193,3 +193,73 @@ Palette migration throughout, plus:
 5. Palette migration across the remaining seven sections.
 6. Section re-cuts above.
 7. Verify: build, a11y, Lighthouse on LCP/CLS, and both themes.
+
+---
+
+# Below the hero
+
+Audited from a 1440px capture of the live page. Six sections, and four of them
+carry a pattern that reads as filler.
+
+## What is wrong, section by section
+
+**WorkBand** (the photographic band). Fine. It earns its place: a real artisan
+doing real work, cropped so the hands and the face are in frame rather than a
+centred shot of blank wall. Keep as is.
+
+**Promises.** Now unbalanced. Re-cutting it as an asymmetric 2+1 to escape the
+three-equal-cards shape left the first column ending halfway up while the
+other two stack beside it, so a third of the section is empty. And it is pure
+type: three headings and three paragraphs with nothing to catch the eye
+scanning past.
+
+**HowItWorks.** Five columns labelled `01 02 03 04 05`. Numbered step labels
+are the clearest filler on a marketing page - "Describe the job" is already the
+label, and a reader can count. Five equal columns is also too many: the body
+copy is squeezed to four words a line, which is the width at which people stop
+reading.
+
+**Trades.** Twenty-six rows, each numbered `01`-`26`, each with a hairline
+under it, in three columns. A long list is not made better by being longer; it
+needs a different component. The numbering is doubly pointless here - nobody
+needs to know that Upholstery is the eighteenth trade.
+
+**Pricing.** The `QuoteDocket` is still on the pre-redesign palette: cream
+ground, amber total row, seventeen legacy tokens. Against the navy hero it
+reads as a component from another product.
+
+**ForArtisans.** Already dark and already migrated. This is the page's one
+permitted theme inversion and it earns it - the audience genuinely changes
+here. Keep.
+
+## What replaces them
+
+**Promises -> three columns on hairlines, with icons, no numbers.** Back to
+three, because three short editorial columns divided by rules is not the same
+thing as three stacked cards - the ban is on the card shape, not the count. An
+icon per column gives the eye somewhere to land and fixes the all-type
+monotony. Equal heights, so no dead corner.
+
+**HowItWorks -> a two-column timeline.** Heading and standfirst on the left,
+sticky through the section; the five steps stacked vertically on the right
+against a single continuous rule, each with a marker on it. Five steps read
+down; they do not read across. Numbers go. The step's verb is its label.
+
+**Trades -> four named groups of chips.** Every one of the twenty-six still
+appears, but grouped into clusters that carry information the flat list did
+not: what kind of work it is. No row rules, no numbering, no three columns of
+hairlines. Chips scan in any order, wrap at any width, and collapse to one
+column on a phone without becoming a mile of list.
+
+  Repairs and maintenance, Building and finishing, Home and living,
+  Security and systems.
+
+**Pricing -> migrate the docket.** Same component, the redesign palette.
+
+## Order
+
+1. QuoteDocket palette, because it is the loudest break.
+2. Promises.
+3. HowItWorks.
+4. Trades.
+5. Re-shoot at 1440 and 390, check both, run the suite.

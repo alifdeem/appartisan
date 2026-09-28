@@ -56,8 +56,8 @@ export interface ArtisanCardProps {
 
 function Claim({ icon: Icon, label }: { icon: typeof ShieldCheck; label: string }) {
   return (
-    <li className="flex items-center gap-1.5 text-[0.8125rem] leading-none text-ink-700">
-      <Icon className="size-3.5 shrink-0 text-brand-600" aria-hidden />
+    <li className="flex items-center gap-1.5 text-[0.8125rem] leading-none text-copy">
+      <Icon className="size-3.5 shrink-0 text-navy-800" aria-hidden />
       {label}
     </li>
   );
@@ -87,7 +87,7 @@ export function ArtisanCard({
   return (
     <article
       className={cn(
-        "overflow-hidden rounded-card border border-ink-200 bg-ink-0",
+        "overflow-hidden rounded-card border border-hairline bg-white",
         elevated ? "shadow-lg" : "shadow-sm",
         className,
       )}
@@ -111,12 +111,12 @@ export function ArtisanCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <Heading className="truncate text-[1.0625rem] leading-tight font-semibold text-ink-900">
+              <Heading className="truncate text-[1.0625rem] leading-tight font-semibold text-navy-900">
                 {name}
               </Heading>
-              <p className="mt-0.5 truncate text-sm text-ink-600">
+              <p className="mt-0.5 truncate text-sm text-copy-muted">
                 {trade}
-                {baseCity && <span className="text-ink-400"> · {baseCity}</span>}
+                {baseCity && <span className="text-copy-muted"> · {baseCity}</span>}
               </p>
             </div>
 
@@ -146,37 +146,37 @@ export function ArtisanCard({
 
       {/* The measured figures, set in mono so the digits line up between cards
           in a list. A rating that jitters column-to-column reads as sloppy. */}
-      <dl className="flex items-stretch border-t border-ink-200 bg-ink-25 text-ink-900">
+      <dl className="flex items-stretch border-t border-hairline bg-canvas text-navy-900">
         <div className="flex-1 px-4 py-2.5">
-          <dt className="text-[0.6875rem] font-medium tracking-wide text-ink-500 uppercase">
+          <dt className="text-[0.6875rem] font-medium tracking-wide text-copy-muted uppercase">
             Rating
           </dt>
           <dd className="mt-0.5 font-mono text-sm tabular">
             {ratingCount > 0 ? (
               <>
                 {ratingAvg.toFixed(1)}
-                <span className="text-ink-400"> / {ratingCount}</span>
+                <span className="text-copy-muted"> / {ratingCount}</span>
               </>
             ) : (
-              <span className="text-ink-400">New</span>
+              <span className="text-copy-muted">New</span>
             )}
           </dd>
         </div>
 
-        <div className="flex-1 border-l border-ink-200 px-4 py-2.5">
-          <dt className="text-[0.6875rem] font-medium tracking-wide text-ink-500 uppercase">
+        <div className="flex-1 border-l border-hairline px-4 py-2.5">
+          <dt className="text-[0.6875rem] font-medium tracking-wide text-copy-muted uppercase">
             Jobs
           </dt>
           <dd className="mt-0.5 font-mono text-sm tabular">{jobsCompleted}</dd>
         </div>
 
         {distanceKm != null && (
-          <div className="flex-1 border-l border-ink-200 px-4 py-2.5">
-            <dt className="text-[0.6875rem] font-medium tracking-wide text-ink-500 uppercase">
+          <div className="flex-1 border-l border-hairline px-4 py-2.5">
+            <dt className="text-[0.6875rem] font-medium tracking-wide text-copy-muted uppercase">
               Away
             </dt>
             <dd className="mt-0.5 flex items-center gap-1 font-mono text-sm tabular">
-              <MapPin className="size-3.5 text-ink-400" aria-hidden />
+              <MapPin className="size-3.5 text-copy-muted" aria-hidden />
               {distanceKm.toFixed(1)} km
             </dd>
           </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, MapPin } from "lucide-react";
+import { ArrowRight, Lock, MapPin, ReceiptText, ShieldCheck } from "lucide-react";
 
 import { HeroPhones } from "@/components/landing/hero-phones";
 import { cn } from "@/lib/utils";
@@ -284,68 +284,68 @@ function WorkBand() {
 const PROMISES = [
   {
     id: "verified",
+    icon: ShieldCheck,
     title: "Ghana Card verified",
     body: "Every artisan submits their Ghana Card and a selfie. Our team reviews each one and calls them before approving. Nobody accepts work unverified.",
   },
   {
     id: "priced",
+    icon: ReceiptText,
     title: "Price agreed upfront",
     body: "The artisan sends an itemised quote: labour, materials, transport. Nobody travels, and nothing starts, until you have approved it.",
   },
   {
     id: "held",
+    icon: Lock,
     title: "Money held until sign-off",
     body: "Your deposit sits with ArtisanGH, not with the artisan. They are paid after you have looked at the work and said it is done.",
   },
-];
+] as const;
 
-/** Three claims, set as editorial columns on hairlines. Explicitly not three
- *  cards with icons in rounded squares — that pattern is the single most
- *  recognisable thing about a generated page.
+/**
+ * Three promises, as editorial columns on rules.
  *
- *  Titles moved up to `title-sm` (22px). They were 17px sitting above 14px
- *  body, which is not a hierarchy, it is a rounding error. */
+ * **Three, and back to three deliberately.** An earlier pass numbered these
+ * `01 / 02 / 03` and set them as three identical cards, which is the most
+ * templated shape on the web. The fix for that was an asymmetric two-plus-one,
+ * and it was worse: the wide column ended halfway up while the other two
+ * stacked beside it, leaving a third of the section empty. The ban is on the
+ * card shape, not on the number three. Three short columns divided by
+ * hairlines, at equal height, is an editorial device rather than a card row.
+ *
+ * **The numbers are gone and the icons replace them.** A number above a
+ * heading tells the reader nothing that the heading does not - "Ghana Card
+ * verified" is already the label, and anybody can count. An icon does the job
+ * a number was pretending to do, which is to give the eye somewhere to land in
+ * a block of otherwise undifferentiated type.
+ */
 function Promises() {
   return (
     <section className="border-b border-hairline bg-white">
-      {/**
-       * Three promises, and deliberately not three equal cards in a row.
-       *
-       * Two things were wrong with the previous version. It numbered them
-       * `01 / 02 / 03`, and a number above a heading is filler: "Ghana Card
-       * verified" is already the label, and the reader can count. And three
-       * identical columns is the most templated shape on the web - the eye
-       * takes it in as one block of texture and reads none of it.
-       *
-       * So: the first promise is given the width to be read, the other two
-       * stack beside it. Same content, a shape that has somewhere to start.
-       */}
-      <div className="mx-auto w-full max-w-5xl px-5 py-14 sm:px-8 sm:py-18">
-        <div className="grid gap-x-10 gap-y-8 lg:grid-cols-[1.25fr_1fr]">
-          <div className="lg:border-r lg:border-hairline lg:pr-10">
-            <h2 className="font-space text-title font-bold text-balance text-navy-900">
-              {PROMISES[0].title}
-            </h2>
-            <p className="mt-3 max-w-md text-lede leading-relaxed text-copy-muted">
-              {PROMISES[0].body}
-            </p>
-          </div>
-
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1 lg:gap-7">
-            {PROMISES.slice(1).map(({ id, title, body }) => (
-              <div key={id}>
-                <h3 className="font-space text-title-sm font-bold text-navy-900">{title}</h3>
-                <p className="mt-1.5 text-ui leading-relaxed text-copy-muted">{body}</p>
-              </div>
-            ))}
-          </div>
+      <div className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-18">
+        <div className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+          {PROMISES.map(({ id, icon: Icon, title, body }, index) => (
+            <div
+              key={id}
+              className={
+                // Rules between, never around, and never on the first item:
+                // a border on all four sides is a card, which is the thing
+                // this section is avoiding.
+                index > 0 ? "lg:border-l lg:border-hairline lg:pl-10" : undefined
+              }
+            >
+              <span className="grid size-11 place-items-center rounded-[0.875rem] bg-azure-50 text-navy-800">
+                <Icon className="size-5" aria-hidden />
+              </span>
+              <h2 className="mt-4 font-space text-title-sm font-bold text-navy-900">{title}</h2>
+              <p className="mt-2 text-ui leading-relaxed text-copy-muted">{body}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
   );
 }
-
-/* ------------------------------------------------------------------------- */
 
 const STEPS = [
   [
@@ -380,42 +380,54 @@ const STEPS = [
  * shape a sequence actually wants on a narrow screen, and lets the rule and the
  * dots keep doing their job instead of being dropped.
  */
+/**
+ * The five steps, read down rather than across.
+ *
+ * **Why it stopped being five columns.** Five equal columns squeezed the body
+ * copy to about four words a line, which is the width at which people stop
+ * reading and start skimming shapes. And they were labelled `01` to `05` -
+ * the clearest filler on a marketing page, because "Describe the job" is
+ * already the label and a reader can count without help.
+ *
+ * So the steps stack, against one continuous rule with a marker per step, and
+ * the heading sits beside them and stays put while they scroll past. That
+ * gives the copy a readable measure, gives the section a layout family nothing
+ * else on the page uses, and needs no numbers: the order is the order they are
+ * in.
+ */
 function HowItWorks() {
   return (
-    <section id="how-it-works" className="scroll-mt-20">
-      <div className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-20">
-        <h2 className="max-w-xl text-title font-semibold text-balance text-navy-900 sm:text-title-lg">
-          Five steps, and you decide at every one
-        </h2>
+    <section id="how-it-works" className="scroll-mt-20 border-b border-hairline">
+      <div className="mx-auto grid w-full max-w-6xl gap-10 px-5 py-14 sm:px-8 sm:py-20 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-16">
+        <div className="lg:sticky lg:top-24 lg:self-start">
+          <h2 className="font-space text-title font-bold text-balance text-navy-900 sm:text-title-lg">
+            Five steps, and you decide at every one
+          </h2>
+          <p className="mt-4 max-w-sm text-lede leading-relaxed text-copy-muted">
+            Nothing happens to your money until you have said yes to the thing in front of you.
+          </p>
+        </div>
 
-        <ol className="relative mt-10 grid gap-y-7 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-9 xl:grid-cols-5 xl:gap-x-6">
-          {/* The rule. Vertical on a phone, horizontal at `xl`, absent in the
-              two-up middle where there is no single axis to draw along. One
-              continuous line rather than one per step — five separate rules
-              with gaps between them read as five cards again, which is the
-              thing this section exists to avoid. */}
+        <ol className="relative space-y-8">
+          {/* One rule down the whole list, with the markers punching through
+              it. Five separate rules with gaps between them would read as five
+              cards again, which is what this section is getting away from. */}
           <span
             aria-hidden
-            className="absolute top-2 bottom-2 left-[0.3125rem] w-px bg-hairline sm:hidden"
-          />
-          <span
-            aria-hidden
-            className="absolute top-6 left-0 hidden h-px w-full bg-hairline xl:block"
+            className="absolute top-2 bottom-2 left-[0.3125rem] w-px bg-hairline"
           />
 
-          {STEPS.map(([title, body], i) => (
-            <li key={title} className="relative pl-7 sm:pl-0 xl:pt-11">
-              {/* The ring is the page ground, so the dot punches a hole in the
-                  rule instead of sitting on top of it. */}
+          {STEPS.map(([title, body]) => (
+            <li key={title} className="relative pl-9">
+              {/* The ring has to be the section's own ground, not white: this
+                  section sits on `canvas`, so a white ring draws a faint halo
+                  around every marker instead of cutting a hole in the rule. */}
               <span
                 aria-hidden
-                className="absolute top-[0.4375rem] left-0 size-2.5 rounded-full bg-azure-500 ring-4 ring-canvas sm:hidden xl:left-0 xl:block xl:top-[1.1875rem]"
+                className="absolute top-[0.4375rem] left-0 size-2.5 rounded-full bg-azure-500 ring-4 ring-canvas"
               />
-              <span className="font-mono text-2xs tabular text-copy-muted xl:absolute xl:top-0 xl:left-0">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <h3 className="mt-1 text-lede font-semibold text-navy-900 xl:mt-0 xl:pr-4">{title}</h3>
-              <p className="mt-1.5 text-ui text-copy-muted xl:pr-4">{body}</p>
+              <h3 className="font-space text-lede font-bold text-navy-900">{title}</h3>
+              <p className="mt-1.5 max-w-lg text-ui leading-relaxed text-copy-muted">{body}</p>
             </li>
           ))}
         </ol>
@@ -424,44 +436,122 @@ function HowItWorks() {
   );
 }
 
-/* ------------------------------------------------------------------------- */
-
-/** 26 trades as a typographic list. The density is the argument.
+/**
+ * All twenty-six, grouped.
  *
- *  Two columns from the smallest screen up. As a single column this was 26 full
- *  rows — about a third of the page's mobile height spent on a list nobody
- *  reads linearly. The point of the list is that it is *long*, which you can
- *  see at a glance in two columns and have to scroll to discover in one. */
+ * The clusters are editorial, not a column in the database - `categories` has
+ * a sort order and nothing else. They exist because the flat list did not
+ * answer the question a reader actually has, which is not *how many* but
+ * *is my thing on here*. Grouping turns twenty-six names into four places to
+ * look.
+ *
+ * Every category appears exactly once; the assertion below is what keeps that
+ * true when somebody adds the twenty-seventh trade and forgets this file.
+ */
+const TRADE_GROUPS = [
+  {
+    heading: "Repairs and maintenance",
+    trades: [
+      "Electrical",
+      "Plumbing",
+      "AC & Refrigeration",
+      "Appliance Repair",
+      "Generator Repair",
+      "Mobile Auto Mechanic",
+    ],
+  },
+  {
+    heading: "Building and finishing",
+    trades: [
+      "Carpentry",
+      "Masonry & Tiling",
+      "Painting",
+      "Welding & Metalwork",
+      "Roofing",
+      "Aluminium & Glass",
+      "POP & Ceiling Works",
+      "Interior Fit-out",
+    ],
+  },
+  {
+    heading: "Home and living",
+    trades: [
+      "Cleaning",
+      "Pest Control",
+      "Landscaping & Gardening",
+      "Upholstery",
+      "Curtains & Blinds",
+      "Tailoring",
+      "Hair & Beauty (Home)",
+    ],
+  },
+  {
+    heading: "Security and systems",
+    trades: [
+      "CCTV & Security",
+      "Locksmith",
+      "Satellite & TV Installation",
+      "Solar Installation",
+      "Borehole & Water Systems",
+    ],
+  },
+] as const;
+
+/**
+ * A grouped trade list is only honest if it is complete, and a grouping held
+ * by hand drifts the moment a trade is added. This fails the build rather than
+ * quietly dropping one off the marketing page.
+ */
+const GROUPED = TRADE_GROUPS.flatMap((g) => g.trades);
+if (GROUPED.length !== CATEGORIES.length) {
+  const missing = CATEGORIES.filter((c) => !GROUPED.includes(c as (typeof GROUPED)[number]));
+  throw new Error(
+    `TRADE_GROUPS covers ${GROUPED.length} of ${CATEGORIES.length} trades.` +
+      (missing.length ? ` Missing: ${missing.join(", ")}.` : " Check for duplicates."),
+  );
+}
+
+/**
+ * **Chips, not a numbered list with a rule under every row.**
+ *
+ * The previous version set all twenty-six as numbered rows, each with its own
+ * hairline, in three columns. A long list is not improved by being longer, and
+ * the numbering was doubly pointless: nobody needs to know Upholstery is the
+ * eighteenth trade. Chips wrap at any width, scan in any order, and collapse
+ * to a phone without becoming a mile of list.
+ */
 function Trades() {
   return (
-    <section id="services" className="scroll-mt-20 border-y border-hairline bg-white">
-      <div className="mx-auto w-full max-w-4xl px-5 py-14 sm:px-8 sm:py-18">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1.5">
-          <h2 className="text-title font-semibold text-navy-900 sm:text-title-lg">
-            Twenty-six trades
-          </h2>
-          <p className="text-ui text-copy-muted">If it happens in a Ghanaian home, someone here does it.</p>
-        </div>
+    <section id="services" className="scroll-mt-20 border-b border-hairline bg-white">
+      <div className="mx-auto w-full max-w-5xl px-5 py-14 sm:px-8 sm:py-18">
+        <h2 className="font-space text-title font-bold text-balance text-navy-900 sm:text-title-lg">
+          Twenty-six trades
+        </h2>
+        <p className="mt-3 max-w-lg text-lede leading-relaxed text-copy-muted">
+          If it happens in a Ghanaian home, someone here does it.
+        </p>
 
-        <ul className="mt-8 columns-2 gap-x-6 sm:gap-x-10 lg:columns-3">
-          {CATEGORIES.map((label, i) => (
-            <li
-              key={label}
-              className="flex items-baseline gap-2.5 break-inside-avoid border-b border-azure-50 py-2 text-note text-navy-900 sm:gap-3 sm:py-2.5 sm:text-ui"
-            >
-              <span className="font-mono text-2xs tabular text-copy-muted">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              {label}
-            </li>
+        <div className="mt-10 space-y-8">
+          {TRADE_GROUPS.map((group) => (
+            <div key={group.heading}>
+              <h3 className="text-note font-semibold text-copy-muted">{group.heading}</h3>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {group.trades.map((trade) => (
+                  <li
+                    key={trade}
+                    className="rounded-full bg-azure-50 px-3.5 py-1.5 text-note font-medium text-navy-900"
+                  >
+                    {trade}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
     </section>
   );
 }
-
-/* ------------------------------------------------------------------------- */
 
 /** Docket on the left this time — the hero put it on the right, and repeating
  *  the same side is how a page starts to feel like one template applied twice.
