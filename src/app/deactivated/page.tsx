@@ -20,10 +20,10 @@ export default function DeactivatedPage() {
             <ShieldOff className="size-6" />
           </span>
           <div className="space-y-1.5">
-            <h1 className="text-xl font-semibold tracking-tight text-ink-900">
+            <h1 className="text-xl font-semibold tracking-tight text-navy-900">
               This account is deactivated
             </h1>
-            <p className="text-[0.9375rem] leading-relaxed text-ink-600">
+            <p className="text-[0.9375rem] leading-relaxed text-copy-muted">
               You cannot book or accept work while your account is deactivated. If you think this is
               a mistake, contact support and we will look into it.
             </p>

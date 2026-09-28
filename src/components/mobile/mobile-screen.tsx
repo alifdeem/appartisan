@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  * marking where the column ends so it reads as deliberate rather than as a page
  * that forgot to fill the window.
  *
- * `bg-white` on both wrappers, not `ink-25`. The warm-paper ground argued in
+ * `bg-white` on both wrappers, not `canvas`. The warm-paper ground argued in
  * DESIGN.md §3 is right for the marketing page and wrong here — the reference
  * grounds on white, and photographs of real rooms already supply all the warmth
  * these screens need.
@@ -56,7 +56,7 @@ export function MobileScreen({
           bg,
           // Only from lg — below that the column *is* the viewport and a border
           // would draw a line down the edge of the screen.
-          "lg:border-x lg:border-ink-100",
+          "lg:border-x lg:border-azure-50",
           className,
         )}
       >

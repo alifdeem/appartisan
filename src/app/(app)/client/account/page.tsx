@@ -113,7 +113,7 @@ export default async function AccountPage() {
           <Row
             icon={<Phone />}
             label="How you sign in"
-            detail="Your number is your account — we text you a code each time. There is no password to forget."
+            detail="Your number is your account, and we text you a code each time. There is no password to forget."
           />
         </Group>
 

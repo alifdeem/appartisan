@@ -73,7 +73,7 @@ export function IncomingOffer({ offer, listening }: IncomingOfferProps) {
     <Link
       href={`/provider/offers/${offer.id}`}
       className={cn(
-        "group block overflow-hidden rounded-card border-2 border-brand-600 bg-brand-50 shadow-md",
+        "group block overflow-hidden rounded-card border-2 border-navy-800 bg-azure-50 shadow-md",
         // Entering, so ease-out. It arrives on a poll while the artisan is
         // looking at a static screen — appearing without transition would read
         // as a rendering glitch rather than as news.
@@ -83,27 +83,27 @@ export function IncomingOffer({ offer, listening }: IncomingOfferProps) {
       )}
     >
       <div className="flex items-center gap-4 p-4">
-        <span className="grid size-12 shrink-0 place-items-center rounded-card bg-brand-600 text-white">
+        <span className="grid size-12 shrink-0 place-items-center rounded-card bg-navy-800 text-white">
           <CategoryIcon name={offer.categoryIcon} className="size-6" />
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[0.6875rem] font-semibold tracking-wide text-brand-700 uppercase">
+          <p className="text-[0.6875rem] font-semibold tracking-wide text-navy-800 uppercase">
             New job offer
           </p>
-          <p className="truncate text-[1.0625rem] leading-tight font-semibold text-ink-900">
+          <p className="truncate text-[1.0625rem] leading-tight font-semibold text-navy-900">
             {offer.categoryName}
           </p>
-          <p className="mt-0.5 flex items-center gap-1.5 truncate text-sm text-ink-700">
+          <p className="mt-0.5 flex items-center gap-1.5 truncate text-sm text-copy">
             {offer.distanceKm !== null && (
               <>
-                <Navigation className="size-3.5 shrink-0 text-ink-400" aria-hidden />
+                <Navigation className="size-3.5 shrink-0 text-copy-muted" aria-hidden />
                 <span className="tabular font-mono font-medium">
                   {offer.distanceKm.toFixed(1)} km
                 </span>
               </>
             )}
-            {offer.landmark && <span className="truncate text-ink-500">· {offer.landmark}</span>}
+            {offer.landmark && <span className="truncate text-copy-muted">· {offer.landmark}</span>}
           </p>
         </div>
 
@@ -117,8 +117,8 @@ export function IncomingOffer({ offer, listening }: IncomingOfferProps) {
         />
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-brand-200 bg-brand-100/60 px-4 py-2.5">
-        <span className="text-sm font-medium text-brand-900">
+      <div className="flex items-center justify-between gap-3 border-t border-azure-200 bg-azure-50/60 px-4 py-2.5">
+        <span className="text-sm font-medium text-navy-900">
           Open it before the time runs out
         </span>
         <span className={cn(buttonVariants({ size: "sm" }), "pointer-events-none")}>

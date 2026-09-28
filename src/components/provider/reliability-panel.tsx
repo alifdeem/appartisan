@@ -74,19 +74,19 @@ export function ReliabilityPanel({ stats }: { stats: ReliabilityStats }) {
             Rolling {stats.window_days} days. These decide how often you are offered work.
           </p>
         </div>
-        <Activity className="size-4 shrink-0 text-ink-400" aria-hidden />
+        <Activity className="size-4 shrink-0 text-copy-muted" aria-hidden />
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Figure
           label="Accepted"
-          value={stats.accept_rate === null ? "—" : `${stats.accept_rate}%`}
+          value={stats.accept_rate === null ? "-" : `${stats.accept_rate}%`}
           detail={`${stats.accepted} of ${stats.offers} offers`}
           warn={stats.accept_rate !== null && stats.accept_rate < 40}
         />
         <Figure
           label="Rating"
-          value={stats.rating_count === 0 ? "—" : stats.rating_avg.toFixed(2)}
+          value={stats.rating_count === 0 ? "-" : stats.rating_avg.toFixed(2)}
           detail={`${stats.rating_count} rated job${stats.rating_count === 1 ? "" : "s"}`}
           warn={stats.rating_count >= 5 && stats.rating_avg < 3}
         />

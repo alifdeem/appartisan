@@ -46,7 +46,7 @@ export function ScreenHeader({
         <Link
           href={back}
           aria-label="Go back"
-          className="-ml-1 grid size-11 place-items-center rounded-full text-ink-900 transition-colors duration-[var(--duration-instant)] hover:bg-ink-100 active:bg-ink-200"
+          className="-ml-1 grid size-11 place-items-center rounded-full text-navy-900 transition-colors duration-[var(--duration-instant)] hover:bg-azure-50 active:bg-hairline"
         >
           <ArrowLeft className="size-5" />
         </Link>
@@ -55,7 +55,7 @@ export function ScreenHeader({
       )}
 
       {title && (
-        <p className="pointer-events-none absolute inset-x-0 text-center text-lede font-semibold text-ink-900">
+        <p className="pointer-events-none absolute inset-x-0 text-center text-lede font-semibold text-navy-900">
           {title}
         </p>
       )}

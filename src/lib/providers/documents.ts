@@ -44,13 +44,13 @@ export interface DocSpec {
 export const REQUIRED_DOCS: DocSpec[] = [
   {
     type: "ghana_card_front",
-    label: "Ghana Card — front",
+    label: "Ghana Card, front",
     hint: "The side with your photo. Lay it flat, fill the frame.",
     capture: "environment",
   },
   {
     type: "ghana_card_back",
-    label: "Ghana Card — back",
+    label: "Ghana Card, back",
     hint: "The side with the barcode.",
     capture: "environment",
   },

@@ -14,8 +14,8 @@ export default async function AboutStepPage() {
   return (
     <div className="space-y-5">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-ink-900">About your work</h2>
-        <p className="max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
+        <h2 className="text-lg font-semibold text-navy-900">About your work</h2>
+        <p className="max-w-prose text-[0.9375rem] leading-relaxed text-copy-muted">
           A client sees this before they accept your quote. Write it the way you would explain
           your work to a neighbour, not the way you would write a CV.
         </p>

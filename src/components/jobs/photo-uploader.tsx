@@ -212,8 +212,8 @@ export function PhotoUploader({
                 title="Remove photo"
                 className={cn(
                   "absolute right-1.5 top-1.5 grid size-7 place-items-center rounded-full",
-                  "bg-ink-950/60 text-white backdrop-blur-sm transition-all duration-[var(--duration-instant)]",
-                  "hover:bg-ink-950/80 active:scale-90",
+                  "bg-navy-950/60 text-white backdrop-blur-sm transition-all duration-[var(--duration-instant)]",
+                  "hover:bg-navy-950/80 active:scale-90",
                   // Always visible on touch, where there is no hover to reveal it.
                   "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
                 )}
@@ -245,7 +245,7 @@ export function PhotoUploader({
                 event.currentTarget.style.visibility = "hidden";
               }}
             />
-            <div className="absolute inset-0 grid place-items-center bg-ink-950/20">
+            <div className="absolute inset-0 grid place-items-center bg-navy-950/20">
               <Loader2 className="size-5 animate-spin text-white drop-shadow" aria-hidden />
             </div>
             <span className="sr-only">Uploading {item.name}</span>

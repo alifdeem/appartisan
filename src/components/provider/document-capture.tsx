@@ -156,7 +156,7 @@ export function DocumentCapture({
   return (
     <div className="space-y-2.5">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-ink-800">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-navy-900">
           {spec.label}
           {filled && !multiple && (
             <Check className="size-4 text-success-600 animate-fade-in" aria-label="Uploaded" />
@@ -166,7 +166,7 @@ export function DocumentCapture({
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 transition-colors hover:text-brand-800"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-800 transition-colors hover:text-navy-900"
           >
             <RotateCcw className="size-3.5" aria-hidden />
             Retake
@@ -192,9 +192,9 @@ export function DocumentCapture({
               disabled={busy}
               className={cn(
                 "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-card",
-                "border border-dashed border-ink-300 bg-ink-50 text-ink-500",
+                "border border-dashed border-hairline bg-canvas text-copy-muted",
                 "transition-colors duration-[var(--duration-fast)] ease-out-strong",
-                "hover:border-brand-600 hover:bg-brand-50 hover:text-brand-700 active:scale-[0.98]",
+                "hover:border-navy-800 hover:bg-azure-50 hover:text-navy-800 active:scale-[0.98]",
                 "disabled:opacity-50",
               )}
             >
@@ -213,9 +213,9 @@ export function DocumentCapture({
             frameRatio,
             "transition-[border-color,background-color,transform] duration-[var(--duration-fast)] ease-out-strong",
             filled || pending
-              ? "border border-ink-200 bg-ink-100"
-              : "border border-dashed border-ink-300 bg-ink-50",
-            !disabled && "hover:border-brand-600 active:scale-[0.99]",
+              ? "border border-hairline bg-azure-50"
+              : "border border-dashed border-hairline bg-canvas",
+            !disabled && "hover:border-navy-800 active:scale-[0.99]",
             "disabled:cursor-default disabled:opacity-70",
             spec.type === "selfie" && "mx-auto max-w-[15rem]",
           )}
@@ -226,7 +226,7 @@ export function DocumentCapture({
                   the optimiser cannot process and Safari may not decode. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={pending.previewUrl} alt="" className="size-full object-cover opacity-60" />
-              <span className="absolute inset-0 grid place-items-center bg-ink-950/25">
+              <span className="absolute inset-0 grid place-items-center bg-navy-950/25">
                 <Loader2 className="size-6 animate-spin text-white drop-shadow" aria-hidden />
               </span>
             </>
@@ -240,30 +240,30 @@ export function DocumentCapture({
               unoptimized /* signed URL, expires — no point caching a derivative */
             />
           ) : filled ? (
-            <span className="absolute inset-0 grid place-items-center px-4 text-center text-sm text-ink-500">
+            <span className="absolute inset-0 grid place-items-center px-4 text-center text-sm text-copy-muted">
               Uploaded, but we cannot show it right now.
             </span>
           ) : (
             <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
               <Camera
-                className="size-7 text-ink-400 transition-colors group-hover:text-brand-600"
+                className="size-7 text-copy-muted transition-colors group-hover:text-navy-800"
                 strokeWidth={1.5}
                 aria-hidden
               />
-              <span className="text-sm leading-snug font-medium text-ink-700">{spec.hint}</span>
+              <span className="text-sm leading-snug font-medium text-copy">{spec.hint}</span>
             </span>
           )}
         </button>
       )}
 
       {!multiple && !filled && (
-        <p className="flex items-start gap-1.5 text-xs leading-relaxed text-ink-500">
-          <ShieldCheck className="mt-px size-3.5 shrink-0 text-ink-400" aria-hidden />
+        <p className="flex items-start gap-1.5 text-xs leading-relaxed text-copy-muted">
+          <ShieldCheck className="mt-px size-3.5 shrink-0 text-copy-muted" aria-hidden />
           Only our verification team sees this. It is never shown to clients.
         </p>
       )}
 
-      {multiple && <p className="text-xs text-ink-500">{spec.hint}</p>}
+      {multiple && <p className="text-xs text-copy-muted">{spec.hint}</p>}
 
       <input
         ref={inputRef}
@@ -292,7 +292,7 @@ function Thumb({
   uploading?: boolean;
 }) {
   return (
-    <div className="group relative aspect-square overflow-hidden rounded-card border border-ink-200 bg-ink-100">
+    <div className="group relative aspect-square overflow-hidden rounded-card border border-hairline bg-azure-50">
       {url && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -306,7 +306,7 @@ function Thumb({
       )}
 
       {uploading && (
-        <span className="absolute inset-0 grid place-items-center bg-ink-950/20">
+        <span className="absolute inset-0 grid place-items-center bg-navy-950/20">
           <Loader2 className="size-5 animate-spin text-white drop-shadow" aria-hidden />
         </span>
       )}
@@ -319,8 +319,8 @@ function Thumb({
           title="Remove"
           className={cn(
             "absolute top-1.5 right-1.5 grid size-7 place-items-center rounded-full",
-            "bg-ink-950/60 text-white backdrop-blur-sm transition-all duration-[var(--duration-instant)]",
-            "hover:bg-ink-950/80 active:scale-90",
+            "bg-navy-950/60 text-white backdrop-blur-sm transition-all duration-[var(--duration-instant)]",
+            "hover:bg-navy-950/80 active:scale-90",
             // Always visible on touch, where there is no hover to reveal it.
             "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
           )}

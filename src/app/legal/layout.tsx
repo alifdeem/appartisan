@@ -16,18 +16,18 @@ import { Logo } from "@/components/brand/logo";
  */
 export default function LegalLayout({ children }: LayoutProps<"/legal">) {
   return (
-    <div className="flex min-h-dvh flex-col bg-ink-25">
-      <header className="border-b border-ink-200 bg-ink-0 print:hidden">
+    <div className="flex min-h-dvh flex-col bg-canvas">
+      <header className="border-b border-hairline bg-white print:hidden">
         <div className="mx-auto flex w-full max-w-3xl items-center gap-4 px-5 py-4 sm:px-8">
           <Link href="/">
             <Logo />
           </Link>
 
-          <nav className="ml-auto flex gap-x-5 text-sm text-ink-500">
-            <Link href="/legal/terms" className="tap transition-colors hover:text-ink-900">
+          <nav className="ml-auto flex gap-x-5 text-sm text-copy-muted">
+            <Link href="/legal/terms" className="tap transition-colors hover:text-navy-900">
               Terms
             </Link>
-            <Link href="/legal/privacy" className="tap transition-colors hover:text-ink-900">
+            <Link href="/legal/privacy" className="tap transition-colors hover:text-navy-900">
               Privacy
             </Link>
           </nav>
@@ -38,9 +38,9 @@ export default function LegalLayout({ children }: LayoutProps<"/legal">) {
         <article className="prose-legal mx-auto w-full max-w-3xl">{children}</article>
       </main>
 
-      <footer className="border-t border-ink-200 bg-ink-0 print:hidden">
-        <div className="mx-auto w-full max-w-3xl px-5 py-6 text-sm text-ink-500 sm:px-8">
-          <Link href="/" className="tap transition-colors hover:text-ink-900">
+      <footer className="border-t border-hairline bg-white print:hidden">
+        <div className="mx-auto w-full max-w-3xl px-5 py-6 text-sm text-copy-muted sm:px-8">
+          <Link href="/" className="tap transition-colors hover:text-navy-900">
             Back to ArtisanGH
           </Link>
         </div>

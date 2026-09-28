@@ -119,7 +119,7 @@ export function OfferCountdown({
           r={RADIUS}
           fill="none"
           strokeWidth="7"
-          className="stroke-ink-200"
+          className="stroke-hairline"
         />
         <circle
           cx="60"
@@ -134,7 +134,7 @@ export function OfferCountdown({
             // Amber is money and nothing else in this system, so a draining
             // clock is brand green until it is genuinely urgent, then danger.
             // Never amber: this is not a price.
-            expired ? "stroke-ink-300" : "stroke-brand-600",
+            expired ? "stroke-hairline" : "stroke-navy-800",
           )}
           style={
             {
@@ -154,11 +154,11 @@ export function OfferCountdown({
       <div className="relative text-center">
         <span
           ref={digitsRef}
-          className="tabular block font-mono text-[1.75rem] leading-none font-semibold text-ink-900"
+          className="tabular block font-mono text-[1.75rem] leading-none font-semibold text-navy-900"
         >
           {format(clock.remaining)}
         </span>
-        <span className="mt-1 block text-[0.6875rem] font-medium tracking-wide text-ink-500 uppercase">
+        <span className="mt-1 block text-[0.6875rem] font-medium tracking-wide text-copy-muted uppercase">
           {expired ? "Expired" : "To decide"}
         </span>
       </div>

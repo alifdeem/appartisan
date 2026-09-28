@@ -30,25 +30,25 @@ export default async function DocumentsStepPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-ink-900">Prove it&rsquo;s you</h2>
-        <p className="max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
+        <h2 className="text-lg font-semibold text-navy-900">Prove it&rsquo;s you</h2>
+        <p className="max-w-prose text-[0.9375rem] leading-relaxed text-copy-muted">
           This is the part that makes you a verified artisan, and it is the reason clients let a
-          stranger into their home. Take the photos in good light — a card you cannot read is the
+          stranger into their home. Take the photos in good light. A card you cannot read is the
           most common reason an application comes back.
         </p>
       </div>
 
       {/* Stated once, prominently, at the top of the only screen that collects
-          anything sensitive — rather than as fine print under each field, where
+          anything sensitive, rather than as fine print under each field, where
           it reads as a disclaimer instead of a promise. */}
-      <div className="flex items-start gap-3 rounded-card border border-brand-200 bg-brand-50 px-4 py-3.5">
-        <Lock className="mt-0.5 size-4 shrink-0 text-brand-700" aria-hidden />
+      <div className="flex items-start gap-3 rounded-card border border-azure-200 bg-azure-50 px-4 py-3.5">
+        <Lock className="mt-0.5 size-4 shrink-0 text-navy-800" aria-hidden />
         <div className="space-y-1">
-          <p className="text-sm font-medium text-brand-900">Stored privately, shown to nobody</p>
-          <p className="text-sm leading-relaxed text-brand-800/85">
+          <p className="text-sm font-medium text-navy-900">Stored privately, shown to nobody</p>
+          <p className="text-sm leading-relaxed text-navy-900/85">
             Your Ghana Card is held in a private store that clients and other artisans cannot
             reach. Only our verification team can open it, and only while reviewing you. Clients
-            see that you passed — never the document.
+            see that you passed, never the document.
           </p>
         </div>
       </div>
@@ -66,13 +66,13 @@ export default async function DocumentsStepPage() {
         ))}
       </div>
 
-      <div className="space-y-6 border-t border-ink-200 pt-6">
+      <div className="space-y-6 border-t border-hairline pt-6">
         <div className="space-y-1">
-          <h3 className="text-base font-semibold text-ink-900">
+          <h3 className="text-base font-semibold text-navy-900">
             Optional, and worth doing
-            <span className="ml-2 text-sm font-normal text-ink-500">not required to apply</span>
+            <span className="ml-2 text-sm font-normal text-copy-muted">not required to apply</span>
           </h3>
-          <p className="max-w-prose text-sm leading-relaxed text-ink-600">
+          <p className="max-w-prose text-sm leading-relaxed text-copy-muted">
             Photos of finished jobs are the most persuasive thing on your profile. Clients decide
             between artisans on these.
           </p>
@@ -102,7 +102,7 @@ export default async function DocumentsStepPage() {
         </Link>
 
         {!ready && (
-          <p className="text-sm text-ink-500">
+          <p className="text-sm text-copy-muted">
             {provider.ghana_card_number
               ? "Add all three photos to continue."
               : "Add your card number and all three photos to continue."}

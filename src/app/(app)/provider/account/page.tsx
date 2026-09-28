@@ -122,7 +122,7 @@ export default async function ProviderAccountPage() {
           />
           <BandStat
             label="Rating"
-            value={provider.rating_count >= 3 ? provider.rating_avg.toFixed(1) : "—"}
+            value={provider.rating_count >= 3 ? provider.rating_avg.toFixed(1) : "-"}
             hint={
               provider.rating_count >= 3
                 ? `${provider.rating_count} reviews`

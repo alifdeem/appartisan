@@ -138,7 +138,7 @@ export function AvailabilityToggle({
               <span
                 className={cn(
                   "relative size-2.5 rounded-full",
-                  isOnline ? "bg-success-600" : "bg-ink-300",
+                  isOnline ? "bg-success-600" : "bg-hairline",
                 )}
               />
             </>
@@ -169,7 +169,7 @@ export function AvailabilityToggle({
             className={cn(
               "relative h-7 w-[3rem] shrink-0 rounded-full",
               "transition-colors duration-[var(--duration-base)] ease-out-strong",
-              isOnline ? "bg-azure-500" : "bg-ink-200",
+              isOnline ? "bg-azure-500" : "bg-hairline",
             )}
           >
             <span

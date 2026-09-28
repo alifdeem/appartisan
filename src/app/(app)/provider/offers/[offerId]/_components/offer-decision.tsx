@@ -115,28 +115,28 @@ export function OfferDecision({
       <header
         className={cn(
           "flex items-center gap-4 rounded-card border p-5 shadow-sm",
-          closed ? "border-ink-200 bg-ink-0" : "border-brand-200 bg-brand-50",
+          closed ? "border-hairline bg-white" : "border-azure-200 bg-azure-50",
         )}
       >
         <span
           className={cn(
             "grid size-14 shrink-0 place-items-center rounded-card",
-            closed ? "bg-ink-100 text-ink-500" : "bg-brand-600 text-white",
+            closed ? "bg-azure-50 text-copy-muted" : "bg-navy-800 text-white",
           )}
         >
           <CategoryIcon name={job.categoryIcon} className="size-7" />
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[0.6875rem] font-medium tracking-wide text-ink-500 uppercase">
+          <p className="text-[0.6875rem] font-medium tracking-wide text-copy-muted uppercase">
             {closed ? "Offer closed" : "New job offer"}
           </p>
-          <h1 className="truncate text-xl leading-tight font-semibold text-ink-900">
+          <h1 className="truncate text-xl leading-tight font-semibold text-navy-900">
             {job.categoryName}
           </h1>
           {distanceKm !== null && (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-700">
-              <Navigation className="size-3.5 text-ink-400" aria-hidden />
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-copy">
+              <Navigation className="size-3.5 text-copy-muted" aria-hidden />
               <span className="tabular font-mono font-medium">{distanceKm.toFixed(1)} km</span>
               away
             </p>
@@ -155,10 +155,10 @@ export function OfferDecision({
       </header>
 
       {closed ? (
-        <div className="animate-fade-up space-y-4 rounded-card border border-ink-200 bg-ink-0 p-6 text-center shadow-sm">
+        <div className="animate-fade-up space-y-4 rounded-card border border-hairline bg-white p-6 text-center shadow-sm">
           <div className="space-y-1.5">
-            <p className="text-base font-semibold text-ink-900">This one went to someone else</p>
-            <p className="mx-auto max-w-sm text-sm leading-relaxed text-ink-600">
+            <p className="text-base font-semibold text-navy-900">This one went to someone else</p>
+            <p className="mx-auto max-w-sm text-sm leading-relaxed text-copy-muted">
               Offers run for two minutes and then move on. Staying online is the single biggest
               thing that puts the next one in front of you.
             </p>
@@ -172,12 +172,12 @@ export function OfferDecision({
           {/* Evidence first. An artisan prices by looking. */}
           {photos.length > 0 && (
             <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-ink-800">What they sent</h2>
+              <h2 className="text-sm font-semibold text-navy-900">What they sent</h2>
               <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {photos.map((photo) => (
                   <li
                     key={photo.id}
-                    className="relative aspect-[4/3] overflow-hidden rounded-card border border-ink-200 bg-ink-100"
+                    className="relative aspect-[4/3] overflow-hidden rounded-card border border-hairline bg-azure-50"
                   >
                     {photo.url ? (
                       <Image
@@ -189,7 +189,7 @@ export function OfferDecision({
                         unoptimized /* signed URL, expires — no point caching a derivative */
                       />
                     ) : (
-                      <div className="grid size-full place-items-center text-ink-400">
+                      <div className="grid size-full place-items-center text-copy-muted">
                         <ImageOff className="size-5" aria-hidden />
                       </div>
                     )}
@@ -201,8 +201,8 @@ export function OfferDecision({
 
           {voiceNoteUrl && (
             <section className="space-y-2">
-              <h2 className="flex items-center gap-1.5 text-sm font-semibold text-ink-800">
-                <Mic className="size-3.5 text-ink-500" aria-hidden />
+              <h2 className="flex items-center gap-1.5 text-sm font-semibold text-navy-900">
+                <Mic className="size-3.5 text-copy-muted" aria-hidden />
                 They recorded a message
               </h2>
               {/* The native player, deliberately. It is the one control every
@@ -214,30 +214,30 @@ export function OfferDecision({
 
           {job.description && (
             <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-ink-800">The problem</h2>
-              <p className="rounded-card border border-ink-200 bg-ink-0 p-4 text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-ink-800 shadow-xs">
+              <h2 className="text-sm font-semibold text-navy-900">The problem</h2>
+              <p className="rounded-card border border-hairline bg-white p-4 text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-navy-900 shadow-xs">
                 {job.description}
               </p>
             </section>
           )}
 
           <section className="space-y-2">
-            <h2 className="text-sm font-semibold text-ink-800">Where</h2>
-            <div className="flex items-start gap-2.5 rounded-card border border-ink-200 bg-ink-0 p-4 shadow-xs">
-              <MapPin className="mt-0.5 size-4 shrink-0 text-ink-500" aria-hidden />
+            <h2 className="text-sm font-semibold text-navy-900">Where</h2>
+            <div className="flex items-start gap-2.5 rounded-card border border-hairline bg-white p-4 shadow-xs">
+              <MapPin className="mt-0.5 size-4 shrink-0 text-copy-muted" aria-hidden />
               <div className="min-w-0 space-y-0.5">
                 {/* The landmark leads. It is how the artisan will actually find
                     the place, which is why Phase 1 made it mandatory. */}
                 {job.landmark && (
-                  <p className="text-[0.9375rem] leading-snug font-medium text-ink-900">
+                  <p className="text-[0.9375rem] leading-snug font-medium text-navy-900">
                     {job.landmark}
                   </p>
                 )}
-                {job.addressText && <p className="text-sm text-ink-600">{job.addressText}</p>}
+                {job.addressText && <p className="text-sm text-copy-muted">{job.addressText}</p>}
                 {job.ghanapostCode && (
-                  <p className="tabular font-mono text-xs text-ink-500">{job.ghanapostCode}</p>
+                  <p className="tabular font-mono text-xs text-copy-muted">{job.ghanapostCode}</p>
                 )}
-                <p className="pt-1 text-xs text-ink-500">
+                <p className="pt-1 text-xs text-copy-muted">
                   The exact pin is shared once you accept.
                 </p>
               </div>

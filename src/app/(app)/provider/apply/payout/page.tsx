@@ -14,10 +14,10 @@ export default async function PayoutStepPage() {
   return (
     <div className="space-y-5">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-ink-900">Where your money goes</h2>
-        <p className="max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
+        <h2 className="text-lg font-semibold text-navy-900">Where your money goes</h2>
+        <p className="max-w-prose text-[0.9375rem] leading-relaxed text-copy-muted">
           Clients pay ArtisanGH, and we send your share to your mobile money after the job is
-          signed off. Nothing is held in an account here — the money moves per job.
+          signed off. Nothing is held in an account here: the money moves per job.
         </p>
       </div>
 

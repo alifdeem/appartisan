@@ -59,13 +59,13 @@ export default async function WelcomePage() {
       }
     >
       <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-        <SuccessMark className="size-32 text-brand-600" />
+        <SuccessMark className="size-32 text-success-600" />
 
-        <h1 className="mt-6 text-title font-semibold text-ink-900">
+        <h1 className="mt-6 text-title font-semibold text-navy-900">
           Success! You&rsquo;re in{firstName ? `, ${firstName}` : ""}.
         </h1>
 
-        <p className="mt-2 max-w-xs text-ui leading-relaxed text-ink-600">
+        <p className="mt-2 max-w-xs text-ui leading-relaxed text-copy-muted">
           {isProvider
             ? "One more step. We verify every artisan against their Ghana Card before any client can book them."
             : "Tell us what needs doing and we'll find a verified artisan near you. You approve the price before anyone travels."}

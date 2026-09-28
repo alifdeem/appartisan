@@ -6,7 +6,7 @@ import type { JobStatus } from "@/lib/supabase/types";
  * A job's state, in the client's language.
  *
  * **Why this no longer renders `<Badge>`.** `Badge` is built on the warm `ink`
- * ramp — `bg-ink-100`, `bg-brand-50`, `bg-info-50` — which is correct in the
+ * ramp — `bg-azure-50`, `bg-azure-50`, `bg-info-50` — which is correct in the
  * admin console and wrong on every screen of the 2026 redesign, where the
  * ground is pure white and the palette is navy and azure. This badge appears on
  * five redesigned screens (client home, job history, the artisan's job list and
@@ -31,7 +31,7 @@ const TONES: Record<ReturnType<typeof jobStatus>["tone"], string> = {
   success: "bg-success-50 text-success-700",
   warning: "bg-warning-50 text-warning-700",
   danger: "bg-danger-50 text-danger-700",
-  money: "bg-accent-50 text-accent-800",
+  money: "bg-navy-50 text-navy-900",
 };
 
 export function JobStatusBadge({

@@ -90,14 +90,14 @@ export function PayoutForm({
             setNumber(accountPhone);
             setOverride(null);
           }}
-          className="-mt-3 text-sm font-medium text-brand-700 underline-offset-4 transition-colors hover:text-brand-800 hover:underline"
+          className="-mt-3 text-sm font-medium text-navy-800 underline-offset-4 transition-colors hover:text-navy-900 hover:underline"
         >
           Use the number I signed up with
         </button>
       )}
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-ink-800">
+        <legend className="text-sm font-medium text-navy-900">
           Network
           <span className="ml-0.5 text-danger-600" aria-hidden>
             *
@@ -121,19 +121,19 @@ export function PayoutForm({
                   "transition-[border-color,background-color,color,transform] duration-[var(--duration-fast)] ease-out-strong",
                   "active:scale-[0.98]",
                   on
-                    ? "border-brand-600 bg-brand-50 text-brand-900 ring-1 ring-brand-600"
-                    : "border-ink-300 bg-ink-0 text-ink-700 hover:border-ink-400",
+                    ? "border-navy-800 bg-azure-50 text-navy-900 ring-1 ring-navy-800"
+                    : "border-hairline bg-white text-copy hover:border-copy-muted",
                 )}
               >
                 {on && (
                   <Check
-                    className="absolute top-1.5 right-1.5 size-3.5 text-brand-600 animate-fade-in"
+                    className="absolute top-1.5 right-1.5 size-3.5 text-navy-800 animate-fade-in"
                     strokeWidth={3}
                     aria-hidden
                   />
                 )}
                 <span className="leading-tight">{MOMO_NETWORK_LABELS[option]}</span>
-                {auto && <span className="text-[0.6875rem] text-brand-700">from your number</span>}
+                {auto && <span className="text-[0.6875rem] text-navy-800">from your number</span>}
               </button>
             );
           })}
@@ -146,11 +146,11 @@ export function PayoutForm({
         )}
       </fieldset>
 
-      <div className="flex items-start gap-2.5 rounded-card border border-ink-200 bg-ink-50 px-3.5 py-3">
-        <Info className="mt-px size-4 shrink-0 text-ink-500" aria-hidden />
-        <p className="text-sm leading-relaxed text-ink-600">
+      <div className="flex items-start gap-2.5 rounded-card border border-hairline bg-canvas px-3.5 py-3">
+        <Info className="mt-px size-4 shrink-0 text-copy-muted" aria-hidden />
+        <p className="text-sm leading-relaxed text-copy-muted">
           Make sure the name registered on this mobile money account is{" "}
-          <strong className="font-medium text-ink-800">your own</strong>. Payouts to a number
+          <strong className="font-medium text-navy-900">your own</strong>. Payouts to a number
           registered to somebody else get held, and sorting that out takes days.
         </p>
       </div>

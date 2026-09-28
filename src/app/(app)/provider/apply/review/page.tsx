@@ -49,8 +49,8 @@ export default async function ReviewStepPage() {
   return (
     <div className="space-y-5">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-ink-900">Check it over</h2>
-        <p className="max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
+        <h2 className="text-lg font-semibold text-navy-900">Check it over</h2>
+        <p className="max-w-prose text-[0.9375rem] leading-relaxed text-copy-muted">
           Once this goes in, our team reviews your documents and calls you to confirm a few
           details. You cannot edit it while it is being reviewed.
         </p>
@@ -65,7 +65,7 @@ export default async function ReviewStepPage() {
             <AlertTriangle className="size-4" aria-hidden />
             Not quite ready
           </p>
-          <ul className="space-y-1 text-sm leading-relaxed text-ink-700">
+          <ul className="space-y-1 text-sm leading-relaxed text-copy">
             {gaps.map((gap) => (
               <li key={gap} className="flex gap-2">
                 <span aria-hidden className="text-warning-700">
@@ -96,7 +96,7 @@ export default async function ReviewStepPage() {
 
           <Section title="About you" href="/provider/apply/about">
             {provider.bio ? (
-              <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-ink-800">
+              <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-navy-900">
                 {provider.bio}
               </p>
             ) : (
@@ -110,26 +110,26 @@ export default async function ReviewStepPage() {
                     <span className="tabular font-mono">{provider.years_experience}</span> years
                   </>
                 ) : (
-                  "—"
+                  "-"
                 )}
               </Line>
-              <Line label="Based in">{provider.base_city ?? "—"}</Line>
+              <Line label="Based in">{provider.base_city ?? "-"}</Line>
               <Line label="Will travel">
                 <span className="tabular font-mono">{Number(provider.service_radius_km)}</span> km
               </Line>
               <Line label="Languages">
-                {(profile?.spoken_languages ?? []).join(", ") || "—"}
+                {(profile?.spoken_languages ?? []).join(", ") || "-"}
               </Line>
             </dl>
           </Section>
 
           <Section title="Getting paid" href="/provider/apply/payout">
             {provider.momo_number && provider.momo_network ? (
-              <p className="text-[0.9375rem] text-ink-800">
+              <p className="text-[0.9375rem] text-navy-900">
                 <span className="tabular font-mono">
                   {formatPhoneForDisplay(provider.momo_number)}
                 </span>
-                <span className="text-ink-500"> · {MOMO_NETWORK_LABELS[provider.momo_network]}</span>
+                <span className="text-copy-muted"> · {MOMO_NETWORK_LABELS[provider.momo_network]}</span>
               </p>
             ) : (
               <Empty>No payment number yet.</Empty>
@@ -137,24 +137,24 @@ export default async function ReviewStepPage() {
           </Section>
 
           <Section title="Proof of identity" href="/provider/apply/documents">
-            <p className="text-[0.9375rem] text-ink-800">
+            <p className="text-[0.9375rem] text-navy-900">
               Ghana Card{" "}
-              <span className="tabular font-mono">{provider.ghana_card_number ?? "—"}</span>
+              <span className="tabular font-mono">{provider.ghana_card_number ?? "-"}</span>
             </p>
 
             <ul className="mt-2 space-y-1 text-sm">
               {REQUIRED_DOCS.map((spec) => (
-                <li key={spec.type} className="flex items-center gap-2 text-ink-700">
+                <li key={spec.type} className="flex items-center gap-2 text-copy">
                   <span
                     aria-hidden
                     className={
                       docTypes.has(spec.type)
                         ? "size-1.5 rounded-full bg-success-600"
-                        : "size-1.5 rounded-full bg-ink-300"
+                        : "size-1.5 rounded-full bg-hairline"
                     }
                   />
                   {docLabel(spec.type)}
-                  <span className={docTypes.has(spec.type) ? "text-success-700" : "text-ink-400"}>
+                  <span className={docTypes.has(spec.type) ? "text-success-700" : "text-copy-muted"}>
                     {docTypes.has(spec.type) ? "uploaded" : "missing"}
                   </span>
                 </li>
@@ -179,12 +179,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-b border-ink-100 pb-5 last:border-0 last:pb-0">
+    <section className="border-b border-azure-50 pb-5 last:border-0 last:pb-0">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-ink-800">{title}</h3>
+        <h3 className="text-sm font-semibold text-navy-900">{title}</h3>
         <Link
           href={href}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 transition-colors hover:text-brand-800"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-800 transition-colors hover:text-navy-900"
         >
           <Pencil className="size-3.5" aria-hidden />
           Edit
@@ -198,12 +198,12 @@ function Section({
 function Line({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline gap-2">
-      <dt className="text-ink-500">{label}</dt>
-      <dd className="text-ink-800">{children}</dd>
+      <dt className="text-copy-muted">{label}</dt>
+      <dd className="text-navy-900">{children}</dd>
     </div>
   );
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="text-[0.9375rem] text-ink-400">{children}</p>;
+  return <p className="text-[0.9375rem] text-copy-muted">{children}</p>;
 }

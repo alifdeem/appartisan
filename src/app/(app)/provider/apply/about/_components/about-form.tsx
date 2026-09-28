@@ -91,7 +91,7 @@ export function AboutForm({
           onChange={(event) => setBioText(event.target.value)}
           maxLength={MAX_BIO_LENGTH}
           rows={5}
-          placeholder="I fix and install air conditioners — split units and window units. Eight years, mostly around Tema and Spintex. I carry my own gas and vacuum pump."
+          placeholder="I fix and install air conditioners, split units and window units. Eight years, mostly around Tema and Spintex. I carry my own gas and vacuum pump."
           aria-invalid={Boolean(state?.fieldErrors?.bio)}
         />
       </Field>
@@ -101,14 +101,14 @@ export function AboutForm({
       <p
         className={cn(
           "-mt-3.5 flex items-center gap-1.5 text-xs transition-colors duration-[var(--duration-base)]",
-          bioShort ? "text-ink-500" : "text-success-700",
+          bioShort ? "text-copy-muted" : "text-success-700",
         )}
       >
         {!bioShort && <Check className="size-3.5 animate-fade-in" strokeWidth={3} aria-hidden />}
         <span className="tabular font-mono">
           {bioShort ? `${bioLength}/${MIN_BIO_LENGTH}` : `${bioLength}`}
         </span>
-        {bioShort ? "characters — keep going" : "that's enough to go on"}
+        {bioShort ? "characters to go" : "that's enough to go on"}
       </p>
 
       <div className="grid gap-5 sm:grid-cols-2">
@@ -151,7 +151,7 @@ export function AboutForm({
       </div>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-ink-800">
+        <legend className="text-sm font-medium text-navy-900">
           How far will you travel?
           <span className="ml-0.5 text-danger-600" aria-hidden>
             *
@@ -171,21 +171,21 @@ export function AboutForm({
                 "transition-[border-color,background-color,color,transform] duration-[var(--duration-fast)] ease-out-strong",
                 "active:scale-[0.98]",
                 radius === option
-                  ? "border-brand-600 bg-brand-50 text-brand-900 ring-1 ring-brand-600"
-                  : "border-ink-300 bg-ink-0 text-ink-700 hover:border-ink-400",
+                  ? "border-navy-800 bg-azure-50 text-navy-900 ring-1 ring-navy-800"
+                  : "border-hairline bg-white text-copy hover:border-copy-muted",
               )}
             >
               <span className="tabular font-mono">{option}</span> km
             </button>
           ))}
         </div>
-        <p className="text-sm text-ink-500">
+        <p className="text-sm text-copy-muted">
           Jobs further than this will not be offered to you. You can change it any time.
         </p>
       </fieldset>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-ink-800">Languages you speak</legend>
+        <legend className="text-sm font-medium text-navy-900">Languages you speak</legend>
         <input type="hidden" name="languages" value={[...languages].join(",")} />
 
         <div className="flex flex-wrap gap-2">
@@ -202,8 +202,8 @@ export function AboutForm({
                   "transition-[border-color,background-color,color,transform] duration-[var(--duration-fast)] ease-out-strong",
                   "active:scale-[0.97]",
                   on
-                    ? "border-brand-600 bg-brand-50 text-brand-900"
-                    : "border-ink-300 bg-ink-0 text-ink-700 hover:border-ink-400",
+                    ? "border-navy-800 bg-azure-50 text-navy-900"
+                    : "border-hairline bg-white text-copy hover:border-copy-muted",
                 )}
               >
                 {on && <Check className="size-3.5" strokeWidth={3} aria-hidden />}
@@ -212,7 +212,7 @@ export function AboutForm({
             );
           })}
         </div>
-        <p className="text-sm text-ink-500">
+        <p className="text-sm text-copy-muted">
           Clients can ask for an artisan who speaks their language. This is how they find you.
         </p>
       </fieldset>

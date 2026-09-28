@@ -24,7 +24,8 @@
     "e2e:execution": "tsx scripts/e2e-execution.ts",
     "e2e:trust": "tsx scripts/e2e-trust.ts",
     "demo:job": "tsx scripts/demo-job.ts",
-    "hero:shots": "tsx scripts/hero-shots.ts"
+    "hero:shots": "tsx scripts/hero-shots.ts",
+    "copy:audit": "tsx scripts/copy-audit.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

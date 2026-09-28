@@ -16,18 +16,13 @@
  */
 
 @theme {
-  /* ---- Brand: deep green ------------------------------------------------ */
-  --color-brand-50: oklch(0.972 0.021 155);
-  --color-brand-100: oklch(0.942 0.043 155);
-  --color-brand-200: oklch(0.885 0.079 155);
-  --color-brand-300: oklch(0.812 0.112 155);
-  --color-brand-400: oklch(0.724 0.137 155);
-  --color-brand-500: oklch(0.638 0.142 155);
-  --color-brand-600: oklch(0.548 0.126 155);
-  --color-brand-700: oklch(0.452 0.103 155);
-  --color-brand-800: oklch(0.371 0.082 155);
-  --color-brand-900: oklch(0.305 0.064 155);
-  --color-brand-950: oklch(0.201 0.045 155);
+  /* The pre-redesign ramps - `ink-*` (warm neutrals), `brand-*` (green),
+     `accent-*` (amber) and the `surface-*` tiers - have been removed. Every
+     screen now uses navy/azure below, and leaving thirty-nine dead custom
+     properties in place was not neutral: Tailwind emits a utility for each one,
+     so `bg-ink-500` would still have compiled and silently reintroduced the old
+     palette. Gone, it fails loudly instead. */
+
 
   /* ---- Navy: the 2026 brand ---------------------------------------------- */
   /* The new reference (designing-ui-ux/) replaces the deep green with a navy +
@@ -77,45 +72,8 @@
   --color-copy: oklch(0.212 0.024 265); /* #111827 — body                   */
   --color-copy-muted: oklch(0.554 0.034 257); /* #64748B — secondary        */
 
-  /* ---- Accent: amber. Money only. -------------------------------------- */
-  /* Earnings, payouts, deposit due, primary CTAs. If it is not about money or
-     not the single most important action on the screen, it is not amber. */
-  --color-accent-50: oklch(0.977 0.031 84);
-  --color-accent-100: oklch(0.951 0.062 84);
-  --color-accent-200: oklch(0.904 0.107 82);
-  --color-accent-300: oklch(0.856 0.144 79);
-  --color-accent-400: oklch(0.806 0.162 74);
-  --color-accent-500: oklch(0.752 0.158 68);
-  --color-accent-600: oklch(0.667 0.142 55);
-  --color-accent-700: oklch(0.556 0.119 47);
-  --color-accent-800: oklch(0.461 0.095 45);
-  --color-accent-900: oklch(0.391 0.077 44);
-
-  /* ---- Ink: warm neutrals ---------------------------------------------- */
-  /* There is no pure white in this app, on purpose. Every African product worth
-     copying — Kuda, Hubtel, Moniepoint — grounds on warm paper rather than
-     #FFF, and the reason is practical rather than decorative: these screens sit
-     next to photographs of real rooms, and a pure-white surround makes a warm
-     interior photograph look like it was pasted on. ink-0 is the card surface,
-     ink-25 the page ground. The chroma is tiny (0.004–0.007) but it is the
-     difference between "designed" and "default".
-     Ramp steps 50→950 are unchanged, so nothing that already uses them moves. */
-  --color-ink-0: oklch(0.993 0.004 78); /* card / raised surface  ≈ #FEFCFA */
-  --color-ink-25: oklch(0.977 0.007 78); /* page ground            ≈ #FBF7F1 */
-  --color-ink-50: oklch(0.985 0.003 75);
-  --color-ink-100: oklch(0.968 0.005 75);
-  --color-ink-200: oklch(0.927 0.007 75);
-  --color-ink-300: oklch(0.868 0.009 75);
-  --color-ink-400: oklch(0.708 0.012 75);
-  --color-ink-500: oklch(0.567 0.013 75);
-  --color-ink-600: oklch(0.452 0.012 75);
-  --color-ink-700: oklch(0.371 0.011 75);
-  --color-ink-800: oklch(0.276 0.009 75);
-  --color-ink-900: oklch(0.211 0.008 75);
-  --color-ink-950: oklch(0.147 0.007 75);
   /* The one dark band. Warm charcoal, not black — black next to warm paper
      reads as a rendering bug rather than a choice. */
-  --color-ink-975: oklch(0.178 0.012 75); /*                       ≈ #1C1916 */
 
   /* ---- Semantic --------------------------------------------------------- */
   --color-success-50: oklch(0.973 0.028 150);
@@ -140,27 +98,6 @@
      explicitly and are unaffected. */
   --color-background: var(--color-canvas);
   --color-foreground: var(--color-copy);
-
-  /* ---- Surfaces: the layering scale ------------------------------------- */
-  /* "Paper & Depth". Four opaque tiers, each step lighter than the one below,
-     so the implied light always comes from above and a raised thing never has
-     to be outlined to read as raised.
-
-     Opaque on purpose. Translucency was considered and rejected: this theme is
-     warm paper in light mode only, so blurring paper over paper produces
-     almost no visible difference while costing a compositing layer — and the
-     audience is outdoors on low-end Android, where backdrop-filter is the most
-     expensive thing we could put on a scroll. Blur stays where it does real
-     work (sticky bars over moving content, scrims, image overlays) and is not
-     part of the surface language.
-
-     `sunken` is the tier that was missing. Wells, table headers, inset
-     summaries and anything that should read as *recessed* now have a tone,
-     instead of being faked with a border. */
-  --color-surface-sunken: oklch(0.958 0.008 78); /* wells, table heads    */
-  --color-surface-ground: oklch(0.977 0.007 78); /* page   (= ink-25)     */
-  --color-surface-raised: oklch(0.993 0.004 78); /* cards  (= ink-0)      */
-  --color-surface-overlay: oklch(0.999 0.002 78); /* modals, popovers     */
 
   /* ---- Motion ----------------------------------------------------------- */
   /* Per the Emil Kowalski skill: never ease-in for UI that enters, never a
@@ -469,14 +406,14 @@
 
   /* Keyboard users get a ring; mouse users never see it. */
   :focus-visible {
-    outline: 2px solid var(--color-brand-600);
+    outline: 2px solid var(--color-azure-500);
     outline-offset: 2px;
     border-radius: 0.25rem;
   }
 
   ::selection {
-    background-color: var(--color-brand-200);
-    color: var(--color-brand-950);
+    background-color: var(--color-azure-100);
+    color: var(--color-navy-950);
   }
 
   /* Forms inherit the app font instead of the UA's. */
@@ -513,7 +450,7 @@
      than "broken". Because the slot already holds its final aspect ratio,
      nothing on the page moves when the image arrives. */
   .img-slot {
-    background-color: var(--color-ink-100);
+    background-color: var(--color-azure-50);
     background-image: repeating-linear-gradient(
       135deg,
       transparent 0 11px,
@@ -536,9 +473,9 @@
   .skeleton {
     background-image: linear-gradient(
       90deg,
-      var(--color-ink-200) 0%,
-      var(--color-ink-100) 50%,
-      var(--color-ink-200) 100%
+      var(--color-hairline) 0%,
+      var(--color-azure-50) 50%,
+      var(--color-hairline) 100%
     );
     background-size: 200% 100%;
     animation: var(--animate-shimmer);
@@ -653,7 +590,7 @@
    Measure is capped at 68ch: a contract read on a phone is hard enough without
    the lines running the full width of a laptop. */
 .prose-legal {
-  color: var(--color-ink-700);
+  color: var(--color-copy);
   font-size: 0.9375rem;
   line-height: 1.7;
 }
@@ -663,7 +600,7 @@
 }
 
 .prose-legal h1 {
-  color: var(--color-ink-900);
+  color: var(--color-navy-900);
   font-size: 1.875rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -671,16 +608,16 @@
 }
 
 .prose-legal h2 {
-  color: var(--color-ink-900);
+  color: var(--color-navy-900);
   font-size: 1.1875rem;
   font-weight: 600;
   margin-top: 2.25rem;
   padding-top: 1.25rem;
-  border-top: 1px solid var(--color-ink-200);
+  border-top: 1px solid var(--color-hairline);
 }
 
 .prose-legal h3 {
-  color: var(--color-ink-900);
+  color: var(--color-navy-900);
   font-size: 1rem;
   font-weight: 600;
   margin-top: 1.5rem;
@@ -706,7 +643,7 @@
 }
 
 .prose-legal strong {
-  color: var(--color-ink-900);
+  color: var(--color-navy-900);
   font-weight: 600;
 }
 
@@ -714,12 +651,12 @@
 .prose-legal .amount {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
-  color: var(--color-ink-900);
+  color: var(--color-navy-900);
 }
 
 .prose-legal .lede {
   font-size: 1.0625rem;
-  color: var(--color-ink-600);
+  color: var(--color-copy-muted);
 }
 
 .prose-legal .meta {
@@ -727,7 +664,7 @@
   font-size: 0.75rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--color-ink-500);
+  color: var(--color-copy-muted);
 }
 
 /* ---------------------------------------------------------------------------

@@ -42,17 +42,17 @@ export default function ErrorBoundary({
   }, [error.digest, error.message, error.stack]);
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-ink-25 px-5 py-10">
-      <div className="w-full max-w-md space-y-5 rounded-card border border-ink-200 bg-ink-0 p-6 text-center shadow-sm">
+    <main className="grid min-h-dvh place-items-center bg-canvas px-5 py-10">
+      <div className="w-full max-w-md space-y-5 rounded-card border border-hairline bg-white p-6 text-center shadow-sm">
         <div className="space-y-2">
-          <h1 className="text-xl font-semibold text-ink-900">Something went wrong</h1>
-          <p className="text-[0.9375rem] text-ink-600">
+          <h1 className="text-xl font-semibold text-navy-900">Something went wrong</h1>
+          <p className="text-[0.9375rem] text-copy-muted">
             That is our fault, not yours. It has been reported and someone will look at it.
           </p>
         </div>
 
         {/* The question anyone using this app actually has. */}
-        <p className="rounded-field bg-ink-25 px-3 py-2 text-sm text-ink-600">
+        <p className="rounded-field bg-canvas px-3 py-2 text-sm text-copy-muted">
           No payment was taken or repeated because of this. Your jobs and money are unaffected.
         </p>
 
@@ -71,7 +71,7 @@ export default function ErrorBoundary({
         {/* Shown so somebody reporting this by phone can read it out, and it
             matches the server log line exactly. */}
         {error.digest && (
-          <p className="tabular font-mono text-[0.6875rem] tracking-wide text-ink-400 uppercase">
+          <p className="tabular font-mono text-[0.6875rem] tracking-wide text-copy-muted uppercase">
             Reference {error.digest}
           </p>
         )}

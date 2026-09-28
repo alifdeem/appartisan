@@ -53,7 +53,7 @@ import type { QuoteContext } from "@/lib/jobs/matching";
  * airy `PanelInput` used on one-question screens.
  *
  * What did not survive is the *warm* version of boxed. `Input` fills with
- * `ink-0` and focuses to a **green** ring, and a green ring is the loudest
+ * `white` and focuses to a **green** ring, and a green ring is the loudest
  * possible wrong note on a navy screen. The skin below is the same control in
  * the cool palette, kept local because the quote builder is the only dense form
  * in the redesign — `ui/input.tsx` is left exactly as the admin console needs

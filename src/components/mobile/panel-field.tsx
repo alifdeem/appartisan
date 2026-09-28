@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
  * they are correct in the admin console and the quote builder, where a form is
  * a dense grid and the boxed, warm-filled control is what separates one input
  * from its neighbour. These screens are the opposite: one question on an empty
- * page, on pure white, in the navy palette. The `ink-0` fill reads as a stain
+ * page, on pure white, in the navy palette. The `white` fill reads as a stain
  * there, and `rounded-field` is half the radius everything around it uses.
  *
  * Rather than adding a variant to `Input` and dragging forty existing fields

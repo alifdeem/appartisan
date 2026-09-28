@@ -51,7 +51,7 @@ export function UnderlineField({
           // `focus-within` rather than a ring: the rule IS the field here.
           error
             ? "border-danger-500 focus-within:border-danger-600"
-            : "border-ink-200 focus-within:border-ink-900",
+            : "border-hairline focus-within:border-navy-900",
         )}
       >
         {children}
@@ -62,7 +62,7 @@ export function UnderlineField({
           {error}
         </p>
       ) : hint ? (
-        <p className="text-note text-ink-500">{hint}</p>
+        <p className="text-note text-copy-muted">{hint}</p>
       ) : null}
     </div>
   );
@@ -81,8 +81,8 @@ export function UnderlineInput({
   return (
     <input
       className={cn(
-        "min-h-11 w-full min-w-0 bg-transparent text-base text-ink-900",
-        "placeholder:text-ink-400 focus:outline-none",
+        "min-h-11 w-full min-w-0 bg-transparent text-base text-navy-900",
+        "placeholder:text-copy-muted focus:outline-none",
         "disabled:cursor-not-allowed disabled:opacity-60",
         className,
       )}

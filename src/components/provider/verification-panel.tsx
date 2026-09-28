@@ -32,9 +32,9 @@ const TONE: Record<
   unsubmitted: {
     icon: FileText,
     badge: "neutral",
-    ring: "border-ink-200",
-    wash: "bg-ink-0",
-    mark: "bg-ink-100 text-ink-600",
+    ring: "border-hairline",
+    wash: "bg-white",
+    mark: "bg-azure-50 text-copy-muted",
   },
   pending: {
     icon: Clock,

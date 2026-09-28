@@ -32,7 +32,7 @@ export default async function InvoicePage({ params }: PageProps<"/client/jobs/[j
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Link
           href={`/client/jobs/${jobId}`}
-          className="inline-flex items-center gap-1.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
+          className="inline-flex items-center gap-1.5 text-sm text-copy-muted transition-colors hover:text-navy-900"
         >
           <ArrowLeft className="size-4" aria-hidden />
           Back to job

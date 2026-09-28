@@ -147,7 +147,7 @@ export function MomoPrompt({
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-5 px-5 py-8">
       {/* The handset. Warm charcoal rather than black — DESIGN.md §3 keeps the
           one dark surface in the system warm so it sits with the paper. */}
-      <div className="overflow-hidden rounded-[1.5rem] border border-ink-975/20 bg-ink-975 shadow-xl">
+      <div className="overflow-hidden rounded-[1.5rem] border border-navy-950/20 bg-navy-950 shadow-xl">
         <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-3">
           <span className="flex items-center gap-2 text-[0.6875rem] font-medium tracking-wide text-white/60 uppercase">
             <Smartphone className="size-3.5" aria-hidden />
@@ -185,7 +185,7 @@ export function MomoPrompt({
 
               <dl className="space-y-1.5 rounded-card bg-white/5 px-4 py-3 font-mono text-[0.8125rem]">
                 <Row label="Amount">
-                  <span className="tabular text-base font-semibold text-accent-400">
+                  <span className="tabular text-base font-semibold text-warning-500">
                     GHS {formatAmount(amount)}
                   </span>
                 </Row>
@@ -224,7 +224,7 @@ export function MomoPrompt({
                             "size-3 rounded-full transition-[background-color,transform]",
                             "duration-[var(--duration-instant)] ease-out-strong",
                             index < pin.length
-                              ? "scale-110 bg-accent-400"
+                              ? "scale-110 bg-warning-500"
                               : "bg-white/20",
                           )}
                         />
@@ -244,7 +244,7 @@ export function MomoPrompt({
       </div>
 
       {phase === "prompt" && (
-        <p className="text-center text-xs leading-relaxed text-ink-500">
+        <p className="text-center text-xs leading-relaxed text-copy-muted">
           This is a simulation — no money moves and any four digits are accepted. The real thing
           sends this prompt to your handset, which is why someone has to be present to pay.
         </p>
@@ -292,9 +292,9 @@ export function MomoPrompt({
                 type="button"
                 onClick={() => void approve(forced.outcome)}
                 className={cn(
-                  "min-h-9 rounded-field border border-ink-300 bg-ink-0 text-xs font-medium text-ink-700",
+                  "min-h-9 rounded-field border border-hairline bg-white text-xs font-medium text-copy",
                   "transition-[background-color,transform] duration-[var(--duration-instant)] ease-out-strong",
-                  "hover:bg-ink-50 active:scale-[0.97]",
+                  "hover:bg-canvas active:scale-[0.97]",
                 )}
               >
                 {forced.label}

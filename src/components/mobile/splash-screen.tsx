@@ -38,15 +38,15 @@ export function SplashScreen({ version = VERSION }: { version?: string }) {
         {/* w-1/3 is load-bearing: the sweep keyframe's 300% end position is
             derived from it. See the `indeterminate` note in globals.css. */}
         <div
-          className="h-0.5 w-32 overflow-hidden rounded-full bg-ink-100"
+          className="h-0.5 w-32 overflow-hidden rounded-full bg-azure-50"
           role="status"
           aria-label="Loading"
         >
-          <div className="loader-sweep h-full w-1/3 rounded-full bg-brand-700" />
+          <div className="loader-sweep h-full w-1/3 rounded-full bg-navy-800" />
         </div>
       </div>
 
-      <p className="tabular pb-8 font-mono text-2xs text-ink-400">Version {version}</p>
+      <p className="tabular pb-8 font-mono text-2xs text-copy-muted">Version {version}</p>
     </div>
   );
 }

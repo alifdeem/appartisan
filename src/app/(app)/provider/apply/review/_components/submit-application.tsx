@@ -57,7 +57,7 @@ export function SubmitApplication({ ready }: { ready: boolean }) {
         </p>
       )}
 
-      <p className="text-center text-sm text-ink-500">
+      <p className="text-center text-sm text-copy-muted">
         Reviews usually take a day or two. We will call you on the number you signed up with.
       </p>
     </div>

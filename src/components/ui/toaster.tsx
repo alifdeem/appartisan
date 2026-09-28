@@ -23,11 +23,11 @@ export function Toaster() {
       toastOptions={{
         classNames: {
           toast:
-            "!rounded-card !border-ink-200 !bg-ink-0 !shadow-lg !text-ink-900 !font-sans !gap-3",
+            "!rounded-card !border-hairline !bg-white !shadow-lg !text-navy-900 !font-sans !gap-3",
           title: "!text-sm !font-medium",
-          description: "!text-sm !text-ink-600",
-          actionButton: "!bg-brand-700 !text-white !rounded-field !font-medium",
-          cancelButton: "!bg-ink-100 !text-ink-700 !rounded-field",
+          description: "!text-sm !text-copy-muted",
+          actionButton: "!bg-navy-800 !text-white !rounded-field !font-medium",
+          cancelButton: "!bg-azure-50 !text-copy !rounded-field",
           error: "!text-danger-700",
           success: "!text-success-700",
         },

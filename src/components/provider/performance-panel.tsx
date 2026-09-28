@@ -63,7 +63,7 @@ export function PerformancePanel({
       <div className="grid grid-cols-4 divide-x divide-hairline">
         <Stat
           icon={<Star />}
-          value={rated ? ratingAvg.toFixed(1) : "—"}
+          value={rated ? ratingAvg.toFixed(1) : "-"}
           label="Average rating"
           hint={rated ? `${ratingCount} review${ratingCount === 1 ? "" : "s"}` : "Not yet rated"}
         />
@@ -75,7 +75,7 @@ export function PerformancePanel({
         />
         <Stat
           icon={<TrendingUp />}
-          value={scored ? `${Math.round((reliability.accept_rate ?? 0) * 100)}%` : "—"}
+          value={scored ? `${Math.round((reliability.accept_rate ?? 0) * 100)}%` : "-"}
           label="Accept rate"
           hint={scored ? `Last ${reliability.window_days} days` : "Not yet scored"}
         />
@@ -111,7 +111,7 @@ function Stat({
         className={cn(
           "grid size-10 place-items-center rounded-full [&_svg]:size-5",
           tone === "good" && "bg-success-50 text-success-600",
-          tone === "warn" && "bg-accent-50 text-accent-600",
+          tone === "warn" && "bg-warning-50 text-warning-700",
           tone === "neutral" && "bg-azure-50 text-azure-600",
         )}
       >

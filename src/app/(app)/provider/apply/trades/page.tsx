@@ -19,10 +19,10 @@ export default async function TradesStepPage() {
   return (
     <div className="space-y-5">
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-ink-900">What do you do?</h2>
-        <p className="max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
+        <h2 className="text-lg font-semibold text-navy-900">What do you do?</h2>
+        <p className="max-w-prose text-[0.9375rem] leading-relaxed text-copy-muted">
           Pick the work you want to be called for. You will only be offered jobs in these trades,
-          so choose the ones you are confident quoting on — not everything you have ever done.
+          so choose the ones you are confident quoting on, not everything you have ever done.
         </p>
       </div>
 

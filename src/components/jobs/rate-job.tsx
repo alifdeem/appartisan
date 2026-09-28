@@ -64,7 +64,7 @@ function Stars({ value, onChange }: { value: number; onChange: (next: number) =>
           <Star
             className={cn(
               "size-8 transition-colors duration-[var(--duration-fast)]",
-              n <= shown ? "fill-accent-400 text-accent-500" : "text-hairline",
+              n <= shown ? "fill-warning-500 text-warning-500" : "text-hairline",
             )}
           />
         </button>
@@ -120,7 +120,7 @@ export function RateJob({ jobId, existing }: { jobId: string; existing: RatingRo
                 key={n}
                 className={cn(
                   "size-4",
-                  n <= existing.stars ? "fill-accent-400 text-accent-500" : "text-hairline",
+                  n <= existing.stars ? "fill-warning-500 text-warning-500" : "text-hairline",
                 )}
                 aria-hidden
               />

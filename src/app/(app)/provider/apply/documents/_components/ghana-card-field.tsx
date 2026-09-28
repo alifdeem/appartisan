@@ -92,7 +92,7 @@ export function GhanaCardField({ value }: { value: string | null }) {
 
           <span className="pointer-events-none absolute inset-y-0 right-3 grid place-items-center">
             {pending ? (
-              <Loader2 className="size-4 animate-spin text-ink-400" aria-hidden />
+              <Loader2 className="size-4 animate-spin text-copy-muted" aria-hidden />
             ) : saved !== "" && !dirty ? (
               <Check
                 className="size-4 animate-fade-in text-success-600"

@@ -31,7 +31,7 @@ export function FieldLabel({
   return (
     <Component
       className={cn(
-        "block text-2xs font-medium tracking-[0.07em] text-ink-500 uppercase",
+        "block text-2xs font-medium tracking-[0.07em] text-copy-muted uppercase",
         className,
       )}
       {...props}

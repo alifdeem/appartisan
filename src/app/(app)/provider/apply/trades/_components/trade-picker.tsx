@@ -71,14 +71,14 @@ export function TradePicker({
         type="search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search trades — plumbing, AC, welding…"
+        placeholder="Search trades: plumbing, AC, welding…"
         aria-label="Search trades"
         autoComplete="off"
         leading={<Search className="size-4" aria-hidden />}
       />
 
       {filtered.length === 0 ? (
-        <p className="rounded-card border border-dashed border-ink-300 bg-ink-50 px-5 py-10 text-center text-sm text-ink-500">
+        <p className="rounded-card border border-dashed border-hairline bg-canvas px-5 py-10 text-center text-sm text-copy-muted">
           Nothing matches “{query.trim()}”. Our team adds new trades regularly.
         </p>
       ) : (
@@ -101,15 +101,15 @@ export function TradePicker({
                     "transition-[border-color,background-color,transform,box-shadow]",
                     "duration-[var(--duration-fast)] ease-out-strong active:scale-[0.98]",
                     isSelected
-                      ? "border-brand-600 bg-brand-50 shadow-xs ring-1 ring-brand-600"
-                      : "border-ink-200 bg-ink-0 shadow-xs hover:border-ink-300",
+                      ? "border-navy-800 bg-azure-50 shadow-xs ring-1 ring-navy-800"
+                      : "border-hairline bg-white shadow-xs hover:border-hairline",
                     blocked && "cursor-not-allowed opacity-45 active:scale-100",
                   )}
                 >
                   <span
                     className={cn(
                       "grid size-9 place-items-center rounded-field transition-colors duration-[var(--duration-fast)]",
-                      isSelected ? "bg-brand-600 text-white" : "bg-ink-100 text-ink-600",
+                      isSelected ? "bg-navy-800 text-white" : "bg-azure-50 text-copy-muted",
                     )}
                   >
                     {isSelected ? (
@@ -122,7 +122,7 @@ export function TradePicker({
                   <span
                     className={cn(
                       "text-sm leading-snug font-medium",
-                      isSelected ? "text-brand-900" : "text-ink-800",
+                      isSelected ? "text-navy-900" : "text-navy-900",
                     )}
                   >
                     {category.name}
@@ -142,11 +142,11 @@ export function TradePicker({
 
       {/* Sticky on a phone: the grid is long, and a Continue button at the
           bottom of 26 tiles is a button nobody finds without scrolling twice. */}
-      <div className="sticky bottom-0 -mx-5 flex items-center gap-4 border-t border-ink-200 bg-ink-25/95 px-5 py-3 backdrop-blur-md sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
-        <p className="tabular flex-1 font-mono text-sm text-ink-600">
+      <div className="sticky bottom-0 -mx-5 flex items-center gap-4 border-t border-hairline bg-canvas/95 px-5 py-3 backdrop-blur-md sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
+        <p className="tabular flex-1 font-mono text-sm text-copy-muted">
           {selected.size}
-          <span className="text-ink-400">/{MAX_TRADES}</span>
-          <span className="ml-2 font-sans text-ink-500">
+          <span className="text-copy-muted">/{MAX_TRADES}</span>
+          <span className="ml-2 font-sans text-copy-muted">
             {selected.size === 0 ? "Pick at least one" : atLimit ? "That's the limit" : "selected"}
           </span>
         </p>

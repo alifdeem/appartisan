@@ -15,9 +15,9 @@ import { AlertTriangle } from "lucide-react";
  */
 export function DraftNotice() {
   return (
-    <aside className="not-prose my-6 flex items-start gap-3 rounded-card border border-dashed border-accent-400 bg-accent-50 px-4 py-3">
-      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-accent-700" aria-hidden />
-      <div className="space-y-1 text-sm text-accent-900">
+    <aside className="not-prose my-6 flex items-start gap-3 rounded-card border border-dashed border-warning-500 bg-warning-50 px-4 py-3">
+      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning-700" aria-hidden />
+      <div className="space-y-1 text-sm text-warning-700">
         <p className="font-semibold">Draft — not yet reviewed by a lawyer.</p>
         <p>
           This describes exactly how the platform works today and is written to be handed to a

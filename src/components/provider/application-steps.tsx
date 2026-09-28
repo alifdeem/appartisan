@@ -46,15 +46,15 @@ export function ApplicationSteps({
       {/* ---- phone ---- */}
       <div className="space-y-2.5 lg:hidden">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="text-sm font-semibold text-ink-900">{current.label}</p>
-          <p className="tabular font-mono text-xs text-ink-500">
+          <p className="text-sm font-semibold text-navy-900">{current.label}</p>
+          <p className="tabular font-mono text-xs text-copy-muted">
             {currentIndex + 1}/{APPLICATION_STEPS.length}
           </p>
         </div>
 
-        <div className="h-1 overflow-hidden rounded-full bg-ink-200">
+        <div className="h-1 overflow-hidden rounded-full bg-hairline">
           <div
-            className="h-full rounded-full bg-brand-600 transition-[width] duration-[var(--duration-slow)] ease-out-strong"
+            className="h-full rounded-full bg-navy-800 transition-[width] duration-[var(--duration-slow)] ease-out-strong"
             style={{ width: `${(doneCount / workSteps.length) * 100}%` }}
             role="progressbar"
             aria-valuenow={doneCount}
@@ -79,7 +79,7 @@ export function ApplicationSteps({
                 className={cn(
                   "group flex items-start gap-3 rounded-field px-3 py-2.5",
                   "transition-colors duration-[var(--duration-fast)] ease-out-strong",
-                  active ? "bg-ink-0 shadow-xs" : "hover:bg-ink-0/70",
+                  active ? "bg-white shadow-xs" : "hover:bg-white/70",
                 )}
               >
                 <span
@@ -87,10 +87,10 @@ export function ApplicationSteps({
                     "mt-px grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold",
                     "transition-colors duration-[var(--duration-base)] ease-out-strong",
                     done
-                      ? "bg-brand-600 text-white"
+                      ? "bg-navy-800 text-white"
                       : active
-                        ? "bg-brand-700 text-white"
-                        : "bg-ink-200 text-ink-500",
+                        ? "bg-navy-800 text-white"
+                        : "bg-hairline text-copy-muted",
                   )}
                 >
                   {done ? <Check className="size-3.5" strokeWidth={3} aria-hidden /> : index + 1}
@@ -100,12 +100,12 @@ export function ApplicationSteps({
                   <span
                     className={cn(
                       "block text-sm font-medium",
-                      active ? "text-ink-900" : "text-ink-700",
+                      active ? "text-navy-900" : "text-copy",
                     )}
                   >
                     {step.label}
                   </span>
-                  <span className="mt-0.5 block text-xs leading-snug text-ink-500">
+                  <span className="mt-0.5 block text-xs leading-snug text-copy-muted">
                     {step.blurb}
                   </span>
                 </span>

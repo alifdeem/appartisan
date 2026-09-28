@@ -18,12 +18,12 @@ export function SeededAccountsHint() {
   const [open, setOpen] = React.useState(false);
 
   return (
-    <div className="rounded-card border border-dashed border-ink-300 bg-ink-100/60">
+    <div className="rounded-card border border-dashed border-hairline bg-azure-50/60">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex min-h-11 w-full items-center gap-2 px-4 text-left text-sm font-medium text-ink-600 transition-colors hover:text-ink-900"
+        className="flex min-h-11 w-full items-center gap-2 px-4 text-left text-sm font-medium text-copy-muted transition-colors hover:text-navy-900"
       >
         <FlaskConical className="size-4" />
         Test accounts
@@ -36,7 +36,7 @@ export function SeededAccountsHint() {
       </button>
 
       {open && (
-        <ul className="animate-fade-in space-y-1 border-t border-ink-200 px-2 pb-2 pt-2">
+        <ul className="animate-fade-in space-y-1 border-t border-hairline px-2 pb-2 pt-2">
           {SEED_ACCOUNTS.map((account) => (
             <li key={account.phone}>
               <button
@@ -53,20 +53,20 @@ export function SeededAccountsHint() {
                   input.dispatchEvent(new Event("input", { bubbles: true }));
                   input.focus();
                 }}
-                className="flex w-full items-baseline gap-2 rounded-field px-2 py-2 text-left transition-colors hover:bg-ink-0"
+                className="flex w-full items-baseline gap-2 rounded-field px-2 py-2 text-left transition-colors hover:bg-white"
               >
-                <span className="w-16 shrink-0 text-xs font-semibold uppercase tracking-wide text-ink-500">
+                <span className="w-16 shrink-0 text-xs font-semibold uppercase tracking-wide text-copy-muted">
                   {account.label}
                 </span>
-                <span className="tabular text-sm text-ink-800">{account.localPhone}</span>
-                <span className="ml-auto truncate text-xs text-ink-400">{account.fullName}</span>
+                <span className="tabular text-sm text-navy-900">{account.localPhone}</span>
+                <span className="ml-auto truncate text-xs text-copy-muted">{account.fullName}</span>
               </button>
             </li>
           ))}
         </ul>
       )}
 
-      <p className="border-t border-ink-200 px-4 py-2.5 text-xs text-ink-500">
+      <p className="border-t border-hairline px-4 py-2.5 text-xs text-copy-muted">
         While SMS is mocked the code is fixed, and shown to you on the next screen.
       </p>
     </div>

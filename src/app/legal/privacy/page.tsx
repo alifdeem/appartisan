@@ -80,7 +80,7 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Your location while you are on a job</strong>, so the client can see you are on
-          the way. We record it only between accepting a job and completing it — never otherwise,
+          the way. We record it only between accepting a job and completing it, never otherwise,
           and never when you are offline.
         </li>
       </ul>

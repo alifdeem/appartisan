@@ -53,17 +53,17 @@ export default async function ApplyLayout({ children }: LayoutProps<"/provider/a
       <div className="space-y-3">
         <Link
           href="/provider"
-          className="inline-flex items-center gap-1.5 text-sm text-ink-500 transition-colors hover:text-ink-800"
+          className="inline-flex items-center gap-1.5 text-sm text-copy-muted transition-colors hover:text-navy-900"
         >
           <ArrowLeft className="size-4" aria-hidden />
           My work
         </Link>
 
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-semibold text-ink-900">
+          <h1 className="text-2xl font-semibold text-navy-900">
             {reapplying ? "Update your application" : "Become a verified artisan"}
           </h1>
-          <p className="max-w-prose text-[0.9375rem] leading-relaxed text-ink-600">
+          <p className="max-w-prose text-[0.9375rem] leading-relaxed text-copy-muted">
             {reapplying
               ? "Fix what our team flagged, then send it back. Nothing you already filled in has been lost."
               : "Five short steps. Everything saves as you go, so you can stop and come back."}
@@ -78,11 +78,11 @@ export default async function ApplyLayout({ children }: LayoutProps<"/provider/a
         <aside className="lg:sticky lg:top-24 lg:self-start lg:-ml-3">
           <ApplicationSteps completion={completion} />
 
-          <p className="mt-5 hidden items-start gap-2 rounded-card bg-ink-0 px-3.5 py-3 text-xs leading-relaxed text-ink-600 shadow-xs lg:flex">
-            <ShieldCheck className="mt-px size-3.5 shrink-0 text-brand-600" aria-hidden />
+          <p className="mt-5 hidden items-start gap-2 rounded-card bg-white px-3.5 py-3 text-xs leading-relaxed text-copy-muted shadow-xs lg:flex">
+            <ShieldCheck className="mt-px size-3.5 shrink-0 text-navy-800" aria-hidden />
             <span>
               Your Ghana Card is stored privately and seen only by our verification team. Clients
-              never see it — they only see that you passed.
+              never see it. They only see that you passed.
             </span>
           </p>
         </aside>

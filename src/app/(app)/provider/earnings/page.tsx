@@ -204,7 +204,7 @@ function PayoutRow({ payout }: { payout: PayoutWithJob }) {
           {payout.job?.category?.name ?? "Job"}
         </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-2xs text-copy-muted">
-          <span className="tabular font-mono">{payout.job?.reference ?? "—"}</span>
+          <span className="tabular font-mono">{payout.job?.reference ?? "-"}</span>
           <span>{date}</span>
           {!settled && (
             <span
